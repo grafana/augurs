@@ -13,7 +13,6 @@ APIs are subject to change, and functionality may not be fully implemented.
 
 ## Crate descriptions
 
-|----------------|----------------------------------------------------------------------|----------------------------------------------------------------------|
 | Name           | Purpose                                                              | Status                                                               |
 | -------------  | -------                                                              | ------                                                               |
 | augurs-core    | Common structs and traits                                            | alpha - API is flexible right now                                    |
@@ -22,7 +21,6 @@ APIs are subject to change, and functionality may not be fully implemented.
 | augurs-testing | Testing data and, eventually, evaluation harness for implementations | alpha - just data right now                                          |
 | augurs-js      | WASM bindings to augurs                                              | alpha - untested, should work though                                 |
 | pyaugurs       | Python bindings to augurs                                            | alpha - untested, should work though                                 |
-|----------------|----------------------------------------------------------------------|----------------------------------------------------------------------|
 
 ## License
 
