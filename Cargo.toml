@@ -1,0 +1,15 @@
+[workspace]
+members = [
+  "crates/*"
+]
+
+[workspace.dependencies]
+
+augurs-core = { path = "crates/augurs-core" }
+augurs-ets = { path = "crates/augurs-ets" }
+augurs-mstl = { path = "crates/augurs-mstl" }
+augurs-testing = { path = "crates/augurs-testing" }
+
+assert_approx_eq = "1.1.0"
+criterion = "0.4.0"
+pprof = { version = "0.11.1", features = ["criterion", "frame-pointer", "prost-codec"] }
