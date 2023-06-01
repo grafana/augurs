@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci github -m crates/pyaugurs/Cargo.toml
 #
-name: python
+name: Python
 
 on:
   push:

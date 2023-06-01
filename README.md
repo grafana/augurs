@@ -1,6 +1,7 @@
 # augurs - a time series framework for Rust
 
-[![build-python](https://github.com/grafana/augurs/actions/workflows/python.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/python.yml)
+[![Python](https://github.com/grafana/augurs/actions/workflows/python.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/python.yml)
+[![Rust](https://github.com/grafana/augurs/actions/workflows/rust.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/rust.yml)
 
 This repository contains `augurs`, a time series framework built in Rust.
 It aims to provide some useful primitives for working with time series,
