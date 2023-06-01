@@ -18,7 +18,7 @@ pub mod ets;
 pub mod mstl;
 pub mod trend;
 
-/// Forecasts produced by an ETS model.
+/// Forecasts produced by augurs models.
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct Forecast {

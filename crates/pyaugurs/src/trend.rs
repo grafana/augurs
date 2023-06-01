@@ -35,7 +35,10 @@ pub struct PyTrendModel {
 
 #[pymethods]
 impl PyTrendModel {
-    /// Create a new Python trend model.
+    /// Wrap a trend model implemented in Python into a PyTrendModel.
+    ///
+    /// The returned PyTrendModel can be used in MSTL models using the
+    /// `custom_trend` method of the MSTL class.
     #[new]
     pub fn new(model: Py<PyAny>) -> Self {
         Self { model }
