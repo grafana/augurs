@@ -37,6 +37,8 @@ jobs:
 
       - name: Run cargo nextest
         run: cargo nextest run
+      - name: Run doc tests
+        run: cargo test --doc
 
   fmt:
     name: Rustfmt
