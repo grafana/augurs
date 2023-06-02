@@ -156,6 +156,12 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
     }
 
     fn predict_impl(&self, horizon: usize, level: Option<f64>) -> Result<Forecast> {
+        if horizon == 0 {
+            return Ok(Forecast {
+                point: vec![],
+                intervals: level.map(ForecastIntervals::empty),
+            });
+        }
         let mut out_of_sample = self
             .trend_model
             .predict(horizon, level)
@@ -332,5 +338,29 @@ mod tests {
         assert_eq!(upper.len(), 10);
         assert_all_close(&lower, &expected_out_of_sample_lower);
         assert_all_close(&upper, &expected_out_of_sample_upper);
+    }
+
+    #[test]
+    fn predict_zero_horizon() {
+        let y = VIC_ELEC.clone();
+
+        let mut params = stlrs::params();
+        params
+            .seasonal_degree(0)
+            .seasonal_jump(1)
+            .trend_degree(1)
+            .trend_jump(1)
+            .low_pass_degree(1)
+            .inner_loops(2)
+            .outer_loops(0);
+        let periods = vec![24, 24 * 7];
+        let trend_model = NaiveTrend::new();
+        let mstl = MSTLModel::new(periods, trend_model).stl_params(params);
+        let fit = mstl.fit(y.clone()).unwrap();
+        let forecast = fit.predict(0, 0.95).unwrap();
+        assert!(forecast.point.is_empty());
+        let ForecastIntervals { lower, upper, .. } = forecast.intervals.unwrap();
+        assert!(lower.is_empty());
+        assert!(upper.is_empty());
     }
 }

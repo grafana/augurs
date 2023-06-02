@@ -1175,6 +1175,14 @@ impl Model {
     }
 
     fn predict_impl(&self, horizon: usize, level: Option<f64>) -> Forecast {
+        // Short-circuit if horizon is zero.
+        if horizon == 0 {
+            return Forecast(augurs_core::Forecast {
+                point: vec![],
+                intervals: level.map(ForecastIntervals::empty),
+            });
+        }
+
         let mut f = Forecast(augurs_core::Forecast {
             point: self.pegels_forecast(horizon),
             intervals: None,
@@ -1734,5 +1742,20 @@ mod test {
         for (actual, expected) in upper.iter().zip(expected_u.iter()) {
             assert_approx_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn predict_zero_horizon() {
+        let unfit = Unfit::new(ModelType {
+            error: ErrorComponent::Multiplicative,
+            trend: TrendComponent::Additive,
+            season: SeasonalComponent::None,
+        });
+        let model = unfit.fit(&AP).unwrap();
+        let forecasts = model.predict(0, 0.95);
+        assert!(forecasts.point.is_empty());
+        let ForecastIntervals { lower, upper, .. } = forecasts.intervals.unwrap();
+        assert!(lower.is_empty());
+        assert!(upper.is_empty());
     }
 }
