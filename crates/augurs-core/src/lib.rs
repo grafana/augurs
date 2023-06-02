@@ -18,6 +18,17 @@ pub struct ForecastIntervals {
     pub upper: Vec<f64>,
 }
 
+impl ForecastIntervals {
+    /// Return empty forecast intervals.
+    pub fn empty(level: f64) -> ForecastIntervals {
+        Self {
+            level,
+            lower: Vec::new(),
+            upper: Vec::new(),
+        }
+    }
+}
+
 /// A forecast containing point forecasts and, optionally, prediction intervals.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

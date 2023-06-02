@@ -1175,6 +1175,14 @@ impl Model {
     }
 
     fn predict_impl(&self, horizon: usize, level: Option<f64>) -> Forecast {
+        // Short-circuit if horizon is zero.
+        if horizon == 0 {
+            return Forecast(augurs_core::Forecast {
+                point: vec![],
+                intervals: level.map(ForecastIntervals::empty),
+            });
+        }
+
         let mut f = Forecast(augurs_core::Forecast {
             point: self.pegels_forecast(horizon),
             intervals: None,
@@ -1322,14 +1330,14 @@ impl Forecast {
                 // Class 2 models.
                 // MNN
                 (EC::Multiplicative, TC::None, SC::None, false) => {
-                    let cvals: Vec<_> = std::iter::repeat(*alpha).take(horizon).collect();
-                    let sigma_h = self.compute_sigma_h(sigma, &cvals, horizon);
+                    let cvals = std::iter::repeat(*alpha).take(horizon);
+                    let sigma_h = self.compute_sigma_h(sigma, cvals, horizon);
                     self.compute_intervals(level, sigma_h.into_iter())
                 }
                 // MAN
                 (EC::Multiplicative, TC::Additive, SC::None, false) => {
-                    let cvals: Vec<_> = steps.iter().map(|s| alpha + beta * s).collect();
-                    let sigma_h = self.compute_sigma_h(sigma, &cvals, horizon);
+                    let cvals = steps.iter().map(|s| alpha + beta * s);
+                    let sigma_h = self.compute_sigma_h(sigma, cvals, horizon);
                     self.compute_intervals(level, sigma_h.into_iter())
                 }
                 // MAdN
@@ -1339,7 +1347,7 @@ impl Forecast {
                         let sum_phi = (1..(k + 1)).map(|j| phi.powi(j as i32)).sum::<f64>();
                         cvals[k - 1] = alpha + beta * sum_phi;
                     }
-                    let sigma_h = self.compute_sigma_h(sigma, &cvals, horizon);
+                    let sigma_h = self.compute_sigma_h(sigma, cvals.into_iter(), horizon);
                     self.compute_intervals(level, sigma_h.into_iter())
                 }
                 // TODO: all below models, once we do seasonality.
@@ -1392,21 +1400,40 @@ impl Forecast {
 
     /// Compute the standard deviations of the residuals given the model's
     /// overall standard deviation and some critical values.
-    fn compute_sigma_h(&self, sigma: f64, cvals: &[f64], horizon: usize) -> Vec<f64> {
-        // This could almost certainly be optimized somehow. We can
-        // probably get away with accepting an `impl Iterator` instead of a
-        // concrete slice but I'm not 100% sure.
-        let mut theta = vec![f64::NAN; horizon];
-        theta[0] = self.0.point[0].powi(2);
-        for k in 1..(horizon) {
-            let mut sum = 0.0;
-            for j in 1..k + 1 {
-                sum += cvals[j - 1].powi(2) * theta[k - j];
-            }
-            theta[k] = self.0.point[k].powi(2) + sigma * sum;
-        }
+    fn compute_sigma_h(
+        &self,
+        sigma: f64,
+        cvals: impl Iterator<Item = f64>,
+        horizon: usize,
+    ) -> Vec<f64> {
+        let cvals_squared: Vec<_> = cvals.map(|c| c.powi(2)).collect();
+        let theta =
+            // Iterate over each point estimate, up to `horizon`.
+            &self
+                .0
+                .point
+                .iter()
+                // `point` should always have length == horizon, but `take` just in case
+                .take(horizon)
+                .fold(Vec::with_capacity(horizon), |mut acc, p| {
+                    // For each point estimate, accumulate a vec of
+                    // errors so far, by iterating the current accumulator,
+                    // zipping with the reversed critical values, and multiplying.
+                    // Sum the totals up until this point, then multiply with sigma
+                    // and add that onto the accumulator.
+                    let t = p.powi(2)
+                        + acc
+                            .iter()
+                            .rev()
+                            .zip(&cvals_squared)
+                            .map(|(t, c)| t * c)
+                            .sum::<f64>()
+                            * sigma;
+                    acc.push(t);
+                    acc
+                });
         theta
-            .into_iter()
+            .iter()
             .zip(&self.0.point)
             .map(|(t, p)| ((1.0 + sigma) * t - p.powi(2)).sqrt())
             .collect()
@@ -1734,5 +1761,20 @@ mod test {
         for (actual, expected) in upper.iter().zip(expected_u.iter()) {
             assert_approx_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn predict_zero_horizon() {
+        let unfit = Unfit::new(ModelType {
+            error: ErrorComponent::Multiplicative,
+            trend: TrendComponent::Additive,
+            season: SeasonalComponent::None,
+        });
+        let model = unfit.fit(&AP).unwrap();
+        let forecasts = model.predict(0, 0.95);
+        assert!(forecasts.point.is_empty());
+        let ForecastIntervals { lower, upper, .. } = forecasts.intervals.unwrap();
+        assert!(lower.is_empty());
+        assert!(upper.is_empty());
     }
 }
