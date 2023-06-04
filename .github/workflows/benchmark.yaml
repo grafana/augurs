@@ -33,7 +33,9 @@ jobs:
           key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
 
       - name: Run baseline bench
-        run: cargo bench --bench "*iai*" | tee iai_baseline
+        run:
+          cargo bench --bench "*iai*" | tee iai_baseline
+          readlink -f iai_baseline
 
       - name: Checkout PR
         uses: actions/checkout@v3
