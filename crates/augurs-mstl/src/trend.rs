@@ -118,10 +118,7 @@ impl NaiveTrend {
         level: f64,
         sigma: impl Iterator<Item = f64>,
     ) -> ForecastIntervals {
-        // let z = distrs::Normal::ppf(0.5 + level / 2.0, 0.0, 1.0);
-        // TODO: use z-score from normal distribution rather than hardcoding
-        // 1.95999.
-        let z = 1.959964;
+        let z = distrs::Normal::ppf(0.5 + level / 2.0, 0.0, 1.0);
         let (lower, upper) = preds
             .zip(sigma)
             .map(|(p, s)| (p - z * s, p + z * s))
