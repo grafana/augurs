@@ -25,8 +25,13 @@ serde = ["dep:serde"]
 assert_approx_eq.workspace = true
 augurs-testing.workspace = true
 criterion.workspace = true
+iai.workspace = true
 pprof.workspace = true
 
 [[bench]]
 name = "air_passengers"
+harness = false
+
+[[bench]]
+name = "air_passengers_iai"
 harness = false

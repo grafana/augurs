@@ -1,0 +1,62 @@
+name: Benchmarks
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  "iai-benchmark":
+    runs-on: ubuntu-latest
+    name: Iai Benchmarks
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - uses: actions/cache@v1
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db/
+            ./target/release
+          key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
+
+      - name: Run baseline bench
+        run: cargo bench --bench "*iai*" | tee iai_baseline
+
+      - name: Checkout PR
+        uses: actions/checkout@v3
+
+      - name: Run bench against baseline
+        run: cargo bench --bench "*iai*" | tee iai_feature
+
+      - name: Write result in PR
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const fs = require('fs');
+
+            const iai_baseline = fs.readFileSync("/home/runner/work/augurs/augurs/iai_baseline", {encoding:'utf8', flag:'r'});
+            const iai_feature = fs.readFileSync("/home/runner/work/augurs/augurs/iai_feature", {encoding:'utf8', flag:'r'});
+
+            // form message
+            const quote = "```";
+            const message = '## Benchmarks\n---\n Current:\n```\n' + iai_feature + '\n```\n Previous:\n\n```\n' + iai_baseline + '\n```';
+
+            // post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            })
+
+
