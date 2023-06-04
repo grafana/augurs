@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout PR
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
       - name: Checkout previous branch
         run: git checkout HEAD^
