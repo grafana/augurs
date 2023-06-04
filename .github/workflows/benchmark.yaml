@@ -22,6 +22,10 @@ jobs:
       - name: Checkout previous branch
         run: git checkout HEAD~
 
+      - name: Set up valgrind for iai
+        run: |
+          sudo apt install -y valgrind
+
       - uses: actions/cache@v1
         with:
           path: |
