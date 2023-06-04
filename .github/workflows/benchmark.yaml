@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 2
 
       - name: Checkout previous branch
-        run: git checkout HEAD^
+        run: git checkout HEAD~
 
       - uses: actions/cache@v1
         with:
