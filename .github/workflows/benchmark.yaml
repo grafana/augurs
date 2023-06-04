@@ -14,10 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     name: Iai Benchmarks
     steps:
-      - name: Checkout main
+      - name: Checkout PR
         uses: actions/checkout@v3
         with:
-          ref: main
+          fetch-depth: 2
+
+      - name: Checkout previous branch
+        run: git checkout HEAD^
 
       - uses: actions/cache@v1
         with:
@@ -58,5 +61,3 @@ jobs:
               repo: context.repo.repo,
               body: message
             })
-
-
