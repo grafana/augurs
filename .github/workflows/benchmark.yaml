@@ -12,12 +12,10 @@ env:
 jobs:
   "iai-benchmark":
     runs-on: ubuntu-latest
-    name: Iai Benchmarks
+    name: Iai benchmarks
     steps:
       - name: Checkout PR
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
 
       - name: Checkout previous branch
         run: git checkout HEAD^
@@ -32,7 +30,7 @@ jobs:
             ./target/release
           key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
 
-      - name: Run baseline bench
+      - name: Run bench against baseline bench
         run:
           cargo bench --bench "*iai*" | tee iai_baseline
           readlink -f iai_baseline
@@ -40,7 +38,7 @@ jobs:
       - name: Checkout PR
         uses: actions/checkout@v3
 
-      - name: Run bench against baseline
+      - name: Run bench against current branch
         run: cargo bench --bench "*iai*" | tee iai_feature
 
       - name: Write result in PR
