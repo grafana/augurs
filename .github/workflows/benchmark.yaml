@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt install -y valgrind
 
-      - uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -54,13 +54,14 @@ jobs:
           ls -l $GITHUB_WORKSPACE
 
       - name: Write result in PR
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
+            const { GITHUB_WORKSPACE } = process.env;
             const fs = require('fs');
 
-            const iai_baseline = fs.readFileSync("/home/runner/work/augurs/augurs/iai_baseline", {encoding:'utf8', flag:'r'});
-            const iai_feature = fs.readFileSync("/home/runner/work/augurs/augurs/iai_feature", {encoding:'utf8', flag:'r'});
+            const iai_baseline = fs.readFileSync(`${GITHUB_WORKSPACE}/iai_baseline`, {encoding:'utf8', flag:'r'});
+            const iai_feature = fs.readFileSync(`${GITHUB_WORKSPACE}/iai_feature`, {encoding:'utf8', flag:'r'});
 
             // form message
             const quote = "```";
