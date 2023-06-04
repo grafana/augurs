@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 augurs-core.workspace = true
 augurs-mstl = { workspace = true, optional = true }
-distrs = "0.2.0"
+distrs.workspace = true
 itertools = "0.10.5"
 lstsq = "0.5.0"
 nalgebra = "0.32.2"
