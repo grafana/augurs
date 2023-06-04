@@ -44,6 +44,8 @@ jobs:
 
       - name: Checkout PR
         uses: actions/checkout@v3
+        with:
+          clean: false
 
       - name: Run bench against current branch
         run: cargo bench --bench "*iai*" | tee iai_feature
