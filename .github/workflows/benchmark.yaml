@@ -1,7 +1,7 @@
 name: Benchmarks
 
 on:
-  pull_request:
+  pull_request_target:
 
 permissions:
   contents: write
@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Checkout previous branch
+      - name: Checkout previous commit
         run: git checkout HEAD~
 
       - name: Set up valgrind for iai
