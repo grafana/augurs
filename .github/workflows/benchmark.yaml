@@ -31,7 +31,7 @@ jobs:
           key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
 
       - name: Run bench against baseline bench
-        run:
+        run: |
           cargo bench --bench "*iai*" | tee iai_baseline
           readlink -f iai_baseline
 
