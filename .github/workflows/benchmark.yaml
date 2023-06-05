@@ -15,9 +15,9 @@ jobs:
   "iai-benchmark":
     runs-on: ubuntu-latest
     name: Iai benchmarks
-    # Only run when organisation members comment on a PR with `@ci benchmark`
+    # Only run when organisation members comment on a PR with `/ci benchmark`
     if: |
-      github.event.issue.pull_request && github.event.comment.body == '@ci benchmark' && github.event.comment.author_association == "MEMBER"
+      github.event.issue.pull_request && github.event.comment.body == '/ci benchmark' && github.event.comment.author_association == 'MEMBER'
     steps:
       - name: Set up valgrind for iai
         run: |
