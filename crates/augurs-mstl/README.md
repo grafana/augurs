@@ -25,8 +25,8 @@ The latter use case is the main entrypoint of this crate.
 use augurs_mstl::MSTLModel;
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
-// Input data must be a `Vec<f64>` for the MSTL algorithm.
-let y = vec![1.5, 3.0, 2.5, 4.2, 2.7, 1.9, 1.0, 1.2, 0.8];
+// Input data must be a `&[f64]` for the MSTL algorithm.
+let y = &[1.5, 3.0, 2.5, 4.2, 2.7, 1.9, 1.0, 1.2, 0.8];
 
 // Define the number of seasonal observations per period.
 // In this example we have hourly data and both daily and

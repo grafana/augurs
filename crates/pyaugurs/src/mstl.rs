@@ -1,6 +1,7 @@
 //! Bindings for Multiple Seasonal Trend using LOESS (MSTL).
 use std::borrow::Cow;
 
+use numpy::PyReadonlyArray1;
 use pyo3::{exceptions::PyException, prelude::*, types::PyType};
 
 use augurs_ets::AutoETS;
@@ -61,10 +62,10 @@ impl MSTL {
     }
 
     /// Fit the model to the given time series.
-    pub fn fit(&mut self, y: Vec<f64>) -> PyResult<()> {
+    pub fn fit(&mut self, y: PyReadonlyArray1<'_, f64>) -> PyResult<()> {
         self.inner = match std::mem::take(&mut self.inner) {
             Some(MSTLEnum::Unfit(inner)) => {
-                Some(MSTLEnum::Fit(inner.fit(y).map_err(|e| {
+                Some(MSTLEnum::Fit(inner.fit(y.as_slice()?).map_err(|e| {
                     PyException::new_err(format!("error fitting model: {e}"))
                 })?))
             }

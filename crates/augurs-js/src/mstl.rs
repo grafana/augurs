@@ -25,7 +25,7 @@ impl MSTL {
     pub fn fit(&mut self, y: Float64Array) -> Result<(), JsValue> {
         self.inner = match std::mem::take(&mut self.inner) {
             Some(MSTLEnum::Unfit(inner)) => Some(MSTLEnum::Fit(
-                inner.fit(y.to_vec()).map_err(|e| e.to_string())?,
+                inner.fit(&y.to_vec()).map_err(|e| e.to_string())?,
             )),
             x => x,
         };
