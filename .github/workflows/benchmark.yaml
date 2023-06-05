@@ -6,6 +6,7 @@ on:
       - created
 
 permissions:
+  contents: read
   pull-requests: write
 
 env:
