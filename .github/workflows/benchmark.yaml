@@ -1,7 +1,9 @@
 name: Benchmarks
 
 on:
-  pull_request:
+  issue_comment:
+    types:
+      - created
 
 permissions:
   contents: write
@@ -13,19 +15,18 @@ jobs:
   "iai-benchmark":
     runs-on: ubuntu-latest
     name: Iai benchmarks
+    # Only run when organisation members comment on a PR with `@ci benchmark`
+    if: |
+      github.event.issue.pull_request && github.event.comment.body == '@ci benchmark' && github.event.comment.author_association == "MEMBER"
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Checkout previous commit
-        run: git checkout HEAD~
-
       - name: Set up valgrind for iai
         run: |
           sudo apt install -y valgrind
+
+      - name: Checkout main
+        uses: actions/checkout@v3
+        with:
+          ref: main
 
       - uses: actions/cache@v3
         with:
@@ -49,11 +50,6 @@ jobs:
 
       - name: Run bench against current branch
         run: cargo bench --bench "*iai*" | tee iai_feature
-
-      - name: ls
-        run: |
-          echo $GITHUB_WORKSPACE
-          ls -l $GITHUB_WORKSPACE
 
       - name: Write result in PR
         uses: actions/github-script@v6
