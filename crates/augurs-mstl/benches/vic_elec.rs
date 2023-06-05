@@ -22,7 +22,7 @@ fn vic_elec(c: &mut Criterion) {
             |(y, periods, stl_params)| {
                 MSTLModel::new(periods, NaiveTrend::new())
                     .stl_params(stl_params)
-                    .fit(y)
+                    .fit(&y)
             },
             BatchSize::SmallInput,
         );

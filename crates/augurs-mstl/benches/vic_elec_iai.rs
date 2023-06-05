@@ -6,7 +6,7 @@ use augurs_testing::data::VIC_ELEC;
 fn vic_elec_fit(y: Vec<f64>, periods: Vec<usize>, params: stlrs::StlParams) {
     MSTLModel::new(periods, NaiveTrend::new())
         .stl_params(params)
-        .fit(y)
+        .fit(&y)
         .ok();
 }
 

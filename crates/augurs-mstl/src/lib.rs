@@ -108,9 +108,9 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
     /// Any errors returned by the STL algorithm or trend model
     /// are also propagated.
     #[instrument(skip_all)]
-    pub fn fit(mut self, y: Vec<f64>) -> Result<MSTLModel<T, Fit>> {
+    pub fn fit(mut self, y: &[f64]) -> Result<MSTLModel<T, Fit>> {
         // Run STL for each season length.
-        let decomposed = MSTL::new(&y, &mut self.periods)
+        let decomposed = MSTL::new(y, &mut self.periods)
             .stl_params(self.stl_params.clone())
             .fit()?;
         // Determine the differencing term for the trend component.
@@ -298,7 +298,7 @@ mod tests {
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
         let mstl = MSTLModel::new(periods, trend_model).stl_params(params);
-        let fit = mstl.fit(y.clone()).unwrap();
+        let fit = mstl.fit(&y).unwrap();
 
         let in_sample = fit.predict_in_sample(0.95).unwrap();
         let expected_in_sample = vec![
@@ -356,7 +356,7 @@ mod tests {
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
         let mstl = MSTLModel::new(periods, trend_model).stl_params(params);
-        let fit = mstl.fit(y.clone()).unwrap();
+        let fit = mstl.fit(&y).unwrap();
         let forecast = fit.predict(0, 0.95).unwrap();
         assert!(forecast.point.is_empty());
         let ForecastIntervals { lower, upper, .. } = forecast.intervals.unwrap();
