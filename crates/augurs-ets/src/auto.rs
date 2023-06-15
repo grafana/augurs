@@ -329,6 +329,16 @@ impl AutoETS {
         }
     }
 
+    /// Get the season length of the model.
+    pub fn season_length(&self) -> usize {
+        self.season_length
+    }
+
+    /// Get the search specification.
+    pub fn spec(&self) -> AutoSpec {
+        self.spec
+    }
+
     /// Create a new `AutoETS` model search without any seasonal components.
     ///
     /// Equivalent to `AutoETS::new(1, "ZZN")`.

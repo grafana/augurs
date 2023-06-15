@@ -37,7 +37,6 @@ impl From<Forecast> for augurs_core::Forecast {
     }
 }
 
-// TODO: __repr__, etc.
 #[pymethods]
 impl Forecast {
     #[new]
@@ -64,6 +63,17 @@ impl Forecast {
                     .transpose()?,
             },
         })
+    }
+
+    fn __repr__(&self) -> String {
+        let intervals = self.inner.intervals.as_ref();
+        format!(
+            "Forecast(point={:?}, level={:?}, lower={:?}, upper={:?})",
+            self.inner.point,
+            intervals.map(|x| x.level),
+            intervals.map(|x| &x.lower),
+            intervals.map(|x| &x.upper)
+        )
     }
 
     /// Get the point forecast.
