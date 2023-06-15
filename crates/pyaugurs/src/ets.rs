@@ -26,6 +26,14 @@ impl AutoETS {
         Ok(Self { inner })
     }
 
+    fn __repr__(&self) -> String {
+        format!(
+            "AutoETS(spec=\"{}\", season_length={})",
+            self.inner.spec(),
+            self.inner.season_length()
+        )
+    }
+
     /// Search for the best model, fitting it to the data.
     ///
     /// The model will be stored on the inner `AutoETS` instance, after which
