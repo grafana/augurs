@@ -28,11 +28,13 @@ pub struct FitState {
 
 impl FitState {
     /// The likelihood of the model, given the data.
+    #[inline]
     pub fn likelihood(&self) -> f64 {
         self.lik
     }
 
     /// The mean squared error (MSE) of the model.
+    #[inline]
     pub fn mse(&self) -> f64 {
         self.amse[0]
     }
@@ -40,16 +42,19 @@ impl FitState {
     /// The average mean squared error (AMSE) of the model.
     ///
     /// This is the average of the MSE over the number of forecasting horizons (`nmse`).
+    #[inline]
     pub fn amse(&self) -> f64 {
         self.amse.iter().sum::<f64>() / self.amse.len() as f64
     }
 
+    #[inline]
     pub fn sigma_squared(&self) -> f64 {
         self.residuals.iter().map(|e| e.powi(2)).sum::<f64>()
             / (self.residuals.len() as f64 - self.n_params as f64 - 2.0)
     }
 
     /// The mean absolute error (MAE) of the model.
+    #[inline]
     pub fn mae(&self) -> f64 {
         self.residuals.iter().map(|e| e.abs()).sum::<f64>() / self.residuals.len() as f64
     }
@@ -71,21 +76,25 @@ impl FitState {
     }
 
     /// The parameters used when fitting the model.
+    #[inline]
     pub fn params(&self) -> &Params {
         &self.params
     }
 
     /// The number of parameters used when fitting the model.
+    #[inline]
     pub fn n_params(&self) -> usize {
         self.n_params
     }
 
     /// The residuals of the model against the training data.
+    #[inline]
     pub fn residuals(&self) -> &[f64] {
         &self.residuals
     }
 
     /// The fitted values of the model.
+    #[inline]
     pub fn fitted(&self) -> &[f64] {
         &self.fitted
     }
@@ -146,6 +155,15 @@ impl Ets {
     // function is only used internally and it's easier to pass everything
     // in as arguments than to try to make it more readable by passing in
     // a struct.
+    //
+    // Steps:
+    //
+    // 1. Extract values of l, b, s from x.
+    // 2. Iterate over the data.
+    // 3. Forecast the next `nmse` values using current l, b, s.
+    // 4. Update the `i`th residual using the forecast and the `i`th data point.
+    // 5. Calculate the AMSE using `y` and the forecasts.
+    // 6. Calculate the likelihood using the residuals.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn etscalc_in(
         &self,
@@ -174,13 +192,12 @@ impl Ets {
         let mut lik2 = 0.0;
 
         let n = y.len();
-        for (i, y_i) in y.iter().copied().enumerate() {
+        for (i, (y_i, e_i)) in y.iter().copied().zip(residuals).enumerate() {
             let old_l = l;
             let old_b = b;
 
-            self.forecast(params.phi, old_l, old_b, forecasts, *nmse);
-            // SAFETY: we know that `i` is <= `n`, `y` has length `n`, and `forecasts` has length `nmse`.
-            unsafe { self.update_error(y_i, i, forecasts, residuals) };
+            let f_0 = self.forecast(params.phi, old_l, old_b, forecasts, *nmse);
+            *e_i = self.compute_error(y_i, f_0);
             self.update_amse(y, i, forecasts, amse, denom);
 
             (l, b) = self.updated_state(&params, old_l, old_b, y_i);
@@ -192,8 +209,8 @@ impl Ets {
             }
 
             // Update likelihood.
-            lik += unsafe { residuals.get_unchecked(i).powi(2) };
-            let val = unsafe { forecasts.get_unchecked(0).abs() };
+            lik += e_i.powi(2);
+            let val = f_0.abs();
             if val > 0.0 {
                 lik2 += val.ln();
             } else {
@@ -356,7 +373,14 @@ impl Ets {
 
     /// Calculate the forecasts for the given values of `l` and `b`.
     #[inline]
-    pub(crate) fn forecast(&self, phi: f64, l: f64, b: Option<f64>, f: &mut [f64], horizon: usize) {
+    pub(crate) fn forecast(
+        &self,
+        phi: f64,
+        l: f64,
+        b: Option<f64>,
+        f: &mut [f64],
+        horizon: usize,
+    ) -> f64 {
         let mut phi_star = phi;
         for (i, f_i) in f.iter_mut().take(horizon).enumerate() {
             if self.model_type.trend == TrendComponent::None {
@@ -384,25 +408,18 @@ impl Ets {
                 }
             }
         }
+        unsafe { *f.get_unchecked(0) }
     }
 
-    /// Update the `i`th error term in `e` using the `i`th value in `y` and the
-    /// first forecast value in `f`.
-    ///
-    /// # Safety
-    ///
-    /// `i` must be a valid index into `y` and `e`.
-    /// `f` must have length at least 1.
+    /// Compute the `i`th error term by comparing the `i`th observation to the first forecast
+    /// at this point.
     #[inline]
-    unsafe fn update_error(&self, y_i: f64, i: usize, f: &[f64], e: &mut [f64]) {
-        let f_0 = unsafe { *f.get_unchecked(0) };
-        // SAFETY: we've always allocated `e` to be the same length as `y`.
-        let e_i = unsafe { e.get_unchecked_mut(i) };
+    fn compute_error(&self, y_i: f64, f_0: f64) -> f64 {
         match self.model_type.error {
-            ErrorComponent::Additive => *e_i = y_i - f_0,
+            ErrorComponent::Additive => y_i - f_0,
             ErrorComponent::Multiplicative => {
                 let f_0_mod = if f_0.abs() < 1e-10 { f_0 + 1e-10 } else { f_0 };
-                *e_i = (y_i - f_0) / f_0_mod;
+                (y_i - f_0) / f_0_mod
             }
         }
     }
