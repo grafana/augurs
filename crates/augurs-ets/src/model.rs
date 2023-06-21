@@ -1037,6 +1037,10 @@ impl<'a> ETSProblem<'a> {
             &mut self.forecasts,
             &mut self.amse,
             &mut self.denom,
+            matches!(
+                opt_crit,
+                OptimizationCriteria::MSE | OptimizationCriteria::AMSE
+            ),
         );
         match opt_crit {
             OptimizationCriteria::Likelihood => fit.likelihood(),

@@ -174,6 +174,7 @@ impl Ets {
         forecasts: &mut [f64],
         amse: &mut [f64],
         denom: &mut [f64],
+        update_amse: bool,
     ) -> FitState {
         let Ets {
             model_type: ModelType { error, trend, .. },
@@ -198,7 +199,10 @@ impl Ets {
 
             let f_0 = self.forecast(params.phi, old_l, old_b, forecasts, *nmse);
             *e_i = self.compute_error(y_i, f_0);
-            self.update_amse(y, i, forecasts, amse, denom);
+
+            if update_amse {
+                self.update_amse(y, i, forecasts, amse, denom);
+            }
 
             (l, b) = self.updated_state(&params, old_l, old_b, y_i);
 
@@ -313,6 +317,7 @@ impl Ets {
             &mut forecasts,
             &mut amse,
             &mut denom,
+            true,
         );
         if !fit.lik.is_nan() && (fit.lik + 99999.0).abs() < 1e-7 {
             fit.lik = f64::NAN;
@@ -559,6 +564,7 @@ mod tests {
             &mut forecasts,
             &mut amse,
             &mut denom,
+            true,
         );
         assert_approx_eq::assert_approx_eq!(fit.lik, 2070.2270304137766);
         assert_approx_eq::assert_approx_eq!(amse[0], 12170.41518101);
