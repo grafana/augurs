@@ -7,10 +7,10 @@ edition = "2021"
 augurs-core.workspace = true
 augurs-mstl = { workspace = true, optional = true }
 distrs.workspace = true
-itertools = "0.11.0"
+itertools.workspace = true
 lstsq = "0.5.0"
 nalgebra = "0.32.2"
-rand = "0.8.0"
+rand = "0.8.5"
 rand_distr = "0.4.3"
 roots = "0.0.8"
 serde = { workspace = true, optional = true, features = ["derive"] }
