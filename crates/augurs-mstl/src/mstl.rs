@@ -107,8 +107,12 @@ impl<'a> MSTL<'a> {
 
     /// Return the default seasonal windows.
     ///
-    /// The seasonal window must be odd, and the MSTL paper recommends
-    // TODO: make this configurable.
+    /// This uses the formula from appendix A of the [MSTL paper].
+    ///
+    /// [MSTL paper]: https://arxiv.org/abs/2107.13462
+    // TODO: make this configurable - the paper notes that "a smaller value of
+    // s.window is set if the seasonal pattern evolves quickly, whereas a higher
+    // value is used if the seasonal pattern is constant over time."
     fn seasonal_windows(&self) -> Vec<usize> {
         (0..self.periods.len()).map(|i| 7 + 4 * (i + 1)).collect()
     }

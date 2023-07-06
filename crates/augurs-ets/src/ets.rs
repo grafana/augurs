@@ -298,7 +298,6 @@ impl Ets {
         x.resize(n_states * (y.len() + 1), 0.0);
 
         // Make final adjustments of params.
-        // TODO: include damped somewhere in `self`.
         if !self.damped {
             params.phi = 1.0;
         }
