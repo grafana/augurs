@@ -1037,6 +1037,8 @@ impl<'a> ETSProblem<'a> {
             &mut self.forecasts,
             &mut self.amse,
             &mut self.denom,
+            // We only need to update the AMSE if we're optimizing using
+            // AMSE-based criteria.
             matches!(
                 opt_crit,
                 OptimizationCriteria::MSE | OptimizationCriteria::AMSE

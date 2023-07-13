@@ -342,6 +342,10 @@ impl Ets {
     /// Simulate values from the ETS model.
     ///
     /// This is currently untested as the codepath hasn't been hit yet...
+    ///
+    /// # Panics
+    ///
+    /// Panics if `yhat` is not the same length as `e` or if `f` is empty.
     pub(crate) fn etssimulate(
         &self,
         x: &[f64],
@@ -350,6 +354,8 @@ impl Ets {
         f: &mut [f64],
         yhat: &mut [f64],
     ) {
+        debug_assert!(yhat.len() == e.len());
+        debug_assert!(!f.is_empty());
         let ModelType { error, trend, .. } = &self.model_type;
 
         let mut l = x[0];
@@ -376,6 +382,10 @@ impl Ets {
     }
 
     /// Calculate the forecasts for the given values of `l` and `b`.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `f.len() < horizon`.
     #[inline]
     pub(crate) fn forecast(
         &self,
@@ -385,6 +395,7 @@ impl Ets {
         f: &mut [f64],
         horizon: usize,
     ) -> f64 {
+        debug_assert!(f.len() >= horizon);
         let mut phi_star = phi;
         for (i, f_i) in f.iter_mut().take(horizon).enumerate() {
             if self.model_type.trend == TrendComponent::None {
@@ -412,7 +423,7 @@ impl Ets {
                 }
             }
         }
-        unsafe { *f.get_unchecked(0) }
+        f[0]
     }
 
     /// Compute the `i`th error term by comparing the `i`th observation to the first forecast
