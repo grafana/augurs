@@ -25,6 +25,15 @@ APIs are subject to change, and functionality may not be fully implemented.
 | [`augurs-js`][]      | WASM bindings to augurs                                              | alpha - untested, should work though                                 |
 | [`pyaugurs`][]       | Python bindings to augurs                                            | alpha - untested, should work though                                 |
 
+## Releasing
+
+Releases are currently done using `cargo-release`:
+
+```bash
+# to release an alpha version:
+$ cargo release --no-publish --dev-version alpha -x --sign --workspace
+```
+
 ## License
 
 Dual-licensed to be compatible with the Rust project.
