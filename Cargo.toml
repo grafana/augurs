@@ -6,10 +6,10 @@ resolver = "2"
 
 [workspace.dependencies]
 
-augurs-core = { path = "crates/augurs-core" }
-augurs-ets = { path = "crates/augurs-ets" }
-augurs-mstl = { path = "crates/augurs-mstl" }
-augurs-testing = { path = "crates/augurs-testing" }
+augurs-core = { version = "0.1.0-alpha.0", path = "crates/augurs-core" }
+augurs-ets = { version = "0.1.0-alpha.0", path = "crates/augurs-ets" }
+augurs-mstl = { version = "0.1.0-alpha.0", path = "crates/augurs-mstl" }
+augurs-testing = { version = "0.1.0-alpha.0", path = "crates/augurs-testing" }
 
 distrs = "0.2.1"
 itertools = "0.11.0"
