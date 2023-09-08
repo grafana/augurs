@@ -1,8 +1,11 @@
 [package]
 name = "augurs-js"
-version = "0.1.0-alpha.1"
-license = "MIT/Apache-2.0"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
