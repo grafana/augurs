@@ -4,12 +4,27 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+license = "MIT OR Apache-2.0"
+authors = [
+  "Ben Sully <ben.sully@grafana.com",
+]
+documentation = "https://docs.rs/crate/augurs"
+repository = "https://github.com/grafana/augurs"
+version = "0.1.0-alpha.0"
+edition = "2021"
+keywords = [
+  "analysis",
+  "forecasting",
+  "time-series",
+]
+
 [workspace.dependencies]
 
-augurs-core = { version = "0.1.0-alpha.0", path = "crates/augurs-core" }
-augurs-ets = { version = "0.1.0-alpha.0", path = "crates/augurs-ets" }
-augurs-mstl = { version = "0.1.0-alpha.0", path = "crates/augurs-mstl" }
-augurs-testing = { version = "0.1.0-alpha.0", path = "crates/augurs-testing" }
+augurs-core = { path = "crates/augurs-core" }
+augurs-ets = { path = "crates/augurs-ets" }
+augurs-mstl = { path = "crates/augurs-mstl" }
+augurs-testing = { path = "crates/augurs-testing" }
 
 distrs = "0.2.1"
 itertools = "0.11.0"
