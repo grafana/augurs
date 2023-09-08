@@ -6,6 +6,7 @@ documentation.workspace = true
 license.workspace = true
 edition.workspace = true
 keywords.workspace = true
+description = "Multiple Seasonal-Trend decomposition with LOESS (MSTL) using the augurs time series library."
 
 [dependencies]
 augurs-core.workspace = true

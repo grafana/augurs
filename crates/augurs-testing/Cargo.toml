@@ -6,6 +6,7 @@ documentation.workspace = true
 license.workspace = true
 edition.workspace = true
 keywords.workspace = true
+description = "Test framework and data for the augurs library."
 
 [dependencies]
 once_cell = "1.18.0"
