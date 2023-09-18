@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Set up valgrind for iai
         run: |
-          sudo apt install -y valgrind
+          sudo apt update && sudo apt install -y valgrind
 
       - name: Checkout main
         uses: actions/checkout@v4
