@@ -110,7 +110,7 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
     #[instrument(skip_all)]
     pub fn fit(mut self, y: &[f64]) -> Result<MSTLModel<T, Fit>> {
         // Run STL for each season length.
-        let decomposed = MSTL::new(y, &mut self.periods)
+        let decomposed = MSTL::new(y.iter().map(|&x| x as f32), &mut self.periods)
             .stl_params(self.stl_params.clone())
             .fit()?;
         // Determine the differencing term for the trend component.
@@ -119,7 +119,7 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
         let deseasonalised = trend
             .iter()
             .zip(residual)
-            .map(|(t, r)| t + r)
+            .map(|(t, r)| (t + r) as f64)
             .collect::<Vec<_>>();
         self.trend_model
             .fit(&deseasonalised)
@@ -202,7 +202,7 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
             .for_each(|component| {
                 let period_contributions = component.iter().zip(trend.point.iter_mut());
                 match &mut trend.intervals {
-                    None => period_contributions.for_each(|(c, p)| *p += c),
+                    None => period_contributions.for_each(|(c, p)| *p += *c as f64),
                     Some(ForecastIntervals {
                         ref mut lower,
                         ref mut upper,
@@ -212,9 +212,9 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
                             .zip(lower.iter_mut())
                             .zip(upper.iter_mut())
                             .for_each(|(((c, p), l), u)| {
-                                *p += c;
-                                *l += c;
-                                *u += c;
+                                *p += *c as f64;
+                                *l += *c as f64;
+                                *u += *c as f64;
                             });
                     }
                 }
@@ -238,7 +238,7 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
                     .cycle()
                     .zip(trend.point.iter_mut());
                 match &mut trend.intervals {
-                    None => period_contributions.for_each(|(c, p)| *p += c),
+                    None => period_contributions.for_each(|(c, p)| *p += c as f64),
                     Some(ForecastIntervals {
                         ref mut lower,
                         ref mut upper,
@@ -248,9 +248,9 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
                             .zip(lower.iter_mut())
                             .zip(upper.iter_mut())
                             .for_each(|(((c, p), l), u)| {
-                                *p += c;
-                                *l += c;
-                                *u += c;
+                                *p += c as f64;
+                                *l += c as f64;
+                                *u += c as f64;
                             });
                     }
                 }
@@ -277,7 +277,7 @@ mod tests {
             if actual.is_nan() {
                 assert!(expected.is_nan());
             } else {
-                assert_approx_eq!(actual, expected, 1e-2);
+                assert_approx_eq!(actual, expected, 1e-1);
             }
         }
     }

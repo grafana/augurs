@@ -12,7 +12,8 @@ description = "Multiple Seasonal-Trend decomposition with LOESS (MSTL) using the
 augurs-core.workspace = true
 distrs.workspace = true
 serde = { workspace = true, features = ["derive"], optional = true }
-stlrs = { git = "https://github.com/sd2k/stl-rust", branch = "python-lib", version = "0.2.1" }
+stlrs = { git = "https://github.com/ankane/stl-rust", version = "0.2.2" }
+# stlrs = "0.2.2"
 thiserror.workspace = true
 tracing.workspace = true
 
