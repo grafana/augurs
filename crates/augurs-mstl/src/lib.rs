@@ -8,17 +8,17 @@
 
 use std::marker::PhantomData;
 
+use stlrs::MstlResult;
 use tracing::instrument;
 
 use augurs_core::{Forecast, ForecastIntervals};
 
 // mod approx;
-pub mod mstl;
+// pub mod mstl;
 // mod stationarity;
 mod trend;
 // mod utils;
 
-use crate::mstl::{MSTLDecomposition, MSTL};
 pub use crate::trend::{NaiveTrend, TrendModel};
 
 /// A marker struct indicating that a model is fit.
@@ -54,11 +54,11 @@ type Result<T> = std::result::Result<T, Error>;
 pub struct MSTLModel<T, F> {
     /// Periodicity of the seasonal components.
     periods: Vec<usize>,
-    stl_params: stlrs::StlParams,
+    mstl_params: stlrs::MstlParams,
 
     state: PhantomData<F>,
 
-    decomposed: Option<MSTLDecomposition>,
+    fit: Option<MstlResult>,
     trend_model: T,
 }
 
@@ -86,15 +86,18 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
         Self {
             periods,
             state: PhantomData,
-            stl_params: stlrs::params(),
-            decomposed: None,
+            mstl_params: stlrs::MstlParams::new(),
+            fit: None,
             trend_model,
         }
     }
 
-    /// Set the parameters for the STL algorithm.
-    pub fn stl_params(mut self, params: stlrs::StlParams) -> Self {
-        self.stl_params = params;
+    /// Set the parameters for the MSTL algorithm.
+    ///
+    /// This can be used to control the parameters for the inner STL algorithm
+    /// by using [`MstlParams::stl_params`].
+    pub fn mstl_params(mut self, params: stlrs::MstlParams) -> Self {
+        self.mstl_params = params;
         self
     }
 
@@ -109,13 +112,11 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
     /// are also propagated.
     #[instrument(skip_all)]
     pub fn fit(mut self, y: &[f64]) -> Result<MSTLModel<T, Fit>> {
-        // Run STL for each season length.
-        let decomposed = MSTL::new(y.iter().map(|&x| x as f32), &mut self.periods)
-            .stl_params(self.stl_params.clone())
-            .fit()?;
+        let y = y.iter().copied().map(|y| y as f32).collect::<Vec<_>>();
+        let fit = self.mstl_params.fit(&y, &self.periods)?;
         // Determine the differencing term for the trend component.
-        let trend = decomposed.trend();
-        let residual = decomposed.residuals();
+        let trend = fit.trend();
+        let residual = fit.remainder();
         let deseasonalised = trend
             .iter()
             .zip(residual)
@@ -130,9 +131,9 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
         );
         Ok(MSTLModel {
             periods: self.periods,
-            stl_params: self.stl_params,
+            mstl_params: self.mstl_params,
             state: PhantomData,
-            decomposed: Some(decomposed),
+            fit: Some(fit),
             trend_model: self.trend_model,
         })
     }
@@ -196,35 +197,32 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
     }
 
     fn add_seasonal_in_sample(&self, trend: &mut Forecast) {
-        self.decomposed()
-            .seasonals()
-            .values()
-            .for_each(|component| {
-                let period_contributions = component.iter().zip(trend.point.iter_mut());
-                match &mut trend.intervals {
-                    None => period_contributions.for_each(|(c, p)| *p += *c as f64),
-                    Some(ForecastIntervals {
-                        ref mut lower,
-                        ref mut upper,
-                        ..
-                    }) => {
-                        period_contributions
-                            .zip(lower.iter_mut())
-                            .zip(upper.iter_mut())
-                            .for_each(|(((c, p), l), u)| {
-                                *p += *c as f64;
-                                *l += *c as f64;
-                                *u += *c as f64;
-                            });
-                    }
+        self.fit().seasonal().iter().for_each(|component| {
+            let period_contributions = component.iter().zip(trend.point.iter_mut());
+            match &mut trend.intervals {
+                None => period_contributions.for_each(|(c, p)| *p += *c as f64),
+                Some(ForecastIntervals {
+                    ref mut lower,
+                    ref mut upper,
+                    ..
+                }) => {
+                    period_contributions
+                        .zip(lower.iter_mut())
+                        .zip(upper.iter_mut())
+                        .for_each(|(((c, p), l), u)| {
+                            *p += *c as f64;
+                            *l += *c as f64;
+                            *u += *c as f64;
+                        });
                 }
-            });
+            }
+        });
     }
 
     fn add_seasonal_out_of_sample(&self, trend: &mut Forecast) {
-        self.decomposed()
-            .seasonals()
+        self.periods
             .iter()
+            .zip(self.fit().seasonal())
             .for_each(|(period, component)| {
                 // For each seasonal period we're going to create a cycle iterator
                 // which will repeat the seasonal component every `period` steps.
@@ -257,9 +255,9 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
             });
     }
 
-    /// Return the MSTL decomposition of the training data.
-    pub fn decomposed(&self) -> &MSTLDecomposition {
-        self.decomposed.as_ref().unwrap()
+    /// Return the MSTL fit of the training data.
+    pub fn fit(&self) -> &MstlResult {
+        self.fit.as_ref().unwrap()
     }
 }
 
@@ -286,8 +284,8 @@ mod tests {
     fn results_match_r() {
         let y = VIC_ELEC.clone();
 
-        let mut params = stlrs::params();
-        params
+        let mut stl_params = stlrs::params();
+        stl_params
             .seasonal_degree(0)
             .seasonal_jump(1)
             .trend_degree(1)
@@ -295,9 +293,11 @@ mod tests {
             .low_pass_degree(1)
             .inner_loops(2)
             .outer_loops(0);
+        let mut mstl_params = stlrs::MstlParams::new();
+        mstl_params.stl_params(stl_params);
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
-        let mstl = MSTLModel::new(periods, trend_model).stl_params(params);
+        let mstl = MSTLModel::new(periods, trend_model).mstl_params(mstl_params);
         let fit = mstl.fit(&y).unwrap();
 
         let in_sample = fit.predict_in_sample(0.95).unwrap();
@@ -344,8 +344,8 @@ mod tests {
     fn predict_zero_horizon() {
         let y = VIC_ELEC.clone();
 
-        let mut params = stlrs::params();
-        params
+        let mut stl_params = stlrs::params();
+        stl_params
             .seasonal_degree(0)
             .seasonal_jump(1)
             .trend_degree(1)
@@ -353,9 +353,11 @@ mod tests {
             .low_pass_degree(1)
             .inner_loops(2)
             .outer_loops(0);
+        let mut mstl_params = stlrs::MstlParams::new();
+        mstl_params.stl_params(stl_params);
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
-        let mstl = MSTLModel::new(periods, trend_model).stl_params(params);
+        let mstl = MSTLModel::new(periods, trend_model).mstl_params(mstl_params);
         let fit = mstl.fit(&y).unwrap();
         let forecast = fit.predict(0, 0.95).unwrap();
         assert!(forecast.point.is_empty());
