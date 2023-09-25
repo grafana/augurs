@@ -16,12 +16,14 @@ fn vic_elec(c: &mut Criterion) {
         .low_pass_degree(1)
         .inner_loops(2)
         .outer_loops(0);
+    let mut mstl_params = stlrs::MstlParams::new();
+    mstl_params.stl_params(stl_params);
     c.bench_function("vic_elec", |b| {
         b.iter_batched(
-            || (y.clone(), vec![24, 24 * 7], stl_params.clone()),
+            || (y.clone(), vec![24, 24 * 7], mstl_params.clone()),
             |(y, periods, stl_params)| {
                 MSTLModel::new(periods, NaiveTrend::new())
-                    .stl_params(stl_params)
+                    .mstl_params(stl_params)
                     .fit(&y)
             },
             BatchSize::SmallInput,
