@@ -29,21 +29,16 @@ APIs are subject to change, and functionality may not be fully implemented.
 
 ## Releasing
 
-Releases are currently done using `cargo-release`:
-
-```bash
-# to release an alpha version:
-$ cargo release --no-publish --dev-version alpha -x --sign --workspace
-```
+Releases are made using `release-plz`: a PR should be automatically created for each release, and merging will perform the release and publish automatically.
 
 ## License
 
 Dual-licensed to be compatible with the Rust project.
 Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/LICENSE-2.0>` or the MIT license `<http://opensource.org/licenses/MIT>`, at your option.
 
-[`augurs-core`]: crates/augurs-core
-[`augurs-ets`]: crates/augurs-ets
-[`augurs-mstl`]: crates/augurs-mstl
-[`augurs-js`]: crates/augurs-js
-[`augurs-testing`]: crates/augurs-testing
-[`pyaugurs`]: crates/pyaugurs
+[`augurs-core`]: https://crates.io/crates/augurs-core
+[`augurs-ets`]: https://crates.io/crates/augurs-ets
+[`augurs-mstl`]: https://crates.io/crates/augurs-mstl
+[`augurs-js`]: https://crates.io/crates/augurs-js
+[`augurs-testing`]: https://crates.io/crates/augurs-testing
+[`pyaugurs`]: https://crates.io/crates/pyaugurs
