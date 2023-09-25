@@ -11,7 +11,7 @@ authors = [
 ]
 documentation = "https://docs.rs/crate/augurs"
 repository = "https://github.com/grafana/augurs"
-version = "0.1.0-alpha.0"
+version = "0.1.0"
 edition = "2021"
 keywords = [
   "analysis",
