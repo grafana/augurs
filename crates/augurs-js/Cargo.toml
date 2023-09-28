@@ -3,6 +3,7 @@ name = "augurs-js"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
+repository.workspace = true
 license.workspace = true
 edition.workspace = true
 keywords.workspace = true
