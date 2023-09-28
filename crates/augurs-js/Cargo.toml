@@ -1,5 +1,5 @@
 [package]
-name = "augurs-js"
+name = "augurs"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -8,6 +8,7 @@ license.workspace = true
 edition.workspace = true
 keywords.workspace = true
 description = "JavaScript bindings for the augurs time series library."
+publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
