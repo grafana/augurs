@@ -21,5 +21,6 @@ pub mod mstl;
 pub fn custom_init() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
+    #[cfg(feature = "tracing-wasm")]
     tracing_wasm::try_set_as_global_default().ok();
 }
