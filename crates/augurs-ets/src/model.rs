@@ -1603,7 +1603,7 @@ mod test {
         .damped(true);
         let model = unfit.fit(&AP[AP.len() - 20..]).unwrap();
         let forecasts = model.predict(10, 0.95);
-        let expected_p = vec![
+        let expected_p = [
             432.26645246,
             432.53827337,
             432.75575609,
@@ -1620,7 +1620,7 @@ mod test {
             assert_approx_eq!(actual, expected);
         }
 
-        let expected_l = vec![
+        let expected_l = [
             301.72457857,
             247.92511851,
             206.64496117,
@@ -1637,7 +1637,7 @@ mod test {
         for (actual, expected) in lower.iter().zip(expected_l.iter()) {
             assert_approx_eq!(actual, expected);
         }
-        let expected_u = vec![
+        let expected_u = [
             562.80832636,
             617.15142823,
             658.86655102,
@@ -1664,7 +1664,7 @@ mod test {
         });
         let model = unfit.fit(&AP).unwrap();
         let forecasts = model.predict(10, 0.95);
-        let expected_p = vec![
+        let expected_p = [
             436.15668239,
             440.31714837,
             444.47761434,
@@ -1681,7 +1681,7 @@ mod test {
             assert_approx_eq!(actual, expected);
         }
 
-        let expected_l = vec![
+        let expected_l = [
             345.14145884,
             310.62430297,
             284.42938026,
@@ -1698,7 +1698,7 @@ mod test {
         for (actual, expected) in lower.iter().zip(expected_l.iter()) {
             assert_approx_eq!(actual, expected);
         }
-        let expected_u = vec![
+        let expected_u = [
             527.17190595,
             570.00999376,
             604.52584842,
@@ -1717,7 +1717,7 @@ mod test {
 
         // For in-sample data, just check that the first 10 values match.
         let in_sample = model.predict_in_sample(0.95);
-        let expected_p = vec![
+        let expected_p = [
             110.74681112,
             116.18804955,
             122.18817486,
@@ -1735,7 +1735,7 @@ mod test {
         }
 
         let ForecastIntervals { lower, upper, .. } = in_sample.intervals.unwrap();
-        let expected_l = vec![
+        let expected_l = [
             43.76306764,
             49.20430607,
             55.20443139,
@@ -1751,7 +1751,7 @@ mod test {
         for (actual, expected) in lower.iter().zip(expected_l.iter()) {
             assert_approx_eq!(actual, expected);
         }
-        let expected_u = vec![
+        let expected_u = [
             177.73055459,
             183.17179302,
             189.17191834,
