@@ -5,6 +5,8 @@ use wasm_bindgen::prelude::*;
 use augurs_ets::AutoETS;
 use augurs_mstl::{Fit, MSTLModel, TrendModel, Unfit};
 
+use crate::Forecast;
+
 #[derive(Debug)]
 enum MSTLEnum<T> {
     Unfit(MSTLModel<T, Unfit>),
@@ -37,12 +39,12 @@ impl MSTL {
     ///
     /// If provided, `level` must be a float between 0 and 1.
     #[wasm_bindgen]
-    pub fn predict(&self, horizon: usize, level: Option<f64>) -> Result<JsValue, JsValue> {
+    pub fn predict(&self, horizon: usize, level: Option<f64>) -> Result<Forecast, JsValue> {
         match &self.inner {
-            Some(MSTLEnum::Fit(inner)) => {
-                let preds = inner.predict(horizon, level).map_err(|e| e.to_string())?;
-                Ok(serde_wasm_bindgen::to_value(&preds)?)
-            }
+            Some(MSTLEnum::Fit(inner)) => Ok(inner
+                .predict(horizon, level)
+                .map(Into::into)
+                .map_err(|e| e.to_string())?),
             _ => Err(JsValue::from_str("model is not fit")),
         }
     }
@@ -52,12 +54,12 @@ impl MSTL {
     ///
     /// If provided, `level` must be a float between 0 and 1.
     #[wasm_bindgen]
-    pub fn predict_in_sample(&self, level: Option<f64>) -> Result<JsValue, JsValue> {
+    pub fn predict_in_sample(&self, level: Option<f64>) -> Result<Forecast, JsValue> {
         match &self.inner {
-            Some(MSTLEnum::Fit(inner)) => {
-                let preds = inner.predict_in_sample(level).map_err(|e| e.to_string())?;
-                Ok(serde_wasm_bindgen::to_value(&preds)?)
-            }
+            Some(MSTLEnum::Fit(inner)) => Ok(inner
+                .predict_in_sample(level)
+                .map(Into::into)
+                .map_err(|e| e.to_string())?),
             _ => Err(JsValue::from_str("model is not fit")),
         }
     }

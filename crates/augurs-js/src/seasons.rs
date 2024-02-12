@@ -1,12 +1,14 @@
 //! Javascript bindings for augurs seasonality detection.
 
 use serde::Deserialize;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_seasons::{Detector, PeriodogramDetector};
 
 /// Options for detecting seasonal periods.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
 pub struct SeasonalityOptions {
     /// The minimum period to consider when detecting seasonal periods.
     ///
@@ -44,11 +46,6 @@ impl From<SeasonalityOptions> for PeriodogramDetector {
 
 /// Detect the seasonal periods in a time series.
 #[wasm_bindgen]
-pub fn seasonalities(y: &[f64], options: JsValue) -> Vec<u32> {
-    let options: SeasonalityOptions =
-        serde_wasm_bindgen::from_value::<Option<SeasonalityOptions>>(options)
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-    PeriodogramDetector::from(options).detect(y)
+pub fn seasonalities(y: &[f64], options: Option<SeasonalityOptions>) -> Vec<u32> {
+    PeriodogramDetector::from(options.unwrap_or_default()).detect(y)
 }

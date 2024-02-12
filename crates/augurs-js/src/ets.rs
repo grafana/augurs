@@ -3,6 +3,8 @@
 use js_sys::Float64Array;
 use wasm_bindgen::prelude::*;
 
+use crate::Forecast;
+
 /// Automatic ETS model selection.
 #[derive(Debug)]
 #[wasm_bindgen]
@@ -48,12 +50,12 @@ impl AutoETS {
     /// # Errors
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
-    pub fn predict(&self, horizon: usize, level: Option<f64>) -> Result<JsValue, JsValue> {
-        let forecasts = self
+    #[wasm_bindgen]
+    pub fn predict(&self, horizon: usize, level: Option<f64>) -> Result<Forecast, JsValue> {
+        Ok(self
             .inner
             .predict(horizon, level)
-            .map_err(|e| e.to_string())?;
-        Ok(serde_wasm_bindgen::to_value(&forecasts)
-            .map_err(|e| format!("serializing forecasts: {e}"))?)
+            .map(Into::into)
+            .map_err(|e| e.to_string())?)
     }
 }
