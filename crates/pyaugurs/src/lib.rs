@@ -16,6 +16,7 @@ use pyo3::prelude::*;
 
 pub mod ets;
 pub mod mstl;
+pub mod seasons;
 pub mod trend;
 
 /// Forecasts produced by augurs models.
@@ -110,5 +111,6 @@ fn augurs(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<mstl::MSTL>()?;
     m.add_class::<trend::PyTrendModel>()?;
     m.add_class::<Forecast>()?;
+    m.add_function(wrap_pyfunction!(seasons::seasonalities, m)?)?;
     Ok(())
 }

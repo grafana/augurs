@@ -1,0 +1,26 @@
+[package]
+name = "augurs-seasons"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "Seasonality detection using periodograms"
+
+[dependencies]
+itertools.workspace = true
+num-traits = "0.2.18"
+thiserror.workspace = true
+tracing.workspace = true
+welch-sde = "0.1.0"
+
+[dev-dependencies]
+augurs-testing.workspace = true
+criterion.workspace = true
+pprof.workspace = true
+
+[[bench]]
+name = "periodogram"
+harness = false
