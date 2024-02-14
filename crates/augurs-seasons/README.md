@@ -20,7 +20,7 @@ let y = &[
     0.09, 0.29, 0.81, 0.49,
     0.11, 0.28, 0.78, 0.53,
 ];
-let periods: Vec<_> = PeriodogramDetector::builder().build(y).detect().collect();
+let periods = PeriodogramDetector::builder().build(y).detect();
 assert_eq!(periods[0], 4);
 # }
 ```

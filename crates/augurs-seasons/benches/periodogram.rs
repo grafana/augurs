@@ -7,12 +7,7 @@ use augurs_testing::data::SEASON_EIGHT;
 fn season_eight(c: &mut Criterion) {
     let y = SEASON_EIGHT;
     c.bench_function("season_eight", |b| {
-        b.iter(|| {
-            PeriodogramDetector::builder()
-                .build(y)
-                .detect()
-                .collect::<Vec<_>>()
-        });
+        b.iter(|| PeriodogramDetector::builder().build(y).detect());
     });
 }
 

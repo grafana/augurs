@@ -6,6 +6,6 @@ use augurs_seasons::{Detector, PeriodogramDetector};
 
 /// Detect the seasonal periods in a time series.
 #[wasm_bindgen]
-pub fn seasonalities(y: &[f64]) -> Vec<usize> {
-    PeriodogramDetector::builder().build(y).detect().collect()
+pub fn seasonalities(y: &[f64]) -> Vec<u32> {
+    PeriodogramDetector::builder().build(y).detect()
 }

@@ -1,7 +1,7 @@
 use augurs_testing::data::{SEASON_EIGHT, SEASON_SEVEN};
 
 pub(crate) struct TestCase {
-    pub(crate) season_lengths: &'static [usize],
+    pub(crate) season_lengths: &'static [u32],
     pub(crate) data: &'static [f64],
 }
 

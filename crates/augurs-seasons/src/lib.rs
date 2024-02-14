@@ -17,5 +17,5 @@ pub use periodogram::{
 /// A detector of periodic signals in a time series.
 pub trait Detector {
     /// Detects the periods of the time series.
-    fn detect(&self) -> impl Iterator<Item = usize>;
+    fn detect(&self) -> Vec<u32>;
 }
