@@ -1,5 +1,5 @@
 import abc
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -69,4 +69,21 @@ class AutoETS:
     def predict(self, horizon: int, level: float | None) -> Forecast: ...
     def predict_in_sample(self, level: float | None) -> Forecast: ...
 
-def seasonalities(y: npt.NDArray[np.float64]) -> npt.NDArray[np.uint64]: ...
+def seasonalities(
+    y: npt.NDArray[np.float64],
+    min_period: Optional[int] = None,
+    max_period: Optional[int] = None,
+    threshold: Optional[float] = None,
+) -> npt.NDArray[np.uint64]: ...
+"""
+Determine the seasonalities of a time series.
+
+:param y: the time series to analyze.
+:param min_period: the minimum period to consider. The default is 4.
+:param max_period: the maximum period to consider. The default is the length of the
+                   data divided by 3, or 512, whichever is smaller.
+:param threshold: the threshold for detecting peaks in the periodogram.
+                  The value will be clamped to the range 0.01 to 0.99.
+                  The default is 0.9.
+:return: an array of season lengths.
+"""
