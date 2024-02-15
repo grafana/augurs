@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/grafana/augurs/compare/augurs-mstl-v0.1.0...augurs-mstl-v0.1.1) - 2024-02-15
+
+### Other
+- Add license files to repo root and symlinks in crate directories ([#43](https://github.com/grafana/augurs/pull/43))
+- Add repository to sub-crate Cargo.tomls ([#42](https://github.com/grafana/augurs/pull/42))
+
 ## [0.1.0-alpha.0](https://github.com/grafana/augurs/releases/tag/augurs-mstl-v0.1.0-alpha.0) - 2023-09-08
 
 ### Other
