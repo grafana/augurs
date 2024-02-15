@@ -61,11 +61,10 @@ impl Builder {
     ///
     /// The data is the time series to detect seasonal periods in.
     #[must_use]
-    pub fn build(self, data: &[f64]) -> Detector<'_> {
+    pub fn build(self) -> Detector {
         Detector {
-            data,
             min_period: self.min_period,
-            max_period: self.max_period.unwrap_or_else(|| default_max_period(data)),
+            max_period: self.max_period,
             threshold: self.threshold,
         }
     }
@@ -138,14 +137,13 @@ pub struct Period {
 /// Welch's method. The peaks in the periodogram represent likely seasonal periods
 /// in the data.
 #[derive(Debug)]
-pub struct Detector<'a> {
-    data: &'a [f64],
+pub struct Detector {
     min_period: u32,
-    max_period: u32,
+    max_period: Option<u32>,
     threshold: f64,
 }
 
-impl<'a> Detector<'a> {
+impl Detector {
     /// Create a new detector builder.
     #[must_use]
     pub fn builder() -> Builder {
@@ -160,14 +158,15 @@ impl<'a> Detector<'a> {
     /// The periodogram can then be used to identify peaks, which are returned as periods which
     /// correspond to likely seasonal periods in the data.
     #[must_use]
-    pub fn periodogram(&self) -> Periodogram {
+    pub fn periodogram(&self, data: &[f64]) -> Periodogram {
+        let max_period = self.max_period.unwrap_or_else(|| default_max_period(data));
         let frequency = 1.0;
-        let data_len = self.data.len();
-        let n_per_segment = (self.max_period * 2).min(data_len as u32 / 2);
+        let data_len = data.len();
+        let n_per_segment = (max_period * 2).min(data_len as u32 / 2);
         let max_fft_size = (n_per_segment as f64).log2().floor() as usize;
         let n_segments = (data_len as f64 / n_per_segment as f64).ceil() as usize;
 
-        let welch: SpectralDensity<'_, f64> = SpectralDensity::builder(self.data, frequency)
+        let welch: SpectralDensity<'_, f64> = SpectralDensity::builder(data, frequency)
             .n_segment(n_segments)
             .dft_log2_max_size(max_fft_size)
             .build();
@@ -185,7 +184,7 @@ impl<'a> Detector<'a> {
             .filter(|(per, _)| {
                 // Filter out periods that are too short or too long, and the period corresponding to the
                 // segment length.
-                *per >= self.min_period && *per < self.max_period && *per != n_per_segment
+                *per >= self.min_period && *per < max_period && *per != n_per_segment
             })
             // Group by period, and keep the maximum power for each period.
             .group_by(|(per, _)| *per)
@@ -201,9 +200,15 @@ impl<'a> Detector<'a> {
     }
 }
 
-impl<'a> crate::Detector for Detector<'a> {
-    fn detect(&self) -> Vec<u32> {
-        self.periodogram()
+impl Default for Detector {
+    fn default() -> Self {
+        Self::builder().build()
+    }
+}
+
+impl crate::Detector for Detector {
+    fn detect(&self, data: &[f64]) -> Vec<u32> {
+        self.periodogram(data)
             .peaks(self.threshold)
             .map(|x| x.period)
             .collect()
@@ -228,7 +233,7 @@ mod test {
             0.09, 0.29, 0.81, 0.49,
             0.11, 0.28, 0.78, 0.53,
         ];
-        let periods = Detector::builder().build(y).detect();
+        let periods = Detector::default().detect(y);
         assert_eq!(periods[0], 4);
     }
 
@@ -239,10 +244,10 @@ mod test {
                 data,
                 season_lengths: expected,
             } = test_case;
-            let detector = Detector::builder().build(data);
+            let detector = Detector::default();
             assert_eq!(
                 detector
-                    .periodogram()
+                    .periodogram(data)
                     .peaks(0.5)
                     .map(|x| x.period)
                     .collect_vec(),

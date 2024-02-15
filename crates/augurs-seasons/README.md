@@ -20,7 +20,17 @@ let y = &[
     0.09, 0.29, 0.81, 0.49,
     0.11, 0.28, 0.78, 0.53,
 ];
-let periods = PeriodogramDetector::builder().build(y).detect();
+// Use the detector with default parameters.
+let periods = PeriodogramDetector::default().detect(y);
+assert_eq!(periods[0], 4);
+
+// Customise the detector using the builder.
+let periods = PeriodogramDetector::builder()
+    .min_period(4)
+    .max_period(8)
+    .threshold(0.8)
+    .build()
+    .detect(y);
 assert_eq!(periods[0], 4);
 # }
 ```

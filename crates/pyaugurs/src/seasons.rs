@@ -9,8 +9,8 @@ use augurs_seasons::{Detector, PeriodogramDetector};
 #[pyfunction]
 pub fn seasonalities(py: Python<'_>, y: PyReadonlyArray1<'_, f64>) -> PyResult<Py<PyArray1<u32>>> {
     Ok(PeriodogramDetector::builder()
-        .build(y.as_slice()?)
-        .detect()
+        .build()
+        .detect(y.as_slice()?)
         .to_pyarray(py)
         .into())
 }
