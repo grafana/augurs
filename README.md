@@ -23,6 +23,7 @@ APIs are subject to change, and functionality may not be fully implemented.
 | [`augurs-core`][]    | Common structs and traits                                            | alpha - API is flexible right now                                    |
 | [`augurs-ets`][]     | Automatic exponential smoothing models                               | alpha - non-seasonal models working and tested against statsforecast |
 | [`augurs-mstl`][]    | Multiple Seasonal Trend Decomposition using LOESS (MSTL)             | beta - working and tested against R                                  |
+| [`augurs-seasons`][] | Seasonality detection using periodograms                             | alpha - working and tested against Python in limited scenarios       |
 | [`augurs-testing`][] | Testing data and, eventually, evaluation harness for implementations | alpha - just data right now                                          |
 | [`augurs-js`][]      | WASM bindings to augurs                                              | alpha - untested, should work though                                 |
 | [`pyaugurs`][]       | Python bindings to augurs                                            | alpha - untested, should work though                                 |
@@ -40,5 +41,6 @@ Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/
 [`augurs-ets`]: https://crates.io/crates/augurs-ets
 [`augurs-mstl`]: https://crates.io/crates/augurs-mstl
 [`augurs-js`]: https://crates.io/crates/augurs-js
+[`augurs-seasons`]: https://crates.io/crates/augurs-seasons
 [`augurs-testing`]: https://crates.io/crates/augurs-testing
 [`pyaugurs`]: https://crates.io/crates/pyaugurs
