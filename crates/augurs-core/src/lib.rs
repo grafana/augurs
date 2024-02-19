@@ -6,6 +6,8 @@
     unreachable_pub
 )]
 
+pub mod interpolate;
+
 /// Forecast intervals.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
