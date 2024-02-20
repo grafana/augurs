@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/grafana/augurs/compare/augurs-mstl-v0.1.1...augurs-mstl-v0.1.2) - 2024-02-20
+
+### Added
+- *(core)* add interpolation iterator adaptor ([#63](https://github.com/grafana/augurs/pull/63))
+
 ## [0.1.1](https://github.com/grafana/augurs/compare/augurs-mstl-v0.1.0...augurs-mstl-v0.1.1) - 2024-02-15
 
 ### Other
