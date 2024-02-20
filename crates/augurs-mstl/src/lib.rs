@@ -11,7 +11,10 @@ use std::marker::PhantomData;
 use stlrs::MstlResult;
 use tracing::instrument;
 
-use augurs_core::{Forecast, ForecastIntervals};
+use augurs_core::{
+    interpolate::{InterpolateExt, LinearInterpolator},
+    Forecast, ForecastIntervals,
+};
 
 // mod approx;
 // pub mod mstl;
@@ -60,6 +63,8 @@ pub struct MSTLModel<T, F> {
 
     fit: Option<MstlResult>,
     trend_model: T,
+
+    impute: bool,
 }
 
 impl MSTLModel<NaiveTrend, Unfit> {
@@ -89,7 +94,17 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
             mstl_params: stlrs::MstlParams::new(),
             fit: None,
             trend_model,
+            impute: false,
         }
+    }
+
+    /// Set whether to impute missing values in the time series.
+    ///
+    /// If `true`, then missing values will be imputed using
+    /// linear interpolation before fitting the model.
+    pub fn impute(mut self, impute: bool) -> Self {
+        self.impute = impute;
+        self
     }
 
     /// Set the parameters for the MSTL algorithm.
@@ -112,7 +127,15 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
     /// are also propagated.
     #[instrument(skip_all)]
     pub fn fit(mut self, y: &[f64]) -> Result<MSTLModel<T, Fit>> {
-        let y = y.iter().copied().map(|y| y as f32).collect::<Vec<_>>();
+        let y: Vec<f32> = if self.impute {
+            y.iter()
+                .copied()
+                .map(|y| y as f32)
+                .interpolate(LinearInterpolator::default())
+                .collect()
+        } else {
+            y.iter().copied().map(|y| y as f32).collect::<Vec<_>>()
+        };
         let fit = self.mstl_params.fit(&y, &self.periods)?;
         // Determine the differencing term for the trend component.
         let trend = fit.trend();
@@ -135,6 +158,7 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
             state: PhantomData,
             fit: Some(fit),
             trend_model: self.trend_model,
+            impute: self.impute,
         })
     }
 }

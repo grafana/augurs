@@ -1,5 +1,7 @@
 //! JavaScript bindings for the MSTL model.
 use js_sys::Float64Array;
+use serde::Deserialize;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_ets::AutoETS;
@@ -65,11 +67,24 @@ impl MSTL {
     }
 }
 
+/// Options for the ETS MSTL model.
+#[derive(Debug, Default, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
+pub struct ETSOptions {
+    /// Whether to impute missing values.
+    pub impute: Option<bool>,
+}
+
 #[wasm_bindgen]
 /// Create a new MSTL model with the given periods using the `AutoETS` trend model.
-pub fn ets(periods: Vec<usize>) -> MSTL {
-    let ets = AutoETS::non_seasonal();
+pub fn ets(periods: Vec<usize>, options: Option<ETSOptions>) -> MSTL {
+    let ets: Box<dyn TrendModel + Sync + Send> = Box::new(AutoETS::non_seasonal());
+    let mut model = MSTLModel::new(periods, ets);
+    let options = options.unwrap_or_default();
+    if let Some(impute) = options.impute {
+        model = model.impute(impute);
+    }
     MSTL {
-        inner: Some(MSTLEnum::Unfit(MSTLModel::new(periods, Box::new(ets)))),
+        inner: Some(MSTLEnum::Unfit(model)),
     }
 }
