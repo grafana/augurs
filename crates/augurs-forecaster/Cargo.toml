@@ -1,0 +1,20 @@
+[package]
+name = "augurs-forecaster"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "A high-level API for the augurs forecasting library."
+
+[dependencies]
+augurs-core.workspace = true
+itertools.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+augurs-ets = { workspace = true, features = ["mstl"] }
+augurs-mstl.workspace = true
+augurs-testing.workspace = true

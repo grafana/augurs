@@ -1,5 +1,6 @@
 use iai::{black_box, main};
 
+use augurs_core::Fit;
 use augurs_ets::{
     model::{ErrorComponent, ModelType, SeasonalComponent::None, TrendComponent, Unfit},
     AutoETS,

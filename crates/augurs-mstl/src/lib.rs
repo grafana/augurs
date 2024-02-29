@@ -6,15 +6,12 @@
     unreachable_pub
 )]
 
-use std::marker::PhantomData;
+use std::sync::{Arc, RwLock};
 
 use stlrs::MstlResult;
 use tracing::instrument;
 
-use augurs_core::{
-    interpolate::{InterpolateExt, LinearInterpolator},
-    Forecast, ForecastIntervals,
-};
+use augurs_core::{Forecast, ForecastIntervals, ModelError, Predict};
 
 // mod approx;
 // pub mod mstl;
@@ -23,14 +20,6 @@ mod trend;
 // mod utils;
 
 pub use crate::trend::{NaiveTrend, TrendModel};
-
-/// A marker struct indicating that a model is fit.
-#[derive(Debug, Clone, Copy)]
-pub struct Fit;
-
-/// A marker struct indicating that a model is unfit.
-#[derive(Debug, Clone, Copy)]
-pub struct Unfit;
 
 /// Errors that can occur when using this crate.
 #[derive(Debug, thiserror::Error)]
@@ -54,20 +43,17 @@ type Result<T> = std::result::Result<T, Error>;
 ///
 /// [MSTL]: https://arxiv.org/abs/2107.13462
 #[derive(Debug)]
-pub struct MSTLModel<T, F> {
+pub struct MSTLModel<T> {
     /// Periodicity of the seasonal components.
     periods: Vec<usize>,
     mstl_params: stlrs::MstlParams,
 
-    state: PhantomData<F>,
-
-    fit: Option<MstlResult>,
-    trend_model: T,
+    trend_model: Arc<RwLock<T>>,
 
     impute: bool,
 }
 
-impl MSTLModel<NaiveTrend, Unfit> {
+impl MSTLModel<NaiveTrend> {
     /// Create a new MSTL model with a naive trend model.
     ///
     /// The naive trend model predicts the last value in the training set
@@ -78,22 +64,20 @@ impl MSTLModel<NaiveTrend, Unfit> {
     }
 }
 
-impl<T: TrendModel, F> MSTLModel<T, F> {
+impl<T: TrendModel> MSTLModel<T> {
     /// Return a reference to the trend model.
-    pub fn trend_model(&self) -> &T {
+    pub fn trend_model(&self) -> &Arc<RwLock<T>> {
         &self.trend_model
     }
 }
 
-impl<T: TrendModel> MSTLModel<T, Unfit> {
+impl<T: TrendModel> MSTLModel<T> {
     /// Create a new MSTL model with the given trend model.
     pub fn new(periods: Vec<usize>, trend_model: T) -> Self {
         Self {
             periods,
-            state: PhantomData,
             mstl_params: stlrs::MstlParams::new(),
-            fit: None,
-            trend_model,
+            trend_model: Arc::new(RwLock::new(trend_model)),
             impute: false,
         }
     }
@@ -126,16 +110,8 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
     /// Any errors returned by the STL algorithm or trend model
     /// are also propagated.
     #[instrument(skip_all)]
-    pub fn fit(mut self, y: &[f64]) -> Result<MSTLModel<T, Fit>> {
-        let y: Vec<f32> = if self.impute {
-            y.iter()
-                .copied()
-                .map(|y| y as f32)
-                .interpolate(LinearInterpolator::default())
-                .collect()
-        } else {
-            y.iter().copied().map(|y| y as f32).collect::<Vec<_>>()
-        };
+    fn fit_impl(&self, y: &[f64]) -> Result<FittedMSTLModel<T>> {
+        let y: Vec<f32> = y.iter().copied().map(|y| y as f32).collect::<Vec<_>>();
         let fit = self.mstl_params.fit(&y, &self.periods)?;
         // Determine the differencing term for the trend component.
         let trend = fit.trend();
@@ -146,78 +122,69 @@ impl<T: TrendModel> MSTLModel<T, Unfit> {
             .map(|(t, r)| (t + r) as f64)
             .collect::<Vec<_>>();
         self.trend_model
+            .write()
+            .unwrap()
             .fit(&deseasonalised)
             .map_err(Error::TrendModel)?;
         tracing::trace!(
             trend_model = ?self.trend_model,
             "found best trend model",
         );
-        Ok(MSTLModel {
-            periods: self.periods,
-            mstl_params: self.mstl_params,
-            state: PhantomData,
-            fit: Some(fit),
-            trend_model: self.trend_model,
-            impute: self.impute,
+        Ok(FittedMSTLModel {
+            periods: self.periods.clone(),
+            fit,
+            trend_model: Arc::clone(&self.trend_model),
         })
     }
 }
 
-impl<T: TrendModel> MSTLModel<T, Fit> {
-    /// Return the n-ahead predictions for the given horizon.
-    ///
-    /// The predictions are point forecasts and optionally include
-    /// prediction intervals at the specified `level`.
-    ///
-    /// `level` should be a float between 0 and 1 representing the
-    /// confidence level of the prediction intervals. If `None` then
-    /// no prediction intervals are returned.
-    ///
-    /// # Errors
-    ///
-    /// Any errors returned by the trend model are propagated.
-    pub fn predict(&self, horizon: usize, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        self.predict_impl(horizon, level.into())
-    }
+/// A model that uses the [MSTL] to decompose a time series into trend,
+/// seasonal and remainder components, and then uses a trend model to
+/// forecast the trend component.
+///
+/// [MSTL]: https://arxiv.org/abs/2107.13462
+#[derive(Debug)]
+pub struct FittedMSTLModel<T> {
+    /// Periodicity of the seasonal components.
+    periods: Vec<usize>,
+    fit: MstlResult,
+    trend_model: Arc<RwLock<T>>,
+}
 
-    fn predict_impl(&self, horizon: usize, level: Option<f64>) -> Result<Forecast> {
+impl<T> FittedMSTLModel<T> {
+    /// Return the MSTL fit of the training data.
+    pub fn fit(&self) -> &MstlResult {
+        &self.fit
+    }
+}
+
+impl<T: TrendModel> FittedMSTLModel<T> {
+    fn predict_impl(
+        &self,
+        horizon: usize,
+        level: Option<f64>,
+        forecast: &mut Forecast,
+    ) -> Result<()> {
         if horizon == 0 {
-            return Ok(Forecast {
-                point: vec![],
-                intervals: level.map(ForecastIntervals::empty),
-            });
+            return Ok(());
         }
-        let mut out_of_sample = self
-            .trend_model
-            .predict(horizon, level)
+        self.trend_model
+            .read()
+            .unwrap()
+            .predict_inplace(horizon, level, forecast)
             .map_err(Error::TrendModel)?;
-        self.add_seasonal_out_of_sample(&mut out_of_sample);
-        Ok(out_of_sample)
+        self.add_seasonal_out_of_sample(forecast);
+        Ok(())
     }
 
-    /// Return the in-sample predictions.
-    ///
-    /// The predictions are point forecasts and optionally include
-    /// prediction intervals at the specified `level`.
-    ///
-    /// `level` should be a float between 0 and 1 representing the
-    /// confidence level of the prediction intervals. If `None` then
-    /// no prediction intervals are returned.
-    ///
-    /// # Errors
-    ///
-    /// Any errors returned by the trend model are propagated.
-    pub fn predict_in_sample(&self, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        self.predict_in_sample_impl(level.into())
-    }
-
-    fn predict_in_sample_impl(&self, level: Option<f64>) -> Result<Forecast> {
-        let mut in_sample = self
-            .trend_model
-            .predict_in_sample(level)
+    fn predict_in_sample_impl(&self, level: Option<f64>, forecast: &mut Forecast) -> Result<()> {
+        self.trend_model
+            .read()
+            .unwrap()
+            .predict_in_sample_inplace(level, forecast)
             .map_err(Error::TrendModel)?;
-        self.add_seasonal_in_sample(&mut in_sample);
-        Ok(in_sample)
+        self.add_seasonal_in_sample(forecast);
+        Ok(())
     }
 
     fn add_seasonal_in_sample(&self, trend: &mut Forecast) {
@@ -278,10 +245,36 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
                 }
             });
     }
+}
 
-    /// Return the MSTL fit of the training data.
-    pub fn fit(&self) -> &MstlResult {
-        self.fit.as_ref().unwrap()
+impl ModelError for Error {}
+
+impl<T: TrendModel> augurs_core::Fit for MSTLModel<T> {
+    type Fitted = FittedMSTLModel<T>;
+    type Error = Error;
+    fn fit(&self, y: &[f64]) -> Result<Self::Fitted> {
+        self.fit_impl(y)
+    }
+}
+
+impl<T: TrendModel> Predict for FittedMSTLModel<T> {
+    type Error = Error;
+
+    fn predict_inplace(
+        &self,
+        horizon: usize,
+        level: Option<f64>,
+        forecast: &mut Forecast,
+    ) -> Result<()> {
+        self.predict_impl(horizon, level, forecast)
+    }
+
+    fn predict_in_sample_inplace(&self, level: Option<f64>, forecast: &mut Forecast) -> Result<()> {
+        self.predict_in_sample_impl(level, forecast)
+    }
+
+    fn training_data_size(&self) -> usize {
+        self.fit().trend().len()
     }
 }
 
@@ -289,6 +282,7 @@ impl<T: TrendModel> MSTLModel<T, Fit> {
 mod tests {
     use assert_approx_eq::assert_approx_eq;
 
+    use augurs_core::prelude::*;
     use augurs_testing::data::VIC_ELEC;
 
     use crate::{trend::NaiveTrend, ForecastIntervals, MSTLModel};

@@ -23,6 +23,7 @@ keywords = [
 
 augurs-core = { version = "0.1.2", path = "crates/augurs-core" }
 augurs-ets = { version = "0.1.2", path = "crates/augurs-ets" }
+augurs-forecaster = { version = "0.1.2", path = "crates/augurs-forecaster" }
 augurs-mstl = { version = "0.1.2", path = "crates/augurs-mstl" }
 augurs-seasons = { version = "0.1.2", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
