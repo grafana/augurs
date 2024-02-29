@@ -24,6 +24,7 @@ jobs:
     strategy:
       matrix:
         target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,7 +34,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist --interpreter ${{ matrix.python-version }} --manifest-path crates/pyaugurs/Cargo.toml
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -47,6 +48,7 @@ jobs:
     strategy:
       matrix:
         target: [x64, x86]
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -57,7 +59,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist --interpreter ${{ matrix.python-version }} --manifest-path crates/pyaugurs/Cargo.toml
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
@@ -70,6 +72,7 @@ jobs:
     strategy:
       matrix:
         target: [x86_64, aarch64]
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -79,7 +82,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist --interpreter ${{ matrix.python-version }} --manifest-path crates/pyaugurs/Cargo.toml
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
