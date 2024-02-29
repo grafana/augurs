@@ -13,7 +13,7 @@
 use numpy::ToPyArray;
 use pyo3::{exceptions::PyException, prelude::*};
 
-use augurs_mstl::TrendModel;
+use augurs_mstl::{FittedTrendModel, TrendModel};
 
 use crate::Forecast;
 
@@ -61,14 +61,32 @@ impl TrendModel for PyTrendModel {
         .unwrap_or_else(|_| "unknown Python class".into())
     }
 
-    fn fit(&mut self, y: &[f64]) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    fn fit(
+        &self,
+        y: &[f64],
+    ) -> Result<
+        Box<dyn FittedTrendModel + Sync + Send>,
+        Box<dyn std::error::Error + Send + Sync + 'static>,
+    > {
+        // TODO - `fitted` should be a `PyFittedTrendModel`
+        // which should implement `Fit` and `FittedTrendModel`
         Python::with_gil(|py| {
             let np = y.to_pyarray_bound(py);
             self.model.call_method1(py, "fit", (np,))
         })?;
-        Ok(())
+        Ok(Box::new(PyFittedTrendModel {
+            model: self.model.clone(),
+        }) as _)
     }
+}
 
+/// A wrapper for a Python trend model that has been fitted to data.
+#[derive(Debug)]
+pub struct PyFittedTrendModel {
+    model: Py<PyAny>,
+}
+
+impl FittedTrendModel for PyFittedTrendModel {
     fn predict_inplace(
         &self,
         horizon: usize,

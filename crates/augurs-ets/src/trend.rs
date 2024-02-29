@@ -10,7 +10,7 @@ This module is gated behind the `mstl` feature.
 use std::borrow::Cow;
 
 use augurs_core::{Fit, Forecast, Predict};
-use augurs_mstl::TrendModel;
+use augurs_mstl::{FittedTrendModel, TrendModel};
 
 use crate::{AutoETS, FittedAutoETS};
 
@@ -18,15 +18,11 @@ use crate::{AutoETS, FittedAutoETS};
 #[derive(Debug, Clone)]
 pub struct AutoETSTrendModel {
     model: AutoETS,
-    fitted: Option<FittedAutoETS>,
 }
 
 impl From<AutoETS> for AutoETSTrendModel {
     fn from(model: AutoETS) -> Self {
-        Self {
-            model,
-            fitted: None,
-        }
+        Self { model }
     }
 }
 
@@ -35,25 +31,33 @@ impl TrendModel for AutoETSTrendModel {
         Cow::Borrowed("AutoETS")
     }
 
-    fn fit(&mut self, y: &[f64]) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        match self.model.fit(y) {
-            Ok(fit) => {
-                self.fitted = Some(fit);
-                Ok(())
-            }
-            Err(e) => Err(e.into()),
-        }
+    fn fit(
+        &self,
+        y: &[f64],
+    ) -> Result<
+        Box<dyn FittedTrendModel + Sync + Send>,
+        Box<dyn std::error::Error + Send + Sync + 'static>,
+    > {
+        Ok(self
+            .model
+            .fit(y)
+            .map(|model| Box::new(AutoETSTrendFitted { model }) as _)?)
     }
+}
 
+#[derive(Debug, Clone)]
+struct AutoETSTrendFitted {
+    model: FittedAutoETS,
+}
+
+impl FittedTrendModel for AutoETSTrendFitted {
     fn predict_inplace(
         &self,
         horizon: usize,
         level: Option<f64>,
         forecast: &mut Forecast,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        self.fitted
-            .as_ref()
-            .ok_or("Model not yet fit")?
+        self.model
             .predict_inplace(horizon, level, forecast)
             .map_err(|e| e.into())
     }
@@ -63,15 +67,13 @@ impl TrendModel for AutoETSTrendModel {
         level: Option<f64>,
         forecast: &mut Forecast,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        self.fitted
-            .as_ref()
-            .ok_or("Model not yet fit")?
+        self.model
             .predict_in_sample_inplace(level, forecast)
             .map_err(|e| e.into())
     }
 
     fn training_data_size(&self) -> Option<usize> {
-        self.fitted.as_ref().map(|f| f.training_data_size())
+        Some(self.model.training_data_size())
     }
 }
 

@@ -21,9 +21,7 @@ impl Transforms {
     {
         self.0
             .iter()
-            .fold(Box::new(input) as Box<dyn Iterator<Item = f64>>, |y, t| {
-                t.transform(y)
-            })
+            .fold(Box::new(input) as _, |y, t| t.transform(y))
     }
 
     pub(crate) fn inverse_transform(&self, forecast: Forecast) -> Forecast {
