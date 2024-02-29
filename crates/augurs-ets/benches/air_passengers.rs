@@ -1,6 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 
+use augurs_core::{Fit, Predict};
 use augurs_ets::{
     model::{ErrorComponent, ModelType, SeasonalComponent::None, TrendComponent, Unfit},
     AutoETS,
@@ -50,7 +51,7 @@ fn forecast(c: &mut Criterion) {
     let mut group = c.benchmark_group("forecast");
     group.bench_function("air_passengers", |b| {
         b.iter(|| {
-            model.predict(24, 0.95);
+            model.predict(24, 0.95).unwrap();
         })
     });
 }

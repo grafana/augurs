@@ -1,5 +1,6 @@
 use iai::{black_box, main};
 
+use augurs_core::Fit;
 use augurs_mstl::{MSTLModel, NaiveTrend};
 use augurs_testing::data::VIC_ELEC;
 
