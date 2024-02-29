@@ -6,8 +6,6 @@
     unreachable_pub
 )]
 
-use std::sync::{Arc, RwLock};
-
 use stlrs::MstlResult;
 use tracing::instrument;
 
@@ -19,7 +17,7 @@ use augurs_core::{Forecast, ForecastIntervals, ModelError, Predict};
 mod trend;
 // mod utils;
 
-pub use crate::trend::{NaiveTrend, TrendModel};
+pub use crate::trend::{FittedTrendModel, NaiveTrend, TrendModel};
 
 /// Errors that can occur when using this crate.
 #[derive(Debug, thiserror::Error)]
@@ -48,7 +46,7 @@ pub struct MSTLModel<T> {
     periods: Vec<usize>,
     mstl_params: stlrs::MstlParams,
 
-    trend_model: Arc<RwLock<T>>,
+    trend_model: T,
 
     impute: bool,
 }
@@ -66,7 +64,7 @@ impl MSTLModel<NaiveTrend> {
 
 impl<T: TrendModel> MSTLModel<T> {
     /// Return a reference to the trend model.
-    pub fn trend_model(&self) -> &Arc<RwLock<T>> {
+    pub fn trend_model(&self) -> &T {
         &self.trend_model
     }
 }
@@ -77,7 +75,7 @@ impl<T: TrendModel> MSTLModel<T> {
         Self {
             periods,
             mstl_params: stlrs::MstlParams::new(),
-            trend_model: Arc::new(RwLock::new(trend_model)),
+            trend_model,
             impute: false,
         }
     }
@@ -110,7 +108,7 @@ impl<T: TrendModel> MSTLModel<T> {
     /// Any errors returned by the STL algorithm or trend model
     /// are also propagated.
     #[instrument(skip_all)]
-    fn fit_impl(&self, y: &[f64]) -> Result<FittedMSTLModel<T>> {
+    fn fit_impl(&self, y: &[f64]) -> Result<FittedMSTLModel> {
         let y: Vec<f32> = y.iter().copied().map(|y| y as f32).collect::<Vec<_>>();
         let fit = self.mstl_params.fit(&y, &self.periods)?;
         // Determine the differencing term for the trend component.
@@ -121,9 +119,8 @@ impl<T: TrendModel> MSTLModel<T> {
             .zip(residual)
             .map(|(t, r)| (t + r) as f64)
             .collect::<Vec<_>>();
-        self.trend_model
-            .write()
-            .unwrap()
+        let fitted_trend_model = self
+            .trend_model
             .fit(&deseasonalised)
             .map_err(Error::TrendModel)?;
         tracing::trace!(
@@ -133,7 +130,7 @@ impl<T: TrendModel> MSTLModel<T> {
         Ok(FittedMSTLModel {
             periods: self.periods.clone(),
             fit,
-            trend_model: Arc::clone(&self.trend_model),
+            fitted_trend_model,
         })
     }
 }
@@ -144,21 +141,21 @@ impl<T: TrendModel> MSTLModel<T> {
 ///
 /// [MSTL]: https://arxiv.org/abs/2107.13462
 #[derive(Debug)]
-pub struct FittedMSTLModel<T> {
+pub struct FittedMSTLModel {
     /// Periodicity of the seasonal components.
     periods: Vec<usize>,
     fit: MstlResult,
-    trend_model: Arc<RwLock<T>>,
+    fitted_trend_model: Box<dyn FittedTrendModel + Sync + Send>,
 }
 
-impl<T> FittedMSTLModel<T> {
+impl FittedMSTLModel {
     /// Return the MSTL fit of the training data.
     pub fn fit(&self) -> &MstlResult {
         &self.fit
     }
 }
 
-impl<T: TrendModel> FittedMSTLModel<T> {
+impl FittedMSTLModel {
     fn predict_impl(
         &self,
         horizon: usize,
@@ -168,9 +165,7 @@ impl<T: TrendModel> FittedMSTLModel<T> {
         if horizon == 0 {
             return Ok(());
         }
-        self.trend_model
-            .read()
-            .unwrap()
+        self.fitted_trend_model
             .predict_inplace(horizon, level, forecast)
             .map_err(Error::TrendModel)?;
         self.add_seasonal_out_of_sample(forecast);
@@ -178,9 +173,7 @@ impl<T: TrendModel> FittedMSTLModel<T> {
     }
 
     fn predict_in_sample_impl(&self, level: Option<f64>, forecast: &mut Forecast) -> Result<()> {
-        self.trend_model
-            .read()
-            .unwrap()
+        self.fitted_trend_model
             .predict_in_sample_inplace(level, forecast)
             .map_err(Error::TrendModel)?;
         self.add_seasonal_in_sample(forecast);
@@ -250,14 +243,14 @@ impl<T: TrendModel> FittedMSTLModel<T> {
 impl ModelError for Error {}
 
 impl<T: TrendModel> augurs_core::Fit for MSTLModel<T> {
-    type Fitted = FittedMSTLModel<T>;
+    type Fitted = FittedMSTLModel;
     type Error = Error;
     fn fit(&self, y: &[f64]) -> Result<Self::Fitted> {
         self.fit_impl(y)
     }
 }
 
-impl<T: TrendModel> Predict for FittedMSTLModel<T> {
+impl Predict for FittedMSTLModel {
     type Error = Error;
 
     fn predict_inplace(

@@ -1,4 +1,4 @@
-use augurs_core::{Fit, Forecast, ModelError, Predict};
+use augurs_core::{Fit, Forecast, Predict};
 
 use crate::{Data, Error, Result, Transform, Transforms};
 
@@ -43,7 +43,7 @@ where
             .transform(y.as_slice().iter().copied())
             .collect();
         self.fitted = Some(self.model.fit(&data).map_err(|e| Error::Fit {
-            source: Box::new(e) as Box<dyn ModelError>,
+            source: Box::new(e) as _,
         })?);
         Ok(())
     }
@@ -58,7 +58,7 @@ where
         self.fitted()?
             .predict(horizon, level.into())
             .map_err(|e| Error::Predict {
-                source: Box::new(e) as Box<dyn ModelError>,
+                source: Box::new(e) as _,
             })
             .map(|f| self.transforms.inverse_transform(f))
     }
@@ -69,7 +69,7 @@ where
         self.fitted()?
             .predict_in_sample(level.into())
             .map_err(|e| Error::Predict {
-                source: Box::new(e) as Box<dyn ModelError>,
+                source: Box::new(e) as _,
             })
     }
 }
