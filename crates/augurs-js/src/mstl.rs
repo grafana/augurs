@@ -4,7 +4,6 @@ use serde::Deserialize;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-// use augurs_core::transform::TransformExt;
 use augurs_ets::{trend::AutoETSTrendModel, AutoETS};
 use augurs_forecaster::{Forecaster, Transform};
 use augurs_mstl::{MSTLModel, TrendModel};
@@ -26,7 +25,7 @@ impl MSTL {
         self.forecaster.fit(y.to_vec()).map_err(|e| e.to_string())?;
         Ok(())
     }
-    ///
+
     /// Predict the next `horizon` values, optionally including prediction
     /// intervals at the given level.
     ///
