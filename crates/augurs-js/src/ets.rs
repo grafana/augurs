@@ -3,6 +3,8 @@
 use js_sys::Float64Array;
 use wasm_bindgen::prelude::*;
 
+use augurs_core::prelude::*;
+
 use crate::Forecast;
 
 /// Automatic ETS model selection.
@@ -11,6 +13,7 @@ use crate::Forecast;
 pub struct AutoETS {
     /// The inner model search instance.
     inner: augurs_ets::AutoETS,
+    fitted: Option<augurs_ets::FittedAutoETS>,
 }
 
 #[wasm_bindgen]
@@ -24,7 +27,10 @@ impl AutoETS {
     pub fn new(season_length: usize, spec: String) -> Result<AutoETS, JsValue> {
         let inner =
             augurs_ets::AutoETS::new(season_length, spec.as_str()).map_err(|e| e.to_string())?;
-        Ok(Self { inner })
+        Ok(Self {
+            inner,
+            fitted: None,
+        })
     }
 
     /// Search for the best model, fitting it to the data.
@@ -38,7 +44,7 @@ impl AutoETS {
     /// returns an error.
     #[wasm_bindgen]
     pub fn fit(&mut self, y: Float64Array) -> Result<(), JsValue> {
-        self.inner.fit(&y.to_vec()).map_err(|e| e.to_string())?;
+        self.fitted = Some(self.inner.fit(&y.to_vec()).map_err(|e| e.to_string())?);
         Ok(())
     }
 
@@ -53,8 +59,10 @@ impl AutoETS {
     #[wasm_bindgen]
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> Result<Forecast, JsValue> {
         Ok(self
-            .inner
-            .predict(horizon, level)
+            .fitted
+            .as_ref()
+            .map(|x| x.predict(horizon, level))
+            .ok_or("model not fit yet")?
             .map(Into::into)
             .map_err(|e| e.to_string())?)
     }

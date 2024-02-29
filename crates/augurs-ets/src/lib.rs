@@ -9,13 +9,14 @@
 //! # Example
 //!
 //! ```
+//! use augurs_core::prelude::*;
 //! use augurs_ets::AutoETS;
 //!
 //! let data: Vec<_> = (0..10).map(|x| x as f64).collect();
 //! let mut search = AutoETS::new(1, "ZZN")
 //!     .expect("ZZN is a valid model search specification string");
 //! let model = search.fit(&data).expect("fit should succeed");
-//! let forecast = model.predict(5, 0.95);
+//! let forecast = model.predict(5, 0.95).expect("predict should succeed");
 //! assert_eq!(forecast.point.len(), 5);
 //! assert_eq!(forecast.point, vec![10.0, 11.0, 12.0, 13.0, 14.0]);
 //! ```
@@ -29,9 +30,10 @@ mod ets;
 pub mod model;
 mod stat;
 #[cfg(feature = "mstl")]
-mod trend;
+pub mod trend;
 
-pub use auto::{AutoETS, AutoSpec};
+use augurs_core::ModelError;
+pub use auto::{AutoETS, AutoSpec, FittedAutoETS};
 
 #[cfg(test)]
 // Assert that a is within (tol * 100)% of b.
@@ -86,6 +88,8 @@ pub enum Error {
     #[error("model not fit")]
     ModelNotFit,
 }
+
+impl ModelError for Error {}
 
 type Result<T> = std::result::Result<T, Error>;
 

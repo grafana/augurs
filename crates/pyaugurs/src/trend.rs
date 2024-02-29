@@ -69,25 +69,28 @@ impl TrendModel for PyTrendModel {
         Ok(())
     }
 
-    fn predict(
+    fn predict_inplace(
         &self,
         horizon: usize,
         level: Option<f64>,
-    ) -> Result<augurs_core::Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast: &mut augurs_core::Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         Python::with_gil(|py| {
             let preds = self
                 .model
                 .call_method1(py, "predict", (horizon, level))
                 .map_err(|e| Box::new(PyException::new_err(format!("error predicting: {e}"))))?;
             let preds: Forecast = preds.extract(py)?;
-            Ok(preds.into())
+            *forecast = preds.into();
+            Ok(())
         })
     }
 
-    fn predict_in_sample(
+    fn predict_in_sample_inplace(
         &self,
         level: Option<f64>,
-    ) -> Result<augurs_core::Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast: &mut augurs_core::Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         Python::with_gil(|py| {
             let preds = self
                 .model
@@ -98,7 +101,12 @@ impl TrendModel for PyTrendModel {
                     )))
                 })?;
             let preds: Forecast = preds.extract(py)?;
-            Ok(preds.into())
+            *forecast = preds.into();
+            Ok(())
         })
+    }
+
+    fn training_data_size(&self) -> Option<usize> {
+        None
     }
 }

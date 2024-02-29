@@ -22,6 +22,7 @@ The latter use case is the main entrypoint of this crate.
 ## Usage
 
 ```rust
+use augurs_core::prelude::*;
 use augurs_mstl::MSTLModel;
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -118,41 +119,41 @@ impl TrendModel for ConstantTrendModel {
         Ok(())
     }
 
-    fn predict(
+    fn predict_inplace(
         &self,
         horizon: usize,
         level: Option<f64>,
-    ) -> Result<Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Ok(Forecast {
-            point: vec![self.constant; horizon],
-            intervals: level.map(|level| {
-                let lower = vec![self.constant; horizon];
-                let upper = vec![self.constant; horizon];
-                ForecastIntervals {
-                    level,
-                    lower,
-                    upper,
-                }
-            }),
-        })
+        forecast: &mut Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast.point = vec![self.constant; horizon];
+        if let Some(level) = level {
+            let mut intervals = forecast
+                .intervals
+                .get_or_insert_with(|| ForecastIntervals::with_capacity(level, horizon));
+            intervals.lower = vec![self.constant; horizon];
+            intervals.upper = vec![self.constant; horizon];
+        }
+        Ok(())
     }
 
-    fn predict_in_sample(
+    fn predict_in_sample_inplace(
         &self,
         level: Option<f64>,
-    ) -> Result<Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Ok(Forecast {
-            point: vec![self.constant; self.y_len],
-            intervals: level.map(|level| {
-                let lower = vec![self.constant; self.y_len];
-                let upper = vec![self.constant; self.y_len];
-                ForecastIntervals {
-                    level,
-                    lower,
-                    upper,
-                }
-            }),
-        })
+        forecast: &mut Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast.point = vec![self.constant; self.y_len];
+        if let Some(level) = level {
+            let mut intervals = forecast
+                .intervals
+                .get_or_insert_with(|| ForecastIntervals::with_capacity(level, self.y_len));
+            intervals.lower = vec![self.constant; self.y_len];
+            intervals.upper = vec![self.constant; self.y_len];
+        }
+        Ok(())
+    }
+
+    fn training_data_size(&self) -> Option<usize> {
+        Some(self.y_len)
     }
 }
 ```
