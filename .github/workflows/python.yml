@@ -37,7 +37,7 @@ jobs:
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -60,7 +60,7 @@ jobs:
           args: --release --out dist -i 3.7 -i 3.8 -i 3.9 -i 3.10 -i 3.11 -i 3.12 --manifest-path crates/pyaugurs/Cargo.toml
           sccache: 'true'
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -82,7 +82,7 @@ jobs:
           args: --release --out dist -i 3.7 -i 3.8 -i 3.9 -i 3.10 -i 3.11 -i 3.12 --manifest-path crates/pyaugurs/Cargo.toml
           sccache: 'true'
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -97,7 +97,7 @@ jobs:
           command: sdist
           args: --out dist --manifest-path crates/pyaugurs/Cargo.toml
       - name: Upload sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
