@@ -26,5 +26,9 @@ pub fn seasonalities(
         builder = builder.threshold(threshold);
     }
 
-    Ok(builder.build().detect(y.as_slice()?).to_pyarray(py).into())
+    Ok(builder
+        .build()
+        .detect(y.as_slice()?)
+        .to_pyarray_bound(py)
+        .into())
 }
