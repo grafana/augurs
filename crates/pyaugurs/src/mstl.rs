@@ -43,7 +43,7 @@ impl MSTL {
 
     /// Create a new MSTL model with the given periods using the `AutoETS` trend model.
     #[classmethod]
-    pub fn ets(_cls: &PyType, periods: Vec<usize>) -> Self {
+    pub fn ets(_cls: &Bound<'_, PyType>, periods: Vec<usize>) -> Self {
         let ets = AutoETS::non_seasonal();
         Self {
             inner: Some(MSTLEnum::Unfit(MSTLModel::new(periods, Box::new(ets)))),
@@ -52,7 +52,11 @@ impl MSTL {
 
     /// Create a new MSTL model with the given periods using provided trend model.
     #[classmethod]
-    pub fn custom_trend(_cls: &PyType, periods: Vec<usize>, trend_model: PyTrendModel) -> Self {
+    pub fn custom_trend(
+        _cls: &Bound<'_, PyType>,
+        periods: Vec<usize>,
+        trend_model: PyTrendModel,
+    ) -> Self {
         Self {
             inner: Some(MSTLEnum::Unfit(MSTLModel::new(
                 periods,

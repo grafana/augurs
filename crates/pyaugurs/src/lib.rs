@@ -83,7 +83,7 @@ impl Forecast {
         // We could also use `into_pyarray` to construct the
         // numpy arrays in the Rust heap; let's see which ends up being
         // faster and more convenient.
-        self.inner.point.to_pyarray(py).into()
+        self.inner.point.to_pyarray_bound(py).into()
     }
 
     /// Get the lower prediction interval.
@@ -91,7 +91,7 @@ impl Forecast {
         self.inner
             .intervals
             .as_ref()
-            .map(|x| x.lower.to_pyarray(py).into())
+            .map(|x| x.lower.to_pyarray_bound(py).into())
     }
 
     /// Get the upper prediction interval.
@@ -99,14 +99,14 @@ impl Forecast {
         self.inner
             .intervals
             .as_ref()
-            .map(|x| x.upper.to_pyarray(py).into())
+            .map(|x| x.upper.to_pyarray_bound(py).into())
     }
 }
 
 /// Python bindings for the augurs time series framework.
 #[pymodule]
-fn augurs(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    pyo3_log::init();
+fn augurs(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // pyo3_log::init();
     m.add_class::<ets::AutoETS>()?;
     m.add_class::<mstl::MSTL>()?;
     m.add_class::<trend::PyTrendModel>()?;

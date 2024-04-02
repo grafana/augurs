@@ -53,17 +53,17 @@ impl TrendModel for PyTrendModel {
     fn name(&self) -> std::borrow::Cow<'_, str> {
         Python::with_gil(|py| {
             self.model
-                .as_ref(py)
+                .bind(py)
                 .get_type()
                 .name()
-                .map(|s| s.to_owned().into())
+                .map(|s| s.into_owned().into())
         })
         .unwrap_or_else(|_| "unknown Python class".into())
     }
 
     fn fit(&mut self, y: &[f64]) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         Python::with_gil(|py| {
-            let np = y.to_pyarray(py);
+            let np = y.to_pyarray_bound(py);
             self.model.call_method1(py, "fit", (np,))
         })?;
         Ok(())
