@@ -22,6 +22,7 @@ The latter use case is the main entrypoint of this crate.
 ## Usage
 
 ```rust
+use augurs_core::prelude::*;
 use augurs_mstl::MSTLModel;
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -90,10 +91,18 @@ that predicts a constant value for all time points in the horizon.
 use std::borrow::Cow;
 
 use augurs_core::{Forecast, ForecastIntervals};
-use augurs_mstl::TrendModel;
+use augurs_mstl::{FittedTrendModel, TrendModel};
 
+// The unfitted model. Sometimes this will need state!
 #[derive(Debug)]
 struct ConstantTrendModel {
+    // The constant value to predict.
+    constant: f64,
+}
+
+// The fitted model. This will invariable need state.
+#[derive(Debug)]
+struct FittedConstantTrendModel {
     // The constant value to predict.
     constant: f64,
     // The number of values in the training data.
@@ -106,53 +115,57 @@ impl TrendModel for ConstantTrendModel {
     }
 
     fn fit(
-        &mut self,
+        &self,
         y: &[f64],
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    ) -> Result<
+        Box<dyn FittedTrendModel + Sync + Send>,
+        Box<dyn std::error::Error + Send + Sync + 'static>,
+    > {
         // Your algorithm should do whatever it needs to do to fit the model.
-        // You have access to the data through the `y` slice, and a mutable
-        // reference to `self` so you can store the results of the fitting
-        // process.
-        // Here we just store the number of elements in the training data.
-        self.y_len = y.len();
-        Ok(())
+        // You need to return a boxed implementation of `FittedTrendModel`.
+        Ok(Box::new(FittedConstantTrendModel {
+            constant: self.constant,
+            y_len: y.len(),
+        }))
     }
+}
 
-    fn predict(
+impl FittedTrendModel for FittedConstantTrendModel {
+    fn predict_inplace(
         &self,
         horizon: usize,
         level: Option<f64>,
-    ) -> Result<Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Ok(Forecast {
-            point: vec![self.constant; horizon],
-            intervals: level.map(|level| {
-                let lower = vec![self.constant; horizon];
-                let upper = vec![self.constant; horizon];
-                ForecastIntervals {
-                    level,
-                    lower,
-                    upper,
-                }
-            }),
-        })
+        forecast: &mut Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast.point = vec![self.constant; horizon];
+        if let Some(level) = level {
+            let mut intervals = forecast
+                .intervals
+                .get_or_insert_with(|| ForecastIntervals::with_capacity(level, horizon));
+            intervals.lower = vec![self.constant; horizon];
+            intervals.upper = vec![self.constant; horizon];
+        }
+        Ok(())
     }
 
-    fn predict_in_sample(
+    fn predict_in_sample_inplace(
         &self,
         level: Option<f64>,
-    ) -> Result<Forecast, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Ok(Forecast {
-            point: vec![self.constant; self.y_len],
-            intervals: level.map(|level| {
-                let lower = vec![self.constant; self.y_len];
-                let upper = vec![self.constant; self.y_len];
-                ForecastIntervals {
-                    level,
-                    lower,
-                    upper,
-                }
-            }),
-        })
+        forecast: &mut Forecast,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+        forecast.point = vec![self.constant; self.y_len];
+        if let Some(level) = level {
+            let mut intervals = forecast
+                .intervals
+                .get_or_insert_with(|| ForecastIntervals::with_capacity(level, self.y_len));
+            intervals.lower = vec![self.constant; self.y_len];
+            intervals.upper = vec![self.constant; self.y_len];
+        }
+        Ok(())
+    }
+
+    fn training_data_size(&self) -> Option<usize> {
+        Some(self.y_len)
     }
 }
 ```

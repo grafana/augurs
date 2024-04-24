@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 [dependencies]
 augurs-core.workspace = true
 augurs-ets = { workspace = true, features = ["mstl"] }
+augurs-forecaster.workspace = true
 augurs-mstl.workspace = true
 augurs-seasons.workspace = true
 numpy = "0.21.0"

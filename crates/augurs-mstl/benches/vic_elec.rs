@@ -1,6 +1,7 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 
+use augurs_core::Fit;
 use augurs_mstl::{MSTLModel, NaiveTrend};
 use augurs_testing::data::VIC_ELEC;
 

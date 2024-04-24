@@ -10,6 +10,7 @@
 //! # Example
 //!
 //! ```
+//! use augurs_core::prelude::*;
 //! use augurs_ets::{AutoETS, AutoSpec};
 //!
 //! // Create an `AutoETS` instance from a specification string.
@@ -19,7 +20,7 @@
 //! let mut auto = AutoETS::new(1, "ZZN").expect("ZZN is a valid specification");
 //! let data = (1..10).map(|x| x as f64).collect::<Vec<_>>();
 //! let model = auto.fit(&data).expect("fit succeeds");
-//! assert_eq!(&model.model_type().to_string(), "AAN");
+//! assert_eq!(&model.model().model_type().to_string(), "AAN");
 //! ```
 
 use std::{
@@ -27,7 +28,7 @@ use std::{
     str::FromStr,
 };
 
-use augurs_core::Forecast;
+use augurs_core::{Fit, Forecast, Predict};
 
 use crate::{
     model::{self, Model, OptimizationCriteria, Params, Unfit},
@@ -278,9 +279,6 @@ pub struct AutoETS {
     ///
     /// Defaults to `2_000`.
     max_iterations: usize,
-
-    /// The model that was selected.
-    model: Option<Model>,
 }
 
 impl AutoETS {
@@ -325,7 +323,6 @@ impl AutoETS {
             nmse: 3,
             opt_crit: OptimizationCriteria::Likelihood,
             max_iterations: 2_000,
-            model: None,
         }
     }
 
@@ -459,7 +456,11 @@ impl AutoETS {
             damped_candidates
         )
     }
+}
 
+impl Fit for AutoETS {
+    type Fitted = FittedAutoETS;
+    type Error = Error;
     /// Search for the best model, fitting it to the data.
     ///
     /// The model is stored on the `AutoETS` struct and can be retrieved with
@@ -469,7 +470,7 @@ impl AutoETS {
     ///
     /// If no model can be found, or if any parameters are invalid, this function
     /// returns an error.
-    pub fn fit(&mut self, y: &[f64]) -> Result<&Model> {
+    fn fit(&self, y: &[f64]) -> Result<Self::Fitted> {
         let data_positive = y.iter().fold(f64::INFINITY, |a, &b| a.min(b)) > 0.0;
         if self.spec.error == ErrorSpec::Multiplicative && !data_positive {
             return Err(Error::InvalidModelSpec(format!(
@@ -490,7 +491,7 @@ impl AutoETS {
             return Err(Error::NotEnoughData);
         }
 
-        self.model = self
+        let model = self
             .candidates()
             .filter_map(|(&error, &trend, season, &damped)| {
                 if self.valid_combination(error, trend, season, damped, data_positive) {
@@ -519,8 +520,39 @@ impl AutoETS {
                 a.aicc()
                     .partial_cmp(&b.aicc())
                     .expect("NaNs have already been filtered from the iterator")
-            });
-        self.model.as_ref().ok_or(Error::NoModelFound)
+            })
+            .ok_or(Error::NoModelFound)?;
+        Ok(FittedAutoETS {
+            model,
+            training_data_size: n,
+        })
+    }
+}
+
+/// A fitted [`AutoETS`] model.
+///
+/// This type can be used to obtain predictions using the [`Predict`] trait.
+#[derive(Debug, Clone)]
+pub struct FittedAutoETS {
+    /// The model that was selected.
+    model: Model,
+
+    /// The number of observations in the training data.
+    training_data_size: usize,
+}
+
+impl FittedAutoETS {
+    /// Get the model that was selected.
+    pub fn model(&self) -> &Model {
+        &self.model
+    }
+}
+
+impl Predict for FittedAutoETS {
+    type Error = Error;
+
+    fn training_data_size(&self) -> usize {
+        self.training_data_size
     }
 
     /// Predict the next `horizon` values using the best model, optionally including
@@ -531,33 +563,24 @@ impl AutoETS {
     /// # Errors
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
-    pub fn predict(&self, h: usize, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        Ok(self
-            .model
-            .as_ref()
-            .ok_or(Error::ModelNotFit)?
-            .predict(h, level))
+    fn predict_inplace(&self, h: usize, level: Option<f64>, forecast: &mut Forecast) -> Result<()> {
+        self.model.predict_inplace(h, level, forecast)?;
+        Ok(())
     }
 
     /// Return the in-sample predictions using the best model, optionally including
     /// prediction intervals at the specified level.
     ///
     /// `level` should be a float between 0 and 1 representing the confidence level.`
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
-    pub fn predict_in_sample(&self, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        Ok(self
-            .model
-            .as_ref()
-            .ok_or(Error::ModelNotFit)?
-            .predict_in_sample(level))
+    fn predict_in_sample_inplace(&self, level: Option<f64>, forecast: &mut Forecast) -> Result<()> {
+        self.model.predict_in_sample_inplace(level, forecast)?;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod test {
+    use augurs_core::Fit;
 
     use super::{AutoETS, AutoSpec};
     use crate::{
@@ -604,12 +627,12 @@ mod test {
 
     #[test]
     fn air_passengers_fit() {
-        let mut auto = AutoETS::new(1, "ZZN").unwrap();
-        let model = auto.fit(&AIR_PASSENGERS).expect("fit failed");
-        assert_eq!(model.model_type().error, ErrorComponent::Multiplicative);
-        assert_eq!(model.model_type().trend, TrendComponent::Additive);
-        assert_eq!(model.model_type().season, SeasonalComponent::None);
-        assert_closeish!(model.log_likelihood(), -831.4883541595792, 0.01);
-        assert_closeish!(model.aic(), 1672.9767083191584, 0.01);
+        let auto = AutoETS::new(1, "ZZN").unwrap();
+        let fit = auto.fit(&AIR_PASSENGERS).expect("fit failed");
+        assert_eq!(fit.model.model_type().error, ErrorComponent::Multiplicative);
+        assert_eq!(fit.model.model_type().trend, TrendComponent::Additive);
+        assert_eq!(fit.model.model_type().season, SeasonalComponent::None);
+        assert_closeish!(fit.model.log_likelihood(), -831.4883541595792, 0.01);
+        assert_closeish!(fit.model.aic(), 1672.9767083191584, 0.01);
     }
 }

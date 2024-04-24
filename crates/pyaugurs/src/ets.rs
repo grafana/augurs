@@ -1,4 +1,5 @@
 //! Bindings for AutoETS model search.
+use augurs_core::{Fit, Predict};
 use numpy::PyReadonlyArrayDyn;
 use pyo3::{exceptions::PyException, prelude::*};
 
@@ -9,6 +10,7 @@ use crate::Forecast;
 #[pyclass]
 pub struct AutoETS {
     inner: augurs_ets::AutoETS,
+    fitted: Option<augurs_ets::FittedAutoETS>,
 }
 
 #[pymethods]
@@ -23,7 +25,10 @@ impl AutoETS {
     pub fn new(season_length: usize, spec: String) -> PyResult<Self> {
         let inner = augurs_ets::AutoETS::new(season_length, spec.as_str())
             .map_err(|e| PyException::new_err(e.to_string()))?;
-        Ok(Self { inner })
+        Ok(Self {
+            inner,
+            fitted: None,
+        })
     }
 
     fn __repr__(&self) -> String {
@@ -59,7 +64,9 @@ impl AutoETS {
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> PyResult<Forecast> {
-        self.inner
+        self.fitted
+            .as_ref()
+            .ok_or_else(|| PyException::new_err("model not fit yet"))?
             .predict(horizon, level)
             .map(Forecast::from)
             .map_err(|e| PyException::new_err(e.to_string()))
@@ -74,7 +81,9 @@ impl AutoETS {
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
     pub fn predict_in_sample(&self, level: Option<f64>) -> PyResult<Forecast> {
-        self.inner
+        self.fitted
+            .as_ref()
+            .ok_or_else(|| PyException::new_err("model not fit yet"))?
             .predict_in_sample(level)
             .map(Forecast::from)
             .map_err(|e| PyException::new_err(e.to_string()))

@@ -6,38 +6,23 @@
     unreachable_pub
 )]
 
+/// Common traits and types for time series forecasting models.
+pub mod prelude {
+    pub use super::{Fit, Predict};
+    pub use crate::forecast::{Forecast, ForecastIntervals};
+}
+
+mod forecast;
 pub mod interpolate;
+mod traits;
 
-/// Forecast intervals.
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ForecastIntervals {
-    /// The confidence level for the intervals.
-    pub level: f64,
-    /// The lower prediction intervals.
-    pub lower: Vec<f64>,
-    /// The upper prediction intervals.
-    pub upper: Vec<f64>,
-}
+use std::convert::Infallible;
 
-impl ForecastIntervals {
-    /// Return empty forecast intervals.
-    pub fn empty(level: f64) -> ForecastIntervals {
-        Self {
-            level,
-            lower: Vec::new(),
-            upper: Vec::new(),
-        }
-    }
-}
+pub use forecast::{Forecast, ForecastIntervals};
+pub use traits::{Fit, Predict};
 
-/// A forecast containing point forecasts and, optionally, prediction intervals.
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Forecast {
-    /// The point forecasts.
-    pub point: Vec<f64>,
-    /// The forecast intervals, if requested and supported
-    /// by the trend model.
-    pub intervals: Option<ForecastIntervals>,
-}
+/// An error produced by a time series forecasting model.
+pub trait ModelError: std::error::Error + Sync + Send + 'static {}
+
+impl std::error::Error for Box<dyn ModelError> {}
+impl ModelError for Infallible {}

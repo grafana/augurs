@@ -4,7 +4,7 @@
 
 use std::fmt::{self, Write};
 
-use augurs_core::ForecastIntervals;
+use augurs_core::{ForecastIntervals, Predict};
 use itertools::Itertools;
 use nalgebra::{DMatrix, DVector};
 use rand_distr::{Distribution, Normal};
@@ -1175,46 +1175,6 @@ impl Model {
         self.model_fit.amse()
     }
 
-    /// Predict the next `horizon` values using the model.
-    pub fn predict(&self, horizon: usize, level: impl Into<Option<f64>>) -> augurs_core::Forecast {
-        self.predict_impl(horizon, level.into()).0
-    }
-
-    fn predict_impl(&self, horizon: usize, level: Option<f64>) -> Forecast {
-        // Short-circuit if horizon is zero.
-        if horizon == 0 {
-            return Forecast(augurs_core::Forecast {
-                point: vec![],
-                intervals: level.map(ForecastIntervals::empty),
-            });
-        }
-
-        let mut f = Forecast(augurs_core::Forecast {
-            point: self.pegels_forecast(horizon),
-            intervals: None,
-        });
-        if let Some(level) = level {
-            f.calculate_intervals(&self.ets, &self.model_fit, horizon, level);
-        }
-        f
-    }
-
-    /// Return the model's predictions for the in-sample data.
-    pub fn predict_in_sample(&self, level: impl Into<Option<f64>>) -> augurs_core::Forecast {
-        self.predict_in_sample_impl(level.into()).0
-    }
-
-    fn predict_in_sample_impl(&self, level: Option<f64>) -> Forecast {
-        let mut f = Forecast(augurs_core::Forecast {
-            point: self.model_fit.fitted().to_vec(),
-            intervals: None,
-        });
-        if let Some(level) = level {
-            f.calculate_in_sample_intervals(self.sigma, level);
-        }
-        f
-    }
-
     /// The model type.
     pub fn model_type(&self) -> ModelType {
         self.ets.model_type
@@ -1226,9 +1186,46 @@ impl Model {
     }
 }
 
-struct Forecast(augurs_core::Forecast);
+impl Predict for Model {
+    type Error = Error;
 
-impl Forecast {
+    fn predict_in_sample_inplace(
+        &self,
+        level: Option<f64>,
+        forecast: &mut augurs_core::Forecast,
+    ) -> Result<(), Self::Error> {
+        forecast.point = self.model_fit.fitted().to_vec();
+        if let Some(level) = level {
+            Forecast(forecast).calculate_in_sample_intervals(self.sigma, level);
+        }
+        Ok(())
+    }
+
+    fn predict_inplace(
+        &self,
+        horizon: usize,
+        level: Option<f64>,
+        forecast: &mut augurs_core::Forecast,
+    ) -> Result<(), Self::Error> {
+        // Short-circuit if horizon is zero.
+        if horizon == 0 {
+            return Ok(());
+        }
+        forecast.point = self.pegels_forecast(horizon);
+        if let Some(level) = level {
+            Forecast(forecast).calculate_intervals(&self.ets, &self.model_fit, horizon, level);
+        }
+        Ok(())
+    }
+
+    fn training_data_size(&self) -> usize {
+        self.model_fit.residuals().len()
+    }
+}
+
+struct Forecast<'a>(&'a mut augurs_core::Forecast);
+
+impl<'a> Forecast<'a> {
     /// Calculate the prediction intervals for the forecast.
     fn calculate_intervals(&mut self, ets: &Ets, fit: &FitState, horizon: usize, level: f64) {
         let sigma = fit.sigma_squared();
@@ -1537,6 +1534,7 @@ fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
 #[cfg(test)]
 mod test {
     use assert_approx_eq::assert_approx_eq;
+    use augurs_core::prelude::*;
 
     use crate::{
         assert_closeish,
@@ -1602,7 +1600,7 @@ mod test {
         })
         .damped(true);
         let model = unfit.fit(&AP[AP.len() - 20..]).unwrap();
-        let forecasts = model.predict(10, 0.95);
+        let forecasts = model.predict(10, 0.95).unwrap();
         let expected_p = [
             432.26645246,
             432.53827337,
@@ -1663,7 +1661,7 @@ mod test {
             season: SeasonalComponent::None,
         });
         let model = unfit.fit(&AP).unwrap();
-        let forecasts = model.predict(10, 0.95);
+        let forecasts = model.predict(10, 0.95).unwrap();
         let expected_p = [
             436.15668239,
             440.31714837,
@@ -1716,7 +1714,7 @@ mod test {
         }
 
         // For in-sample data, just check that the first 10 values match.
-        let in_sample = model.predict_in_sample(0.95);
+        let in_sample = model.predict_in_sample(0.95).unwrap();
         let expected_p = [
             110.74681112,
             116.18804955,
@@ -1777,7 +1775,7 @@ mod test {
             season: SeasonalComponent::None,
         });
         let model = unfit.fit(&AP).unwrap();
-        let forecasts = model.predict(0, 0.95);
+        let forecasts = model.predict(0, 0.95).unwrap();
         assert!(forecasts.point.is_empty());
         let ForecastIntervals { lower, upper, .. } = forecasts.intervals.unwrap();
         assert!(lower.is_empty());

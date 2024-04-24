@@ -1,4 +1,7 @@
 #![doc = include_str!("../README.md")]
+// Annoying, hopefully https://github.com/madonoharu/tsify/issues/42 will
+// be resolved at some point.
+#![allow(non_snake_case)]
 #![warn(
     missing_docs,
     missing_debug_implementations,
