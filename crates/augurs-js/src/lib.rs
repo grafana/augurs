@@ -13,6 +13,7 @@ use serde::Serialize;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
+mod changepoints;
 pub mod ets;
 pub mod mstl;
 pub mod seasons;
