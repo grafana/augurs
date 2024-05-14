@@ -12,7 +12,7 @@ use tracing::instrument;
 
 use crate::{
     ets::{Ets, FitState},
-    stat::StatExt,
+    stat::VarExt,
     Error,
 };
 
