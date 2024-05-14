@@ -1,23 +1,14 @@
-pub trait StatExt {
-    fn mean(&self) -> f64;
+pub trait VarExt {
     fn var(&self, ddof: usize) -> f64;
     fn std(&self, ddof: usize) -> f64 {
         self.var(ddof).sqrt()
     }
 }
 
-fn mean<T: AsRef<[f64]>>(x: T, ddof: usize) -> f64 {
-    x.as_ref().iter().sum::<f64>() / (x.as_ref().len() - ddof) as f64
-}
-
-impl<T> StatExt for T
+impl<T> VarExt for T
 where
     T: AsRef<[f64]>,
 {
-    fn mean(&self) -> f64 {
-        mean(self, 0)
-    }
-
     fn var(&self, ddof: usize) -> f64 {
         let n = self.as_ref().len();
         assert!(
@@ -43,12 +34,7 @@ where
 mod test {
     use assert_approx_eq::assert_approx_eq;
 
-    use super::StatExt;
-
-    #[test]
-    fn test_mean() {
-        assert_eq!([3.0_f64, 5.0, 8.0, 1.0].mean(), 4.25);
-    }
+    use super::VarExt;
 
     #[test]
     fn test_var() {
