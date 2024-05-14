@@ -274,7 +274,7 @@ impl FittedTrendModel for NaiveTrendFitted {
         level: Option<f64>,
         forecast: &mut Forecast,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        forecast.point = self.fitted.clone();
+        forecast.point.clone_from(&self.fitted);
         if let Some(level) = level {
             let intervals = forecast
                 .intervals
