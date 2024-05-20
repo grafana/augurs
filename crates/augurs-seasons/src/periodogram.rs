@@ -187,7 +187,7 @@ impl Detector {
                 *per >= self.min_period && *per < max_period && *per != n_per_segment
             })
             // Group by period, and keep the maximum power for each period.
-            .group_by(|(per, _)| *per)
+            .chunk_by(|(per, _)| *per)
             .into_iter()
             .map(|(per, group)| {
                 let max_power = group
