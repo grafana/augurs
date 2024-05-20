@@ -1,34 +1,78 @@
+use std::num::NonZeroUsize;
+
 use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use augurs_changepoint::{dist, GaussianDetector};
+use augurs_changepoint::{
+    dist, ArgpcpDetector, BocpdDetector, DefaultArgpcpDetector, Detector, NormalGammaDetector,
+};
+
+#[derive(Debug)]
+enum EitherDetector {
+    NormalGamma(NormalGammaDetector),
+    Argpcp(DefaultArgpcpDetector),
+}
+
+impl EitherDetector {
+    fn detect_changepoints(&mut self, y: &[f64]) -> Vec<usize> {
+        match self {
+            EitherDetector::NormalGamma(x) => x.detect_changepoints(y),
+            EitherDetector::Argpcp(x) => x.detect_changepoints(y),
+        }
+    }
+}
 
 /// A changepoint detector.
-#[derive(Debug, Default)]
+#[derive(Debug, Tsify)]
 #[wasm_bindgen]
 pub struct ChangepointDetector {
-    detector: GaussianDetector,
+    detector: EitherDetector,
 }
+
+const DEFAULT_HAZARD_LAMBDA: f64 = 250.0;
 
 #[wasm_bindgen]
 impl ChangepointDetector {
+    /// Create a new Bayesian Online changepoint detector with a Normal Gamma prior.
     #[wasm_bindgen]
-    /// Create a new changepoint detector.
-    pub fn gaussian(opts: Option<GaussianDetectorOpts>) -> Result<ChangepointDetector, JsValue> {
-        let GaussianDetectorOpts { hazard, prior } = opts.unwrap_or_default();
+    pub fn normal_gamma(
+        opts: Option<NormalGammaDetectorOpts>,
+    ) -> Result<ChangepointDetector, JsValue> {
+        let NormalGammaDetectorOpts {
+            hazard_lambda,
+            prior,
+        } = opts.unwrap_or_default();
         Ok(Self {
-            detector: GaussianDetector::gaussian(
-                hazard.unwrap_or(250.0),
+            detector: EitherDetector::NormalGamma(BocpdDetector::normal_gamma(
+                hazard_lambda.unwrap_or(DEFAULT_HAZARD_LAMBDA),
                 dist::NormalGamma::try_from(prior.unwrap_or_default())
                     .map_err(|e| e.to_string())?,
-            ),
+            )),
         })
     }
 
+    /// Create a new Autoregressive Gaussian Process changepoint detector
+    /// with the default kernel and parameters.
     #[wasm_bindgen]
+    pub fn default_argpcp(
+        opts: Option<DefaultArgpcpDetectorOpts>,
+    ) -> Result<ChangepointDetector, JsValue> {
+        let mut builder = ArgpcpDetector::builder();
+        if let Some(opts) = opts {
+            if let Some(cv) = opts.constant_value {
+                builder = builder.constant_value(cv);
+            }
+            // TODO: fill in the rest of these opts.
+        }
+        Ok(Self {
+            detector: EitherDetector::Argpcp(builder.build()),
+        })
+    }
+
     /// Detect changepoints in the given time series.
+    #[wasm_bindgen]
     pub fn detect_changepoints(&mut self, y: Float64Array) -> Changepoints {
         Changepoints {
             indices: self.detector.detect_changepoints(&y.to_vec()),
@@ -46,16 +90,19 @@ pub struct NormalGammaParameters {
     /// Defaults to 0.0.
     #[tsify(optional)]
     pub mu: Option<f64>,
+
     /// The relative precision of μ versus data.
     ///
     /// Defaults to 1.0.
     #[tsify(optional)]
     pub rho: Option<f64>,
+
     /// The mean of rho (the precision) is v/s.
     ///
     /// Defaults to 1.0.
     #[tsify(optional)]
     pub s: Option<f64>,
+
     /// The degrees of freedom of precision of rho.
     ///
     /// Defaults to 1.0.
@@ -98,12 +145,51 @@ impl TryFrom<NormalGammaParameters> for dist::NormalGamma {
 /// Options for the Normal Gamma changepoint detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
-pub struct GaussianDetectorOpts {
+pub struct NormalGammaDetectorOpts {
+    /// The hazard lambda.
+    ///
+    /// `1/hazard` is the probability of the next step being a changepoint.
+    /// Therefore, the larger the value, the lower the prior probability
+    /// is for the any point to be a change-point.
+    /// Mean run-length is lambda - 1.
+    ///
+    /// Defaults to 250.0.
     #[tsify(optional)]
-    pub hazard: Option<f64>,
+    pub hazard_lambda: Option<f64>,
 
+    /// The prior for the Normal distribution.
     #[tsify(optional)]
     pub prior: Option<NormalGammaParameters>,
+}
+
+/// Options for the default Autoregressive Gaussian Process detector.
+#[derive(Debug, Default, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
+pub struct DefaultArgpcpDetectorOpts {
+    /// The value of the constant kernel.
+    #[tsify(optional)]
+    pub constant_value: Option<f64>,
+    /// The length scale of the RBF kernel.
+    #[tsify(optional)]
+    pub length_scale: Option<f64>,
+    /// The noise level of the white kernel.
+    #[tsify(optional)]
+    pub noise_level: Option<f64>,
+    /// The maximum autoregressive lag.
+    #[tsify(optional)]
+    pub max_lag: Option<NonZeroUsize>,
+    /// Scale Gamma distribution alpha parameter.
+    #[tsify(optional)]
+    pub alpha0: Option<f64>,
+    /// Scale Gamma distribution beta parameter.
+    #[tsify(optional)]
+    pub beta0: Option<f64>,
+    #[tsify(optional)]
+    pub logistic_hazard_h: Option<f64>,
+    #[tsify(optional)]
+    pub logistic_hazard_a: Option<f64>,
+    #[tsify(optional)]
+    pub logistic_hazard_b: Option<f64>,
 }
 
 /// Changepoints detected in a time series.

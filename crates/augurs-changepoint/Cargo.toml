@@ -6,8 +6,11 @@ documentation.workspace = true
 repository.workspace = true
 license.workspace = true
 edition.workspace = true
-keywords.workspace = true
-description = "Changepoint detection using Online Bayesian Change Point Detection and more."
+keywords = [
+  "changepoint",
+  "time-series",
+]
+description = "Changepoint detection using Bayesian Online Change Point Detection and more."
 
 [dependencies]
 augurs-core.workspace = true
