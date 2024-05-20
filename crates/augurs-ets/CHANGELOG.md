@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/grafana/augurs/compare/augurs-ets-v0.1.2...augurs-ets-v0.2.0) - 2024-05-20
+
+### Added
+- [**breaking**] add transformations and high-level forecasting API ([#65](https://github.com/grafana/augurs/pull/65))
+
+### Other
+- use clone_from instead of assigning result of clone ([#73](https://github.com/grafana/augurs/pull/73))
+
 ## [0.1.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.1.0...augurs-ets-v0.1.1) - 2024-02-15
 
 ### Other
