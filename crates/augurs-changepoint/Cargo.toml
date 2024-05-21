@@ -1,0 +1,32 @@
+[package]
+name = "augurs-changepoint"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords = [
+  "changepoint",
+  "time-series",
+]
+description = "Changepoint detection using Bayesian Online Change Point Detection and more."
+
+[dependencies]
+augurs-core.workspace = true
+changepoint = "0.14.1"
+distrs.workspace = true
+itertools.workspace = true
+serde = { workspace = true, optional = true, features = ["derive"] }
+thiserror.workspace = true
+tracing.workspace = true
+
+[features]
+serde = ["dep:serde", "changepoint/serde"]
+
+[dev-dependencies]
+assert_approx_eq.workspace = true
+augurs-testing.workspace = true
+criterion.workspace = true
+iai.workspace = true
+pprof.workspace = true
