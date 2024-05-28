@@ -41,7 +41,7 @@ impl MSTL {
     ///
     /// If provided, `level` must be a float between 0 and 1.
     #[wasm_bindgen]
-    pub fn predict_in_sample(&self, level: Option<f64>) -> Result<Forecast, JsValue> {
+    pub fn predictInSample(&self, level: Option<f64>) -> Result<Forecast, JsValue> {
         let forecasts = self.forecaster.predict_in_sample(level);
         Ok(forecasts.map(Into::into).map_err(|e| e.to_string())?)
     }
@@ -49,6 +49,7 @@ impl MSTL {
 
 /// Options for the ETS MSTL model.
 #[derive(Debug, Default, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
 pub struct ETSOptions {
     /// Whether to impute missing values.

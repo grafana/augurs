@@ -8,6 +8,7 @@ use augurs_seasons::{Detector, PeriodogramDetector};
 
 /// Options for detecting seasonal periods.
 #[derive(Debug, Default, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
 pub struct SeasonalityOptions {
     /// The minimum period to consider when detecting seasonal periods.

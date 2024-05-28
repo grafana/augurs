@@ -25,7 +25,7 @@ impl EitherDetector {
 }
 
 /// A changepoint detector.
-#[derive(Debug, Tsify)]
+#[derive(Debug)]
 #[wasm_bindgen]
 pub struct ChangepointDetector {
     detector: EitherDetector,
@@ -36,7 +36,7 @@ const DEFAULT_HAZARD_LAMBDA: f64 = 250.0;
 #[wasm_bindgen]
 impl ChangepointDetector {
     /// Create a new Bayesian Online changepoint detector with a Normal Gamma prior.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "normalGamma")]
     pub fn normal_gamma(
         opts: Option<NormalGammaDetectorOpts>,
     ) -> Result<ChangepointDetector, JsValue> {
@@ -55,7 +55,7 @@ impl ChangepointDetector {
 
     /// Create a new Autoregressive Gaussian Process changepoint detector
     /// with the default kernel and parameters.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "defaultArgpcp")]
     pub fn default_argpcp(
         opts: Option<DefaultArgpcpDetectorOpts>,
     ) -> Result<ChangepointDetector, JsValue> {
@@ -72,7 +72,7 @@ impl ChangepointDetector {
     }
 
     /// Detect changepoints in the given time series.
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = "detectChangepoints")]
     pub fn detect_changepoints(&mut self, y: Float64Array) -> Changepoints {
         Changepoints {
             indices: self.detector.detect_changepoints(&y.to_vec()),
@@ -83,6 +83,7 @@ impl ChangepointDetector {
 /// Parameters for the Normal Gamma prior.
 /// Options for the ETS MSTL model.
 #[derive(Debug, Deserialize, Serialize, Tsify)]
+#[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, into_wasm_abi)]
 pub struct NormalGammaParameters {
     /// The prior mean.
@@ -144,6 +145,7 @@ impl TryFrom<NormalGammaParameters> for dist::NormalGamma {
 
 /// Options for the Normal Gamma changepoint detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
 pub struct NormalGammaDetectorOpts {
     /// The hazard lambda.
@@ -164,6 +166,7 @@ pub struct NormalGammaDetectorOpts {
 
 /// Options for the default Autoregressive Gaussian Process detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
 pub struct DefaultArgpcpDetectorOpts {
     /// The value of the constant kernel.
@@ -176,7 +179,7 @@ pub struct DefaultArgpcpDetectorOpts {
     #[tsify(optional)]
     pub noise_level: Option<f64>,
     /// The maximum autoregressive lag.
-    #[tsify(optional)]
+    #[tsify(type = "number", optional)]
     pub max_lag: Option<NonZeroUsize>,
     /// Scale Gamma distribution alpha parameter.
     #[tsify(optional)]

@@ -24,9 +24,9 @@ impl AutoETS {
     ///
     /// If the `spec` string is invalid, this function returns an error.
     #[wasm_bindgen(constructor)]
-    pub fn new(season_length: usize, spec: String) -> Result<AutoETS, JsValue> {
+    pub fn new(seasonLength: usize, spec: String) -> Result<AutoETS, JsValue> {
         let inner =
-            augurs_ets::AutoETS::new(season_length, spec.as_str()).map_err(|e| e.to_string())?;
+            augurs_ets::AutoETS::new(seasonLength, spec.as_str()).map_err(|e| e.to_string())?;
         Ok(Self {
             inner,
             fitted: None,
