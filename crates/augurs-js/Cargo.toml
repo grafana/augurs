@@ -22,6 +22,7 @@ augurs-core = { workspace = true }
 augurs-ets = { workspace = true, features = ["mstl"] }
 augurs-forecaster.workspace = true
 augurs-mstl = { workspace = true }
+augurs-outlier = { workspace = true }
 augurs-seasons = { workspace = true }
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

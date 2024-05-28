@@ -16,6 +16,7 @@ use wasm_bindgen::prelude::*;
 mod changepoints;
 pub mod ets;
 pub mod mstl;
+mod outlier;
 pub mod seasons;
 
 /// Initialize the logger and panic hook.
