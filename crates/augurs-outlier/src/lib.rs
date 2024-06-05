@@ -10,6 +10,20 @@ mod testing;
 
 pub use dbscan::DBSCANDetector;
 
+/// The sensitivity of an outlier detection algorithm.
+///
+/// Sensitivity values are between 0.0 and 1.0, where 0.0 means
+/// the algorithm is not sensitive to outliers and 1.0 means the
+/// algorithm is very sensitive to outliers.
+///
+/// The exact meaning of the sensitivity value depends on the
+/// implementation of the outlier detection algorithm.
+/// For example, a DBSCAN based algorithm might use the sensitivity
+/// to determine the maximum distance between points in the same
+/// cluster (i.e. `epsilon`).
+///
+/// Crucially, though, sensitivity will always be a value between 0.0
+/// and 1.0 to make it easier to reason about for users.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 struct Sensitivity(f64);
 
