@@ -2,18 +2,10 @@
 
 ## Installation
 
-Eventually wheels will be provided as part of GitHub releases and maybe even on PyPI.
-At that point it will be as easy as:
+Wheels are provided on PyPI for all major platforms. Just run:
 
 ```shell
 $ pip install augurs
-```
-
-Until then it's a bit more manual. You'll need [maturin] installed and a local copy of this
-repository. Then, from the `crates/pyaugurs` directory, with your virtualenv activated:
-
-```shell
-$ maturin build --release
 ```
 
 You'll probably want numpy as well:
@@ -70,5 +62,3 @@ model.predict(10, level=0.95)
 ```
 
 More to come!
-
-[maturin]: https://www.maturin.rs/
