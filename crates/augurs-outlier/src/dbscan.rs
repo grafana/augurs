@@ -53,14 +53,13 @@ pub struct DBSCANDetector {
 }
 
 impl OutlierDetector for DBSCANDetector {
-    fn detect(&self, y: &[&[f64]]) -> OutlierResult {
-        let data = Data::from_row_major(y);
-        self.run(data)
+    type PreprocessedData = Data;
+    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData {
+        Data::from_row_major(y)
     }
 
-    fn detect_transposed(&self, y: &[&[f64]]) -> OutlierResult {
-        let data = Data::from_column_major(y);
-        self.run(data)
+    fn detect(&self, y: &Self::PreprocessedData) -> OutlierResult {
+        self.run(y)
     }
 }
 
@@ -91,8 +90,8 @@ impl DBSCANDetector {
         self.parallelize = parallelize;
     }
 
-    fn run(&self, data: Data) -> OutlierResult {
-        let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(&data);
+    fn run(&self, data: &Data) -> OutlierResult {
+        let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(data);
         let n_timestamps = data.sorted.len();
         let mut serieses: Vec<_> = iter::repeat_with(|| {
             let mut s = Series::with_capacity(n_timestamps);
@@ -281,14 +280,14 @@ impl Index {
 
 /// Preprocessed data for the DBSCAN algorithm.
 #[derive(Debug)]
-struct Data {
+pub struct Data {
     sorted: Vec<SortedData>,
 }
 
 impl Data {
     /// Create a `Data` struct from row-major data.
     #[instrument(skip(data))]
-    fn from_row_major(data: &[&[f64]]) -> Self {
+    pub fn from_row_major(data: &[&[f64]]) -> Self {
         let n_columns = data.len();
         let n_timestamps = data[0].len();
         // First transpose the data.
@@ -313,7 +312,8 @@ impl Data {
     }
 
     /// Create a `Data` struct from column-major data.
-    fn from_column_major(data: &[&[f64]]) -> Self {
+    #[instrument(skip(data))]
+    pub fn from_column_major(data: &[&[f64]]) -> Self {
         let sorted = data.iter().map(|x| SortedData::new(x.to_vec())).collect();
         Self { sorted }
     }
@@ -361,7 +361,7 @@ impl SortedData {
 mod tests {
     use crate::{OutlierDetector, OutlierResult};
 
-    use super::DBSCANDetector;
+    use super::*;
 
     const UNDEFINED: f64 = f64::NAN;
     // Transposed dataset for testing DBSCAN.
@@ -551,7 +551,8 @@ mod tests {
     fn test_synthetic() {
         for TestCase { eps, expected } in CASES {
             let dbscan = DBSCANDetector::with_epsilon(*eps);
-            let results = dbscan.detect_transposed(DBSCAN_DATASET);
+            let data = Data::from_column_major(DBSCAN_DATASET);
+            let results = dbscan.detect(&data);
             let table = outlier_intervals_to_boolean_table(&results);
             let scores = outlier_scores_to_boolean_table(&results);
             for (i, row) in table.iter().enumerate() {
@@ -571,10 +572,9 @@ mod tests {
 
     #[test]
     fn test_realistic() {
-        let data = crate::testing::SERIES;
-
         let dbscan = DBSCANDetector::with_sensitivity(0.8).unwrap();
-        let results = dbscan.detect(data);
+        let data = dbscan.preprocess(crate::testing::SERIES);
+        let results = dbscan.detect(&data);
         assert!(!results.outlying_series.contains(&0));
         assert!(!results.outlying_series.contains(&1));
         assert!(results.outlying_series.contains(&2));

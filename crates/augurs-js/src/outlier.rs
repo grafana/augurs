@@ -7,6 +7,65 @@ use tsify::Tsify;
 
 use wasm_bindgen::prelude::*;
 
+// Enums representing outlier detectors and 'loaded' outlier detectors
+// (i.e. detectors that have already preprocessed some data and are
+// ready to detect).
+
+#[derive(Debug)]
+enum Detector {
+    Dbscan(augurs_outlier::DBSCANDetector),
+}
+
+impl Detector {
+    /// Preprocess the data for the detector.
+    ///
+    /// This is provided as a separate method to allow for the
+    /// preprocessed data to be cached in the future.
+    fn preprocess(&self, y: Float64Array, nTimestamps: usize) -> LoadedDetector {
+        match self {
+            Self::Dbscan(detector) => {
+                let vec = y.to_vec();
+                let y: Vec<_> = vec.chunks(nTimestamps).map(Into::into).collect();
+                let data = detector.preprocess(&y);
+                LoadedDetector::Dbscan {
+                    detector: detector.clone(),
+                    data,
+                }
+            }
+        }
+    }
+
+    /// Preprocess and perform outlier detection on the data.
+    fn detect(&self, y: Float64Array, nTimestamps: usize) -> OutlierResult {
+        match self {
+            Self::Dbscan(detector) => {
+                let vec = y.to_vec();
+                let y: Vec<_> = vec.chunks(nTimestamps).map(Into::into).collect();
+                let data = detector.preprocess(&y);
+                detector.detect(&data).into()
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum LoadedDetector {
+    Dbscan {
+        detector: augurs_outlier::DBSCANDetector,
+        data: <augurs_outlier::DBSCANDetector as augurs_outlier::OutlierDetector>::PreprocessedData,
+    },
+}
+
+impl LoadedDetector {
+    fn detect(&self) -> augurs_outlier::OutlierResult {
+        match self {
+            Self::Dbscan { detector, data } => detector.detect(data),
+        }
+    }
+}
+
+// The public API for the outlier detector, exposed via the Javascript bindings.
+
 /// Options for the DBSCAN outlier detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
@@ -18,26 +77,24 @@ pub struct DBSCANDetectorOptions {
     pub sensitivity: f64,
 }
 
-#[derive(Debug)]
-enum Detector {
-    Dbscan(augurs_outlier::DBSCANDetector),
+#[derive(Debug, Default, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
+pub struct MADDetectorOptions {
+    /// A scale-invariant sensitivity parameter.
+    ///
+    /// This must be in (0, 1) and will be used to estimate a sensible
+    /// value of epsilon based on the data.
+    pub sensitivity: f64,
 }
 
-impl Detector {
-    fn detect(&self, y: Float64Array, n_timestamps: usize) -> OutlierResult {
-        match self {
-            Self::Dbscan(detector) => {
-                let vec = y.to_vec();
-                let y: Vec<_> = vec.chunks(n_timestamps).map(Into::into).collect();
-                let result = detector.detect(&y);
-                OutlierResult {
-                    outlying_series: result.outlying_series,
-                    series_results: result.series_results.into_iter().map(Into::into).collect(),
-                    cluster_band: result.cluster_band.into(),
-                }
-            }
-        }
-    }
+#[derive(Debug, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
+/// Options for outlier detectors.
+pub enum OutlierDetectorOptions {
+    #[serde(rename = "dbscan")]
+    Dbscan(DBSCANDetectorOptions),
+    #[serde(rename = "mad")]
+    Mad(MADDetectorOptions),
 }
 
 /// A detector for detecting outlying time series in a group of series.
@@ -61,9 +118,72 @@ impl OutlierDetector {
     }
 
     /// Detect outlying time series in a group of series.
+    ///
+    /// Note: if you plan to run the detector multiple times on the same data,
+    /// you should use the `preprocess` method to cache the preprocessed data,
+    /// then call `detect` on the `LoadedOutlierDetector` returned by `preprocess`.
     #[wasm_bindgen]
     pub fn detect(&self, y: Float64Array, n_timestamps: usize) -> OutlierResult {
         self.detector.detect(y, n_timestamps)
+    }
+
+    /// Preprocess the data for the detector.
+    ///
+    /// The returned value is a 'loaded' outlier detector, which can be used
+    /// to detect outliers without needing to preprocess the data again.
+    ///
+    /// This is useful if you plan to run the detector multiple times on the same data.
+    #[wasm_bindgen]
+    pub fn preprocess(&self, y: Float64Array, n_timestamps: usize) -> LoadedOutlierDetector {
+        LoadedOutlierDetector {
+            detector: self.detector.preprocess(y, n_timestamps),
+        }
+    }
+}
+
+/// A 'loaded' outlier detector, ready to detect outliers.
+///
+/// This is returned by the `preprocess` method of `OutlierDetector`,
+/// and holds the preprocessed data for the detector.
+#[derive(Debug)]
+#[wasm_bindgen]
+pub struct LoadedOutlierDetector {
+    detector: LoadedDetector,
+}
+
+#[wasm_bindgen]
+impl LoadedOutlierDetector {
+    #[wasm_bindgen]
+    pub fn detect(&self) -> OutlierResult {
+        self.detector.detect().into()
+    }
+
+    /// Update the detector with new options.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if the detector and options types
+    /// are incompatible.
+    #[wasm_bindgen(js_name = "updateDetector")]
+    pub fn update_detector(&mut self, options: OutlierDetectorOptions) -> Result<(), JsError> {
+        match (&mut self.detector, options) {
+            (
+                LoadedDetector::Dbscan {
+                    ref mut detector, ..
+                },
+                OutlierDetectorOptions::Dbscan(options),
+            ) => {
+                // This isn't ideal because it doesn't maintain any other state of the detector,
+                // but it's the best we can do without adding an `update` method to the `OutlierDetector`
+                // trait, which would in turn require some sort of config associated type.
+                let _ = std::mem::replace(
+                    detector,
+                    augurs_outlier::DBSCANDetector::with_sensitivity(options.sensitivity)?,
+                );
+            }
+            _ => return Err(JsError::new("Mismatch between detector and options")),
+        }
+        Ok(())
     }
 }
 
@@ -146,4 +266,14 @@ pub struct OutlierResult {
     /// The band indicating the min and max value considered outlying
     /// at each timestamp.
     cluster_band: ClusterBand,
+}
+
+impl From<augurs_outlier::OutlierResult> for OutlierResult {
+    fn from(r: augurs_outlier::OutlierResult) -> Self {
+        Self {
+            outlying_series: r.outlying_series,
+            series_results: r.series_results.into_iter().map(Into::into).collect(),
+            cluster_band: r.cluster_band.into(),
+        }
+    }
 }

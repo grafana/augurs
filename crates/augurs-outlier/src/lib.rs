@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-use std::{collections::HashSet, ops::Deref};
+use std::collections::HashSet;
 
 mod dbscan;
 mod mad;
@@ -196,51 +196,54 @@ impl OutlierIntervals {
 
 /// An outlier detection algorithm.
 pub trait OutlierDetector {
-    /// Detect outliers in the given slice of series.
+    /// The preprocessed data used by the outlier detection algorithm.
+    ///
+    /// This type is used to store the preprocessed data that is
+    /// calculated from the input data. The preprocessed data is
+    /// then used by the `detect` method to determine whether each
+    /// series is an outlier.
+    ///
+    /// An example of preprocessed data might be the transposed
+    /// input data, where elements of the inner vectors correspond
+    /// to the same timestamp in different series.
+    type PreprocessedData;
+
+    /// Preprocess the given slice of series.
     ///
     /// The input is a slice of aligned time series. Each series is
     /// a slice of `f64` which represents the values of the series
-    /// over time. The length of the series is the same for all series.
+    /// over time. The length of the inner slice is the same for all series.
+    ///
+    /// The output is a preprocessed version of the input data. The exact
+    /// format of the preprocessed data is up to the implementation.
+    /// The preprocessed data will be passed to the `detect` method.
+    ///
+    /// This method is separate from `detect` to allow for more efficient
+    /// recalculations of the preprocessed data when some input parameters
+    /// change. For example, if the input data is the same but the sensitivity
+    /// changes, the outlier detection calculation can be rerun without
+    /// reprocessing the input data.
+    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData;
+
+    /// Detect outliers in the given slice of series.
     ///
     /// The output is a vector of `Series` where each `Series` corresponds
     /// to the corresponding series in the input. The implementation will
     /// decide whether each series is an outlier, i.e. whether it behaves
     /// differently to the other input series.
-    ///
-    /// Note: implementations which can operate more efficiently on
-    /// transposed data should override the `detect_transposed` method
-    /// too.
-    fn detect(&self, y: &[&[f64]]) -> OutlierResult;
-
-    /// Detect outliers in transposed data, where `y` is a slice of
-    /// values and each slice contains the values for each series at
-    /// a given timestamp.
-    ///
-    /// This exists as an optimization for certain outlier detection
-    /// algorithms that can be more efficiently applied to transposed
-    /// data.
-    ///
-    /// The default implementation will simply transpose the data and call
-    /// [`OutlierDetector::detect`]. This means that implementations which
-    /// manually transpose in their `detect` method should override this
-    /// method to avoid transposing the data twice.
-    fn detect_transposed(&self, y: &[&[f64]]) -> OutlierResult {
-        let transposed = transpose(y);
-        let refs: Vec<_> = transposed.iter().map(Deref::deref).collect();
-        self.detect(&refs)
-    }
+    fn detect(&self, y: &Self::PreprocessedData) -> OutlierResult;
 }
 
-fn transpose(data: &[&[f64]]) -> Vec<Vec<f64>> {
-    let mut transposed = vec![vec![]; data.len()];
-    for row in data {
-        transposed.reserve(data.len());
-        for (i, value) in row.iter().enumerate() {
-            transposed[i].push(*value);
-        }
-    }
-    transposed
-}
+// fn transpose(data: &[&[f64]]) -> Vec<Vec<f64>> {
+//     let mut transposed = vec![vec![]; data.len()];
+//     for row in data {
+//         transposed.reserve(data.len());
+//         for (i, value) in row.iter().enumerate() {
+//             transposed[i].push(*value);
+//         }
+//     }
+//     transposed
+// }
 
 // #[cfg(test)]
 // mod test {

@@ -9,7 +9,11 @@ const MAD_K: f64 = 1.4826;
 pub struct MADDetector {}
 
 impl OutlierDetector for MADDetector {
-    fn detect(&self, y: &[&[f64]]) -> crate::OutlierResult {
+    type PreprocessedData = Vec<Vec<f64>>;
+    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData {
+        todo!()
+    }
+    fn detect(&self, y: &Self::PreprocessedData) -> crate::OutlierResult {
         todo!()
     }
 }
