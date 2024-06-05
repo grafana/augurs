@@ -15,7 +15,9 @@ version = "0.2.0"
 edition = "2021"
 keywords = [
   "analysis",
+  "changepoint-detection",
   "forecasting",
+  "outlier-detection",
   "time-series",
 ]
 
