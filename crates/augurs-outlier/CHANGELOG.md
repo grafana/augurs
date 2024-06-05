@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/grafana/augurs/releases/tag/augurs-outlier-v0.2.0) - 2024-06-05
+
+### Added
+- add outlier crate with DBSCAN implementation ([#79](https://github.com/grafana/augurs/pull/79))
+
+### Other
+- Add description for outlier crate
+- release ([#85](https://github.com/grafana/augurs/pull/85))
+- Add empty CHANGELOGs
+
 ## [0.2.0](https://github.com/grafana/augurs/compare/augurs-outlier-v0.1.2...augurs-outlier-v0.2.0) - 2024-06-05
 
 ### Added
