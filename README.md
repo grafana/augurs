@@ -34,6 +34,27 @@ APIs are subject to change, and functionality may not be fully implemented.
 
 Releases are made using `release-plz`: a PR should be automatically created for each release, and merging will perform the release and publish automatically.
 
+### Releasing the `augurs` Python library
+
+The first exception to the `release-plz` flow is the `augurs` Python library, which is only released when a new tag beginning with `pyaugurs` is pushed. This must be done manually for now (ideally soon after the `release-plz` PR is merged).
+
+E.g.:
+
+```
+git tag pyaugurs-v0.2.0 -m "Release pyaugurs v0.2.0"
+git push --tags
+```
+
+### Releasing the `augurs` npm library
+
+The `augurs` npm library must also be published manually. This can be done using `just publish-npm`; note you'll need to login with npm first.
+
+```
+npm login
+# Log in online, etc...
+just publish-npm
+```
+
 ## License
 
 Dual-licensed to be compatible with the Rust project.
