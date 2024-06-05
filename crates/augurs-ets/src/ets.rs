@@ -107,6 +107,7 @@ impl FitState {
 #[derive(Debug, Clone)]
 pub struct Ets {
     pub model_type: ModelType,
+    #[allow(dead_code)] // unused for now as seasonal models are unimplemented.
     pub season_length: usize,
     pub damped: bool,
     pub nmse: usize,
