@@ -1,7 +1,7 @@
 //! JavaScript bindings for the MSTL model.
 use js_sys::Float64Array;
 use serde::Deserialize;
-use tsify::Tsify;
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_ets::{trend::AutoETSTrendModel, AutoETS};

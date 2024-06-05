@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use augurs_outlier::OutlierDetector as _;
 use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::Tsify;
 
 use wasm_bindgen::prelude::*;
 

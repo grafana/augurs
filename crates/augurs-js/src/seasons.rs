@@ -1,7 +1,7 @@
 //! Javascript bindings for augurs seasonality detection.
 
 use serde::Deserialize;
-use tsify::Tsify;
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_seasons::{Detector, PeriodogramDetector};
