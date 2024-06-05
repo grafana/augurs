@@ -21,13 +21,13 @@ keywords = [
 
 [workspace.dependencies]
 
-augurs-changepoint = { version = "0.1.2", path = "crates/augurs-changepoint" }
-augurs-core = { version = "0.1.2", path = "crates/augurs-core" }
-augurs-ets = { version = "0.1.2", path = "crates/augurs-ets" }
-augurs-forecaster = { version = "0.1.2", path = "crates/augurs-forecaster" }
-augurs-mstl = { version = "0.1.2", path = "crates/augurs-mstl" }
-augurs-outlier = { version = "0.1.2", path = "crates/augurs-outlier" }
-augurs-seasons = { version = "0.1.2", path = "crates/augurs-seasons" }
+augurs-changepoint = { path = "crates/augurs-changepoint" }
+augurs-core = { path = "crates/augurs-core" }
+augurs-ets = { path = "crates/augurs-ets" }
+augurs-forecaster = { path = "crates/augurs-forecaster" }
+augurs-mstl = { path = "crates/augurs-mstl" }
+augurs-outlier = { path = "crates/augurs-outlier" }
+augurs-seasons = { path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
 distrs = "0.2.1"
