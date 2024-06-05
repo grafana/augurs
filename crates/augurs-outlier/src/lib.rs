@@ -110,7 +110,7 @@ impl OutlierResult {
 pub struct Series {
     /// Whether the series is an outlier for at least one of the samples.
     pub is_outlier: bool,
-    /// The intervals of the series that are considered outliers.
+    /// The intervals of the samples that are considered outliers.
     pub outlier_intervals: OutlierIntervals,
     /// The outlier scores of the series for each sample.
     ///

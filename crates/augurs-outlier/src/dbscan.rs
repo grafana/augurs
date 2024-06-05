@@ -548,6 +548,24 @@ mod tests {
     }
 
     #[test]
+    fn test_tiny() {
+        let data: &[&[f64]] = &[
+            &[1.0, 2.0, 1.5, 2.3],
+            &[1.9, 2.2, 1.2, 2.4],
+            &[1.5, 2.1, 6.4, 8.5],
+        ];
+        let detector =
+            DBSCANDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
+        let processed = detector.preprocess(data);
+        let outliers = detector.detect(&processed);
+
+        assert_eq!(outliers.outlying_series.len(), 1);
+        assert!(outliers.outlying_series.contains(&2));
+        assert!(outliers.series_results[2].is_outlier);
+        assert_eq!(outliers.series_results[2].scores, vec![0.0, 0.0, 1.0, 1.0]);
+    }
+
+    #[test]
     fn test_synthetic() {
         for TestCase { eps, expected } in CASES {
             let dbscan = DBSCANDetector::with_epsilon(*eps);
