@@ -15,6 +15,7 @@ jobs:
       PR_BENCHMARK_RESULTS: pr.txt
       BASE_BENCHMARK_RESULTS: base.txt
       GITHUB_EVENT: event.json
+      UPPER_BOUNDARY: 0.95
     steps:
       - name: Download Benchmark Results
         uses: actions/github-script@v6
