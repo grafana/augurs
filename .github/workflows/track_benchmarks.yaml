@@ -72,8 +72,10 @@ jobs:
       - name: Create PR threshold
         run: |
           bencher threshold create \
-          --token "${{ secrets.BENCHER_API_TOKEN }}" \
+          --project "$BENCHER_PROJECT" \
           --branch '${{ env.PR_HEAD }}' \
+          --testbed "$BENCHER_TESTBED" \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
           --measure latency \
           --test t \
           --upper-boundary ${{ env.UPPER_BOUNDARY }} \
