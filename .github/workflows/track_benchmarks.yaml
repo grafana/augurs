@@ -64,12 +64,14 @@ jobs:
       - name: Track base Benchmarks
         run: |
           bencher run \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
           --if-branch '${{ env.PR_HEAD }}' \
           --else-branch \
           --file "$BASE_BENCHMARK_RESULTS"
       - name: Create PR threshold
         run: |
           bencher threshold create \
+          --token "${{ secrets.BENCHER_API_TOKEN }}" \
           --branch '${{ env.PR_HEAD }}' \
           --measure latency \
           --test t \
