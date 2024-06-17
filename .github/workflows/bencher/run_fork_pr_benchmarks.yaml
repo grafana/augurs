@@ -1,0 +1,62 @@
+name: Run and Cache Benchmarks
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+jobs:
+  run_benchmarks:
+    name: Run PR Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up valgrind for iai
+        run: |
+          sudo apt update && sudo apt install -y valgrind
+
+      - uses: actions/checkout@v4
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install critcmp
+        run: cargo +stable install critcmp
+
+      - name: Benchmark PR
+        run: cargo bench -- --save-baseline changes > pr.txt
+
+      - name: Upload PR benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr.txt
+          path: ./pr.txt
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          repository: ${{ github.event.pull_request.base.repo.full_name }}
+
+      - name: Benchmark base
+        run: cargo bench -- --save-baseline main > base.txt
+
+      - name: Upload base benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: base.txt
+          path: ./base.txt
+
+      - name: Upload GitHub Event
+        uses: actions/upload-artifact@v4
+        with:
+          name: event.json
+          path: ${{ github.event_path }}
+
+      - name: Critcmp
+        run: |
+          cd diesel_bench
+          critcmp main changes
+          echo "# Benchmarks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          critcmp main changes >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
