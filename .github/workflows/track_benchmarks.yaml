@@ -12,8 +12,8 @@ jobs:
     env:
       BENCHER_PROJECT: augurs
       BENCHER_TESTBED: ubuntu-latest
-      PR_BENCHMARK_RESULTS: pr_${{ matrix.backend }}.txt
-      BASE_BENCHMARK_RESULTS: base_${{ matrix.backend }}.txt
+      PR_BENCHMARK_RESULTS: pr.txt
+      BASE_BENCHMARK_RESULTS: base.txt
       GITHUB_EVENT: event.json
     steps:
       - name: Download Benchmark Results
