@@ -9,6 +9,9 @@ edition.workspace = true
 keywords.workspace = true
 description = "A high-level API for the augurs forecasting library."
 
+[lib]
+bench = false
+
 [dependencies]
 augurs-core.workspace = true
 itertools.workspace = true

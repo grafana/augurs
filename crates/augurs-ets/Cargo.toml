@@ -34,6 +34,9 @@ criterion.workspace = true
 iai.workspace = true
 pprof.workspace = true
 
+[lib]
+bench = false
+
 [[bench]]
 name = "air_passengers"
 harness = false

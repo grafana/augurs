@@ -12,6 +12,9 @@ keywords = [
 ]
 description = "Changepoint detection using Bayesian Online Change Point Detection and more."
 
+[lib]
+bench = false
+
 [dependencies]
 augurs-core.workspace = true
 changepoint = "0.14.1"

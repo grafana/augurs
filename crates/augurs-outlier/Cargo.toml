@@ -9,6 +9,9 @@ edition.workspace = true
 keywords.workspace = true
 description = "Outlier detection for time series."
 
+[lib]
+bench = false
+
 [dependencies]
 rayon = { version = "1.10.0", optional = true }
 rustc-hash = "1.1.0"

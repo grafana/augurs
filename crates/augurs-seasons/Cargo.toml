@@ -9,6 +9,9 @@ edition.workspace = true
 keywords.workspace = true
 description = "Seasonality detection using periodograms"
 
+[lib]
+bench = false
+
 [dependencies]
 itertools.workspace = true
 num-traits = "0.2.18"
