@@ -53,7 +53,6 @@ jobs:
 
       - name: Critcmp
         run: |
-          cd diesel_bench
           critcmp main changes
           echo "# Benchmarks" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
