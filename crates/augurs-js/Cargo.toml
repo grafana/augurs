@@ -11,6 +11,7 @@ description = "JavaScript bindings for the augurs time series library."
 publish = false
 
 [lib]
+bench = false
 crate-type = ["cdylib", "rlib"]
 
 [features]

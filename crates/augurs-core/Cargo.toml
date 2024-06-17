@@ -9,5 +9,8 @@ edition.workspace = true
 keywords.workspace = true
 description = "Core data structures and traits for the augurs time series library."
 
+[lib]
+bench = false
+
 [dependencies]
 serde = { version = "1.0.166", optional = true, features = ["derive"] }

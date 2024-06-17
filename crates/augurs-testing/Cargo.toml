@@ -9,6 +9,9 @@ edition.workspace = true
 keywords.workspace = true
 description = "Test framework and data for the augurs library."
 
+[lib]
+bench = false
+
 [dependencies]
 assert_approx_eq = "1.1.0"
 once_cell = "1.18.0"

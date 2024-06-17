@@ -12,6 +12,7 @@ publish = false
 
 [lib]
 name = "augurs"
+bench = false
 crate-type = ["cdylib"]
 
 [dependencies]
