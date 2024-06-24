@@ -11,7 +11,7 @@ authors = [
 ]
 documentation = "https://docs.rs/crate/augurs"
 repository = "https://github.com/grafana/augurs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 keywords = [
   "analysis",
@@ -22,13 +22,13 @@ keywords = [
 
 [workspace.dependencies]
 
-augurs-changepoint = { version = "0.2.0", path = "crates/augurs-changepoint" }
-augurs-core = { version = "0.2.0", path = "crates/augurs-core" }
-augurs-ets = { version = "0.2.0", path = "crates/augurs-ets" }
+augurs-changepoint = { version = "0.2.1", path = "crates/augurs-changepoint" }
+augurs-core = { version = "0.2.1", path = "crates/augurs-core" }
+augurs-ets = { version = "0.2.1", path = "crates/augurs-ets" }
 augurs-forecaster = { path = "crates/augurs-forecaster" }
-augurs-mstl = { version = "0.2.0", path = "crates/augurs-mstl" }
-augurs-outlier = { version = "0.2.0", path = "crates/augurs-outlier" }
-augurs-seasons = { version = "0.2.0", path = "crates/augurs-seasons" }
+augurs-mstl = { version = "0.2.1", path = "crates/augurs-mstl" }
+augurs-outlier = { version = "0.2.1", path = "crates/augurs-outlier" }
+augurs-seasons = { version = "0.2.1", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
 distrs = "0.2.1"
