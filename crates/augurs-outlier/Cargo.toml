@@ -14,7 +14,7 @@ bench = false
 
 [dependencies]
 rayon = { version = "1.10.0", optional = true }
-rustc-hash = "1.1.0"
+rustc-hash = "2.0.0"
 serde = { workspace = true, features = ["derive"], optional = true }
 tinyvec = { workspace = true, features = ["std"] }
 tracing.workspace = true
