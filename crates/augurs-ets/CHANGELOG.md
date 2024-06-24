@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.2.0...augurs-ets-v0.2.1) - 2024-06-24
+
+### Other
+- Update nalgebra requirement from 0.32.2 to 0.33.0 ([#93](https://github.com/grafana/augurs/pull/93))
+- Remove unsupported .github/workflows/bencher subdirectory and old benchmark workflow ([#90](https://github.com/grafana/augurs/pull/90))
+
 ## [0.2.0](https://github.com/grafana/augurs/compare/augurs-ets-v0.1.2...augurs-ets-v0.2.0) - 2024-06-05
 
 ### Added
