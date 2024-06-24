@@ -14,7 +14,7 @@ augurs-core.workspace = true
 augurs-mstl = { workspace = true, optional = true }
 distrs.workspace = true
 itertools.workspace = true
-lstsq = "0.5.0"
+lstsq = "0.6.0"
 nalgebra = "0.32.2"
 rand = "0.8.5"
 rand_distr = "0.4.3"
