@@ -195,7 +195,7 @@ impl OutlierIntervals {
 }
 
 /// An outlier detection algorithm.
-pub trait OutlierDetector {
+pub trait OutlierDetector<'a> {
     /// The preprocessed data used by the outlier detection algorithm.
     ///
     /// This type is used to store the preprocessed data that is
@@ -223,7 +223,7 @@ pub trait OutlierDetector {
     /// change. For example, if the input data is the same but the sensitivity
     /// changes, the outlier detection calculation can be rerun without
     /// reprocessing the input data.
-    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData;
+    fn preprocess(&self, y: &'a [&'a [f64]]) -> Self::PreprocessedData;
 
     /// Detect outliers in the given slice of series.
     ///
@@ -231,7 +231,7 @@ pub trait OutlierDetector {
     /// to the corresponding series in the input. The implementation will
     /// decide whether each series is an outlier, i.e. whether it behaves
     /// differently to the other input series.
-    fn detect(&self, y: &Self::PreprocessedData) -> OutlierResult;
+    fn detect(&self, y: &'a Self::PreprocessedData) -> OutlierResult;
 }
 
 // fn transpose(data: &[&[f64]]) -> Vec<Vec<f64>> {

@@ -8,19 +8,166 @@ use rv::{
     traits::{Cdf, ContinuousDistr},
 };
 
-use crate::OutlierDetector;
+use crate::{OutlierDetector, Sensitivity, SensitivityError};
 
 /// Scale factor k to approximate standard deviation of a Normal distribution.
 // See https://en.wikipedia.org/wiki/Median_absolute_deviation.
 const MAD_K: f64 = 1.4826;
 
-pub struct MADDetector {}
+#[derive(Debug, Clone, Copy)]
+enum ThresholdOrSensitivity {
+    /// A scale-invariant sensitivity parameter.
+    ///
+    /// This must be in (0, 1) and will be used to estimate a sensible
+    /// threshold at detection-time.
+    Sensitivity(Sensitivity),
+    /// The threshold above which points are considered anomalous
+    Threshold(f64),
+}
 
-impl OutlierDetector for MADDetector {
-    type PreprocessedData = Vec<Vec<f64>>;
-    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData {
-        todo!()
+impl ThresholdOrSensitivity {
+    fn resolve_threshold(&self) -> f64 {
+        match self {
+            Self::Sensitivity(Sensitivity(sensitivity)) => {
+                // Z-score at which individual datapoints are considered an outliers
+                // higher sensitivity = lower threshold value (e.g. lower tolerance)
+                const MAX_T: f64 = 7.941444487; // percentile = 0.9999999999999999
+                const MIN_T: f64 = 0.841621234; // percentile = 0.80
+                                                // use non-linear sensitivity scale, to be more sensitive at lower values
+                                                // sensitivity = 0.5 -> threshold = 2.92 ~= percentile 0.998
+                MAX_T - ((MAX_T - MIN_T) * sensitivity.sqrt())
+            }
+            Self::Threshold(threshold) => *threshold,
+        }
     }
+}
+
+#[derive(Debug, Clone)]
+struct Medians {
+    lower: f64,
+    global: f64,
+    upper: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct MADDetector {
+    /// The maximum distance between points in a cluster.
+    threshold_or_sensitivity: ThresholdOrSensitivity,
+
+    /// The precalculated medians of at least 24h worth of data.
+    ///
+    /// If the data spans at least 24h, this is not required and will be
+    /// calculated on the fly from the data.
+    ///
+    /// If the data spans less than 24h, this must be provided.
+    medians: Option<Medians>,
+}
+
+impl MADDetector {
+    /// Create a new MAD detector with the given threshold.
+    pub fn with_threshold(threshold: f64) -> Self {
+        Self {
+            threshold_or_sensitivity: ThresholdOrSensitivity::Threshold(threshold),
+            medians: None,
+        }
+    }
+
+    /// Create a new MAD detector with the given sensitivity.
+    ///
+    /// At detection-time, a sensible value for `threshold` will be calculated
+    /// using the scale of the data and the sensitivity value.
+    pub fn with_sensitivity(sensitivity: f64) -> Result<Self, SensitivityError> {
+        Ok(Self {
+            threshold_or_sensitivity: ThresholdOrSensitivity::Sensitivity(sensitivity.try_into()?),
+            medians: None,
+        })
+    }
+
+    fn calculate_double_medians(&self, data: &[&[f64]]) -> Result<Medians, MADError> {
+        let flattened = data
+            .iter()
+            .flat_map(|x| x.iter())
+            .copied()
+            .collect::<Vec<_>>();
+        let global = thd_nanmedian(&flattened, true)?;
+        let (mut lower_deviations, mut upper_deviations) = (Vec::new(), Vec::new());
+        for row in data {
+            for value in *row {
+                if !value.is_finite() {
+                    continue;
+                }
+                let deviation = value - global;
+                if deviation > 0.0 {
+                    upper_deviations.push(deviation);
+                } else {
+                    lower_deviations.push(-deviation);
+                }
+            }
+        }
+
+        let lower = thd_median(&lower_deviations, false, true);
+        let upper = thd_median(&upper_deviations, false, true);
+        if let (Ok(lower), Ok(upper)) = (lower, upper) {
+            Ok(Medians {
+                lower,
+                global,
+                upper,
+            })
+        } else {
+            Err(MADError::DivideByZero)
+        }
+    }
+
+    fn calculate_mad(&self, preprocessed: PreprocessedData<'_>) -> Result<Vec<Vec<f64>>, MADError> {
+        let Medians {
+            global,
+            lower,
+            upper,
+        } = preprocessed.medians?;
+        Ok(preprocessed
+            .data
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|&value| {
+                        if !value.is_finite() {
+                            return f64::NAN;
+                        }
+                        let deviation = value - global;
+                        let mut score = if deviation == 0.0 {
+                            0.0
+                        } else if deviation < 0.0 {
+                            -deviation / (MAD_K * lower)
+                        } else {
+                            deviation / (MAD_K * upper)
+                        };
+                        if score.is_infinite() {
+                            score = f64::NAN;
+                        }
+                        score
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>())
+    }
+}
+
+pub struct PreprocessedData<'a> {
+    medians: Result<Medians, MADError>,
+    data: &'a [&'a [f64]],
+}
+
+impl<'a> OutlierDetector<'a> for MADDetector {
+    type PreprocessedData = PreprocessedData<'a> where Self: 'a;
+    fn preprocess(&self, y: &'a [&'a [f64]]) -> Self::PreprocessedData {
+        let medians = self
+            .medians
+            .clone()
+            .map(Ok)
+            .unwrap_or_else(|| self.calculate_double_medians(y));
+        PreprocessedData { data: y, medians }
+    }
+
     fn detect(&self, y: &Self::PreprocessedData) -> crate::OutlierResult {
         todo!()
     }
@@ -31,6 +178,7 @@ enum MADError {
     NoConvergence(roots::SearchError),
     InvalidParameters(rv::dist::BetaError),
     EmptyInput,
+    DivideByZero,
 }
 
 fn beta_hdi(alpha: f64, beta: f64, width: f64) -> Result<(f64, f64), MADError> {

@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use crate::{Band, OutlierDetector, OutlierResult, Sensitivity, SensitivityError, Series};
 
 /// The epsilon or sensitivity parameter for the DBSCAN algorithm.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 enum EpsilonOrSensitivity {
     /// A scale-invariant sensitivity parameter.
     ///
@@ -52,7 +52,7 @@ pub struct DBSCANDetector {
     parallelize: bool,
 }
 
-impl OutlierDetector for DBSCANDetector {
+impl OutlierDetector<'_> for DBSCANDetector {
     type PreprocessedData = Data;
     fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData {
         Data::from_row_major(y)
@@ -78,9 +78,7 @@ impl DBSCANDetector {
     /// using the scale of the data and the sensitivity value.
     pub fn with_sensitivity(sensitivity: f64) -> Result<Self, SensitivityError> {
         Ok(Self {
-            epsilon_or_sensitivity: EpsilonOrSensitivity::Sensitivity(Sensitivity::try_from(
-                sensitivity,
-            )?),
+            epsilon_or_sensitivity: EpsilonOrSensitivity::Sensitivity(sensitivity.try_into()?),
             parallelize: false,
         })
     }
