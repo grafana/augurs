@@ -18,7 +18,7 @@ lstsq = "0.6.0"
 nalgebra = "0.33.0"
 rand = "0.8.5"
 rand_distr = "0.4.3"
-roots = "0.0.8"
+roots.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
 thiserror.workspace = true
 tracing.workspace = true
