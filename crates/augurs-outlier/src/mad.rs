@@ -247,6 +247,7 @@ impl MADDetector {
 ///
 /// This is produced by [`MADDetector::preprocess`] and consumed by
 /// [`MADDetector::detect`].
+#[derive(Debug, Clone)]
 pub struct PreprocessedData {
     medians: Medians,
     mad_scores: Vec<Vec<f64>>,
