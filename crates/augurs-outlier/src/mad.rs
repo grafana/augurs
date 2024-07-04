@@ -365,7 +365,7 @@ fn thd_nanmedian(x: &[f64], sort: bool) -> Result<f64, MADError> {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use rv::traits::Rv;
+    use rv::prelude::*;
 
     use crate::{MADDetector, OutlierDetector};
 
