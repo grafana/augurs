@@ -14,6 +14,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug)]
 enum Detector {
     Dbscan(augurs_outlier::DBSCANDetector),
+    Mad(augurs_outlier::MADDetector),
 }
 
 impl Detector {
@@ -21,13 +22,22 @@ impl Detector {
     ///
     /// This is provided as a separate method to allow for the
     /// preprocessed data to be cached in the future.
-    fn preprocess(&self, y: Float64Array, nTimestamps: usize) -> Result<LoadedDetector, JsError> {
+    fn preprocess(&self, y: Float64Array, n_timestamps: usize) -> Result<LoadedDetector, JsError> {
         match self {
             Self::Dbscan(detector) => {
                 let vec = y.to_vec();
-                let y: Vec<_> = vec.chunks(nTimestamps).map(Into::into).collect();
+                let y: Vec<_> = vec.chunks(n_timestamps).map(Into::into).collect();
                 let data = detector.preprocess(&y)?;
                 Ok(LoadedDetector::Dbscan {
+                    detector: detector.clone(),
+                    data,
+                })
+            }
+            Self::Mad(detector) => {
+                let vec = y.to_vec();
+                let y: Vec<_> = vec.chunks(n_timestamps).map(Into::into).collect();
+                let data = detector.preprocess(&y)?;
+                Ok(LoadedDetector::Mad {
                     detector: detector.clone(),
                     data,
                 })
@@ -36,11 +46,17 @@ impl Detector {
     }
 
     /// Preprocess and perform outlier detection on the data.
-    fn detect(&self, y: Float64Array, nTimestamps: usize) -> Result<OutlierOutput, JsError> {
+    fn detect(&self, y: Float64Array, n_timestamps: usize) -> Result<OutlierOutput, JsError> {
         match self {
             Self::Dbscan(detector) => {
                 let vec = y.to_vec();
-                let y: Vec<_> = vec.chunks(nTimestamps).map(Into::into).collect();
+                let y: Vec<_> = vec.chunks(n_timestamps).map(Into::into).collect();
+                let data = detector.preprocess(&y)?;
+                Ok(detector.detect(&data)?.into())
+            }
+            Self::Mad(detector) => {
+                let vec = y.to_vec();
+                let y: Vec<_> = vec.chunks(n_timestamps).map(Into::into).collect();
                 let data = detector.preprocess(&y)?;
                 Ok(detector.detect(&data)?.into())
             }
@@ -54,12 +70,17 @@ enum LoadedDetector {
         detector: augurs_outlier::DBSCANDetector,
         data: <augurs_outlier::DBSCANDetector as augurs_outlier::OutlierDetector>::PreprocessedData,
     },
+    Mad {
+        detector: augurs_outlier::MADDetector,
+        data: <augurs_outlier::MADDetector as augurs_outlier::OutlierDetector>::PreprocessedData,
+    },
 }
 
 impl LoadedDetector {
     fn detect(&self) -> Result<augurs_outlier::OutlierOutput, augurs_outlier::Error> {
         match self {
             Self::Dbscan { detector, data } => detector.detect(data),
+            Self::Mad { detector, data } => detector.detect(data),
         }
     }
 }
@@ -117,14 +138,22 @@ impl OutlierDetector {
         })
     }
 
+    pub fn mad(options: MADDetectorOptions) -> Result<OutlierDetector, JsError> {
+        Ok(Self {
+            detector: Detector::Mad(augurs_outlier::MADDetector::with_sensitivity(
+                options.sensitivity,
+            )?),
+        })
+    }
+
     /// Detect outlying time series in a group of series.
     ///
     /// Note: if you plan to run the detector multiple times on the same data,
     /// you should use the `preprocess` method to cache the preprocessed data,
     /// then call `detect` on the `LoadedOutlierDetector` returned by `preprocess`.
     #[wasm_bindgen]
-    pub fn detect(&self, y: Float64Array, n_timestamps: usize) -> Result<OutlierOutput, JsError> {
-        self.detector.detect(y, n_timestamps)
+    pub fn detect(&self, y: Float64Array, nTimestamps: usize) -> Result<OutlierOutput, JsError> {
+        self.detector.detect(y, nTimestamps)
     }
 
     /// Preprocess the data for the detector.
@@ -137,10 +166,10 @@ impl OutlierDetector {
     pub fn preprocess(
         &self,
         y: Float64Array,
-        n_timestamps: usize,
+        nTimestamps: usize,
     ) -> Result<LoadedOutlierDetector, JsError> {
         Ok(LoadedOutlierDetector {
-            detector: self.detector.preprocess(y, n_timestamps)?,
+            detector: self.detector.preprocess(y, nTimestamps)?,
         })
     }
 }
@@ -183,6 +212,20 @@ impl LoadedOutlierDetector {
                 let _ = std::mem::replace(
                     detector,
                     augurs_outlier::DBSCANDetector::with_sensitivity(options.sensitivity)?,
+                );
+            }
+            (
+                LoadedDetector::Mad {
+                    ref mut detector, ..
+                },
+                OutlierDetectorOptions::Mad(options),
+            ) => {
+                // This isn't ideal because it doesn't maintain any other state of the detector,
+                // but it's the best we can do without adding an `update` method to the `OutlierDetector`
+                // trait, which would in turn require some sort of config associated type.
+                let _ = std::mem::replace(
+                    detector,
+                    augurs_outlier::MADDetector::with_sensitivity(options.sensitivity)?,
                 );
             }
             _ => return Err(JsError::new("Mismatch between detector and options")),
