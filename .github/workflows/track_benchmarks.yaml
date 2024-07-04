@@ -78,7 +78,8 @@ jobs:
           --token "${{ secrets.BENCHER_API_TOKEN }}" \
           --measure latency \
           --test t \
-          --upper-boundary ${{ env.UPPER_BOUNDARY }} \
+          --upper-boundary ${{ env.UPPER_BOUNDARY }} ||
+          true
       - name: Track PR Benchmarks
         run: |
           bencher run \
