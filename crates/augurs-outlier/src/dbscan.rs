@@ -1,12 +1,10 @@
-use std::iter;
-
 use tinyvec::TinyVec;
 use tracing::instrument;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::{Band, OutlierDetector, OutlierResult, Sensitivity, SensitivityError, Series};
+use crate::{Band, Error, OutlierDetector, OutlierOutput, Sensitivity, Series};
 
 /// The epsilon or sensitivity parameter for the DBSCAN algorithm.
 #[derive(Debug, Clone, Copy)]
@@ -52,14 +50,14 @@ pub struct DBSCANDetector {
     parallelize: bool,
 }
 
-impl OutlierDetector<'_> for DBSCANDetector {
+impl OutlierDetector for DBSCANDetector {
     type PreprocessedData = Data;
-    fn preprocess(&self, y: &[&[f64]]) -> Self::PreprocessedData {
-        Data::from_row_major(y)
+    fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
+        Ok(Data::from_row_major(y))
     }
 
-    fn detect(&self, y: &Self::PreprocessedData) -> OutlierResult {
-        self.run(y)
+    fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error> {
+        Ok(self.run(y))
     }
 }
 
@@ -76,9 +74,10 @@ impl DBSCANDetector {
     ///
     /// At detection-time, a sensible value for `epsilon` will be calculated
     /// using the scale of the data and the sensitivity value.
-    pub fn with_sensitivity(sensitivity: f64) -> Result<Self, SensitivityError> {
+    pub fn with_sensitivity(sensitivity: f64) -> Result<Self, Error> {
+        let sensitivity = Sensitivity::try_from(sensitivity)?;
         Ok(Self {
-            epsilon_or_sensitivity: EpsilonOrSensitivity::Sensitivity(sensitivity.try_into()?),
+            epsilon_or_sensitivity: EpsilonOrSensitivity::Sensitivity(sensitivity),
             parallelize: false,
         })
     }
@@ -88,16 +87,11 @@ impl DBSCANDetector {
         self.parallelize = parallelize;
     }
 
-    fn run(&self, data: &Data) -> OutlierResult {
+    fn run(&self, data: &Data) -> OutlierOutput {
         let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(data);
+        let n_series = data.sorted[0].indices.len();
         let n_timestamps = data.sorted.len();
-        let mut serieses: Vec<_> = iter::repeat_with(|| {
-            let mut s = Series::with_capacity(n_timestamps);
-            s.scores.resize(n_timestamps, 0.0);
-            s
-        })
-        .take(data.sorted[0].indices.len())
-        .collect();
+        let mut serieses = Series::preallocated(n_series, n_timestamps);
         let mut normal_band = Band::new(n_timestamps);
 
         // TODO: come up with an educated guess for capacity.
@@ -179,7 +173,7 @@ impl DBSCANDetector {
                 outliers_so_far.clear();
             }
         }
-        OutlierResult::new(serieses, normal_band)
+        OutlierOutput::new(serieses, normal_band)
     }
 
     // Following impl inspired by https://github.com/d-chambers/dbscan1d
@@ -357,7 +351,7 @@ impl SortedData {
 
 #[cfg(test)]
 mod tests {
-    use crate::{OutlierDetector, OutlierResult};
+    use crate::{OutlierDetector, OutlierOutput};
 
     use super::*;
 
@@ -506,7 +500,7 @@ mod tests {
         },
     ];
 
-    fn outlier_intervals_to_boolean_table(results: &OutlierResult) -> Vec<Vec<bool>> {
+    fn outlier_intervals_to_boolean_table(results: &OutlierOutput) -> Vec<Vec<bool>> {
         // Start by prepopulating a [n_timestamps x n_series] matrix of false values.
         let series_count = results.series_results.len();
         let timestamp_count = DBSCAN_DATASET.len();
@@ -529,7 +523,7 @@ mod tests {
         matrix
     }
 
-    fn outlier_scores_to_boolean_table(results: &OutlierResult) -> Vec<Vec<bool>> {
+    fn outlier_scores_to_boolean_table(results: &OutlierOutput) -> Vec<Vec<bool>> {
         // Start by prepopulating a [n_timestamps x n_series] matrix of false values.
         let series_count = results.series_results.len();
         let timestamp_count = DBSCAN_DATASET.len();
@@ -554,8 +548,8 @@ mod tests {
         ];
         let detector =
             DBSCANDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
-        let processed = detector.preprocess(data);
-        let outliers = detector.detect(&processed);
+        let processed = detector.preprocess(data).unwrap();
+        let outliers = detector.detect(&processed).unwrap();
 
         assert_eq!(outliers.outlying_series.len(), 1);
         assert!(outliers.outlying_series.contains(&2));
@@ -568,7 +562,7 @@ mod tests {
         for TestCase { eps, expected } in CASES {
             let dbscan = DBSCANDetector::with_epsilon(*eps);
             let data = Data::from_column_major(DBSCAN_DATASET);
-            let results = dbscan.detect(&data);
+            let results = dbscan.detect(&data).unwrap();
             let table = outlier_intervals_to_boolean_table(&results);
             let scores = outlier_scores_to_boolean_table(&results);
             for (i, row) in table.iter().enumerate() {
@@ -589,8 +583,8 @@ mod tests {
     #[test]
     fn test_realistic() {
         let dbscan = DBSCANDetector::with_sensitivity(0.8).unwrap();
-        let data = dbscan.preprocess(crate::testing::SERIES);
-        let results = dbscan.detect(&data);
+        let data = dbscan.preprocess(crate::testing::SERIES).unwrap();
+        let results = dbscan.detect(&data).unwrap();
         assert!(!results.outlying_series.contains(&0));
         assert!(!results.outlying_series.contains(&1));
         assert!(results.outlying_series.contains(&2));

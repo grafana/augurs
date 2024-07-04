@@ -4,51 +4,16 @@
 use std::collections::HashSet;
 
 mod dbscan;
+mod error;
 mod mad;
+mod sensitivity;
 #[cfg(test)]
 mod testing;
 
 pub use dbscan::DBSCANDetector;
-
-/// The sensitivity of an outlier detection algorithm.
-///
-/// Sensitivity values are between 0.0 and 1.0, where 0.0 means
-/// the algorithm is not sensitive to outliers and 1.0 means the
-/// algorithm is very sensitive to outliers.
-///
-/// The exact meaning of the sensitivity value depends on the
-/// implementation of the outlier detection algorithm.
-/// For example, a DBSCAN based algorithm might use the sensitivity
-/// to determine the maximum distance between points in the same
-/// cluster (i.e. `epsilon`).
-///
-/// Crucially, though, sensitivity will always be a value between 0.0
-/// and 1.0 to make it easier to reason about for users.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-struct Sensitivity(f64);
-
-impl TryFrom<f64> for Sensitivity {
-    type Error = SensitivityError;
-    fn try_from(value: f64) -> Result<Self, Self::Error> {
-        if value <= 0.0 || value >= 1.0 {
-            Err(SensitivityError(value))
-        } else {
-            Ok(Self(value))
-        }
-    }
-}
-
-/// An error indicating that the sensitivity value is out of bounds.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct SensitivityError(f64);
-
-impl std::fmt::Display for SensitivityError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "sensitivity must be between 0.0 and 1.0, got {}", self.0)
-    }
-}
-
-impl std::error::Error for SensitivityError {}
+pub use error::Error;
+pub use mad::MADDetector;
+use sensitivity::Sensitivity;
 
 /// A band indicating the min and max value considered outlying
 /// at each timestamp.
@@ -73,7 +38,7 @@ impl Band {
 
 /// The result of applying an outlier detection algorithm to a time series.
 #[derive(Debug, Clone)]
-pub struct OutlierResult {
+pub struct OutlierOutput {
     /// The indexes of the series considered outliers.
     pub outlying_series: HashSet<usize>,
 
@@ -85,7 +50,7 @@ pub struct OutlierResult {
     pub cluster_band: Band,
 }
 
-impl OutlierResult {
+impl OutlierOutput {
     /// Create a new `OutlierResult` from the given series results.
     pub fn new(series_results: Vec<Series>, cluster_band: Band) -> Self {
         Self {
@@ -139,6 +104,18 @@ impl Series {
             scores: Vec::with_capacity(n),
             outlier_intervals: OutlierIntervals::empty(),
         }
+    }
+
+    /// Create a `Vec<Series>` with length `n_series` where each inner `Series`
+    /// has its scores preallocated to length `n_timestamps`, all initialized to 0.0.
+    pub fn preallocated(n_series: usize, n_timestamps: usize) -> Vec<Self> {
+        std::iter::repeat_with(|| {
+            let mut s = Series::with_capacity(n_timestamps);
+            s.scores.resize(n_timestamps, 0.0);
+            s
+        })
+        .take(n_series)
+        .collect()
     }
 }
 
@@ -195,7 +172,7 @@ impl OutlierIntervals {
 }
 
 /// An outlier detection algorithm.
-pub trait OutlierDetector<'a> {
+pub trait OutlierDetector {
     /// The preprocessed data used by the outlier detection algorithm.
     ///
     /// This type is used to store the preprocessed data that is
@@ -223,7 +200,7 @@ pub trait OutlierDetector<'a> {
     /// change. For example, if the input data is the same but the sensitivity
     /// changes, the outlier detection calculation can be rerun without
     /// reprocessing the input data.
-    fn preprocess(&self, y: &'a [&'a [f64]]) -> Self::PreprocessedData;
+    fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error>;
 
     /// Detect outliers in the given slice of series.
     ///
@@ -231,7 +208,7 @@ pub trait OutlierDetector<'a> {
     /// to the corresponding series in the input. The implementation will
     /// decide whether each series is an outlier, i.e. whether it behaves
     /// differently to the other input series.
-    fn detect(&self, y: &'a Self::PreprocessedData) -> OutlierResult;
+    fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error>;
 }
 
 // fn transpose(data: &[&[f64]]) -> Vec<Vec<f64>> {

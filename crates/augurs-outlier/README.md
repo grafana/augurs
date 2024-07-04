@@ -21,8 +21,10 @@ let data: &[&[f64]] = &[
 ];
 let detector = DBSCANDetector::with_sensitivity(0.5)
     .expect("sensitivity is between 0.0 and 1.0");
-let processed = detector.preprocess(data);
-let outliers = detector.detect(&processed);
+let processed = detector.preprocess(data)
+    .expect("input data is valid");
+let outliers = detector.detect(&processed)
+    .expect("detection succeeds");
 
 assert_eq!(outliers.outlying_series.len(), 1);
 assert!(outliers.outlying_series.contains(&2));
