@@ -60,12 +60,12 @@ pub struct MADDetector {
     /// The maximum distance between points in a cluster.
     threshold_or_sensitivity: ThresholdOrSensitivity,
 
-    /// The precalculated medians of at least 24h worth of data.
+    /// The precalculated medians.
     ///
-    /// If the data spans at least 24h, this is not required and will be
-    /// calculated on the fly from the data.
+    /// If this is `None`, the medians will be calculated from the data.
     ///
-    /// If the data spans less than 24h, this must be provided.
+    /// This can be provided to avoid recalculating the medians of the data,
+    /// and to use a better estimate of the medians from a larger time range.
     medians: Option<Medians>,
 }
 
@@ -90,11 +90,22 @@ impl MADDetector {
     }
 
     /// Set the precalculated medians.
+    ///
+    /// The medians can be calculated using [`MADDetector::calculate_double_medians`].
     pub fn set_medians(&mut self, medians: Medians) {
         self.medians = Some(medians);
     }
 
-    fn calculate_double_medians(&self, data: &[&[f64]]) -> Result<Medians, MADError> {
+    /// Calculate the medians of the unprocessed data.
+    ///
+    /// This can be used to precalculate the medians of a larger set of data,
+    /// for example.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data is empty, contains only NaNs, or if the
+    /// lower or upper median is 0.0.
+    pub fn calculate_double_medians(data: &[&[f64]]) -> Result<Medians, PreprocessingError> {
         let flattened = data
             .iter()
             .flat_map(|x| x.iter())
@@ -124,7 +135,7 @@ impl MADDetector {
         let upper = thd_median(&upper_deviations, false, true);
         if let (Ok(lower), Ok(upper)) = (lower, upper) {
             if lower == 0.0 || upper == 0.0 {
-                Err(MADError::DivideByZero)
+                Err(PreprocessingError::from(MADError::DivideByZero))
             } else {
                 Ok(Medians {
                     lower,
@@ -133,7 +144,7 @@ impl MADDetector {
                 })
             }
         } else {
-            Err(MADError::DivideByZero)
+            Err(PreprocessingError::from(MADError::DivideByZero))
         }
     }
 
@@ -176,7 +187,7 @@ impl MADDetector {
             .medians
             .clone()
             .map(Ok)
-            .unwrap_or_else(|| self.calculate_double_medians(y))
+            .unwrap_or_else(|| Self::calculate_double_medians(y))
             .map_err(|x| PreprocessingError::from(Box::new(x) as Box<dyn std::error::Error>))?;
         let mad_scores = self.calculate_mad(y, &medians);
         Ok(PreprocessedData {
@@ -232,6 +243,10 @@ impl MADDetector {
     }
 }
 
+/// The preprocessed data for the MAD detector.
+///
+/// This is produced by [`MADDetector::preprocess`] and consumed by
+/// [`MADDetector::detect`].
 pub struct PreprocessedData {
     medians: Medians,
     mad_scores: Vec<Vec<f64>>,
@@ -608,7 +623,7 @@ mod test {
             .precalculated_medians
             .clone()
             .map(Ok)
-            .unwrap_or_else(|| mad.calculate_double_medians(&[tc.data]))
+            .unwrap_or_else(|| MADDetector::calculate_double_medians(&[tc.data]))
             .map(|medians| mad.calculate_mad(&[tc.data], &medians));
         match &tc.expected {
             Ok(Expected { outliers, .. }) => {

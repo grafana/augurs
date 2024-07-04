@@ -120,9 +120,8 @@ impl Series {
 }
 
 /// A list of outlier intervals for a single series.
-///
-/// We manually implement [`Serialize`] for this struct, serializing
-/// just the `timestamps` field as an array.
+// We manually implement [`Serialize`] for this struct, serializing
+// just the `timestamps` field as an array.
 #[derive(Debug, Clone)]
 pub struct OutlierIntervals {
     /// A list of indices, where 'even' elements are the start and
