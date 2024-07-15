@@ -1,0 +1,27 @@
+[package]
+name = "augurs-dtw"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "Dynamic Time Warping (DTW) algorithm for Rust"
+
+[lib]
+bench = false
+
+[dependencies]
+itertools.workspace = true
+rayon = { version = "1.10.0", optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+thiserror.workspace = true
+tinyvec = { workspace = true, features = ["std"] }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "dtw"
+harness = false
