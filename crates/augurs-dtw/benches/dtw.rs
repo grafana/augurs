@@ -149,7 +149,7 @@ static EXAMPLES: (&[f64], &[f64]) = (
 
 fn dtw_distance_euclidean(c: &mut Criterion) {
     let mut group = c.benchmark_group("dtw_distance_euclidean");
-    let windows = [Some(10)];
+    let windows = [None, Some(2), Some(5), Some(10), Some(20), Some(50)];
     for window in windows {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{:?}", window)),

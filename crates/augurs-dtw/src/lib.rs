@@ -118,31 +118,45 @@ impl<T: Distance> Dtw<T> {
 
         let mut k = 0;
 
-        for i in 0..n {
+        for (i, t_i) in t.iter().copied().enumerate() {
             k = max_window.saturating_sub(i);
 
             let lower_bound = i.saturating_sub(max_window);
             let upper_bound = usize::min(n - 1, i + max_window);
 
-            for j in lower_bound..=upper_bound {
+            let mut cost_k_minus_1 = f64::INFINITY;
+            for ((j, s_j), c) in s
+                .iter()
+                .skip(lower_bound)
+                .take(upper_bound - lower_bound + 1)
+                .copied()
+                .enumerate()
+                .zip(&mut cost[k..])
+            {
                 if i == 0 && j == 0 {
-                    cost[k] = self.distance_fn.distance(s[0], t[0]);
+                    *c = self.distance_fn.distance(s_j, t_i);
+                    cost_k_minus_1 = *c;
                     k += 1;
                     continue;
                 }
+                z = unsafe { *prev_cost.get_unchecked(k) };
                 if k == 0 {
                     y = f64::INFINITY;
                 } else {
-                    y = cost[k - 1];
+                    y = cost_k_minus_1;
                 }
-                if k+1 > 2 * max_window {
-                    x = f64::INFINITY
+                let min;
+                if k > prev_cost.len() {
+                    min = y.min(z);
                 } else {
-                    x = prev_cost[k + 1];
+                    x = unsafe { *prev_cost.get_unchecked(k + 1) };
+                    min = x.min(y.min(z));
                 }
-                z = prev_cost[k];
-                cost[k] = self.distance_fn.distance(s[i], t[j]) + x.min(y.min(z));
+
+                let dist = self.distance_fn.distance(s_j, t_i);
+                *c = dist + min;
                 k += 1;
+                cost_k_minus_1 = *c;
             }
 
             (prev_cost, cost) = (cost, prev_cost);
