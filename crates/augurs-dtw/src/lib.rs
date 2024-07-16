@@ -52,6 +52,18 @@ impl Distance for Manhattan {
     }
 }
 
+impl Distance for Box<dyn Distance> {
+    #[inline]
+    fn distance(&self, a: f64, b: f64) -> f64 {
+        self.as_ref().distance(a, b)
+    }
+
+    #[inline]
+    fn transform_result(&self, dist: f64) -> f64 {
+        self.as_ref().transform_result(dist)
+    }
+}
+
 /// Dynamic Time Warping (DTW) algorithm.
 #[derive(Debug)]
 pub struct Dtw<T: Distance> {
