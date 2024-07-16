@@ -75,7 +75,7 @@ impl Dtw<Euclidean> {
     /// Create a new DTW instance using Euclidean distance.
     #[must_use]
     pub fn euclidean() -> Self {
-        Dtw {
+        Self {
             window: None,
             distance_fn: Euclidean,
         }
@@ -86,7 +86,7 @@ impl Dtw<Manhattan> {
     /// Create a new DTW instance using Manhattan distance.
     #[must_use]
     pub fn manhattan() -> Self {
-        Dtw {
+        Self {
             window: None,
             distance_fn: Manhattan,
         }
@@ -97,7 +97,7 @@ impl<T: Distance> Dtw<T> {
     /// Create a new DTW instance with a custom distance function.
     #[must_use]
     pub fn new(distance_fn: T) -> Self {
-        Dtw {
+        Self {
             window: None,
             distance_fn,
         }
@@ -113,6 +113,7 @@ impl<T: Distance> Dtw<T> {
     /// Set the size of the Sakoe-Chiba warping window, `w`.
     ///
     /// Using a window limits shifts up to this amount away from the diagonal.
+    #[must_use]
     pub fn with_window(mut self, window: usize) -> Self {
         self.window = Some(window);
         self
@@ -120,12 +121,13 @@ impl<T: Distance> Dtw<T> {
 
     /// Compute the distance between two sequences under Dynamic Time Warping.
     pub fn distance(&self, s: &[f64], t: &[f64]) -> f64 {
+        // The algorithm is based on the code from the UCR Suite:
+        // https://www.cs.ucr.edu/~eamonn/UCRsuite.html
         let m = s.len();
         let n = t.len();
         let max_window = self
             .window
-            .map(|w| w.max(n.abs_diff(m)))
-            .unwrap_or(m.max(n));
+            .map_or_else(|| m.max(n), |w| w.max(n.abs_diff(m)));
         let max_k = 2 * max_window - 1;
         let (mut cost, mut prev_cost) = (
             vec![f64::INFINITY; 2 * max_window + 1],
@@ -162,13 +164,12 @@ impl<T: Distance> Dtw<T> {
                 } else {
                     y = cost_k_minus_1;
                 }
-                let min;
-                if k > max_k {
-                    min = y.min(z);
+                let min = if k > max_k {
+                    y.min(z)
                 } else {
                     x = unsafe { *prev_cost.get_unchecked(k + 1) };
-                    min = x.min(y.min(z));
-                }
+                    x.min(y.min(z))
+                };
 
                 let dist = self.distance_fn.distance(s_j, t_i);
                 *c = dist + min;
@@ -186,7 +187,7 @@ impl<T: Distance> Dtw<T> {
 
 impl Default for Dtw<Euclidean> {
     fn default() -> Self {
-        Dtw::euclidean()
+        Self::euclidean()
     }
 }
 
