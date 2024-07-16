@@ -22,6 +22,7 @@ pub trait Distance {
 pub struct Euclidean;
 
 impl Distance for Euclidean {
+    #[inline]
     fn distance(&self, a: f64, b: f64) -> f64 {
         // Note: we don't take the square root here to avoid
         // the extra computation. The final result will be
@@ -29,6 +30,7 @@ impl Distance for Euclidean {
         (a - b).powi(2)
     }
 
+    #[inline]
     fn transform_result(&self, dist: f64) -> f64 {
         dist.sqrt()
     }
@@ -39,10 +41,12 @@ impl Distance for Euclidean {
 pub struct Manhattan;
 
 impl Distance for Manhattan {
+    #[inline]
     fn distance(&self, a: f64, b: f64) -> f64 {
         f64::abs(a - b)
     }
 
+    #[inline]
     fn transform_result(&self, dist: f64) -> f64 {
         dist
     }
@@ -180,9 +184,9 @@ mod test {
 
     #[test]
     fn euclidean() {
-        // let dtw = Dtw::euclidean();
-        // let result = dtw.distance(&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0]);
-        // assert_eq!(result, 5.0990195135927845);
+        let dtw = Dtw::euclidean();
+        let result = dtw.distance(&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0]);
+        assert_eq!(result, 5.0990195135927845);
 
         let dtw = Dtw::euclidean().with_window(2);
         let result = dtw.distance(&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0]);
