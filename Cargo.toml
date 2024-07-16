@@ -45,6 +45,12 @@ criterion = "0.5.1"
 iai = "0.1.1"
 pprof = { version = "0.13.0", features = ["criterion", "frame-pointer", "prost-codec"] }
 
+# See https://nnethercote.github.io/perf-book/build-configuration.html
+# for more information on why we're using these settings.
+[profile.release]
+codegen-units = 1
+lto = false
+
 [profile.profiling]
 inherits = "release"
 debug = true
