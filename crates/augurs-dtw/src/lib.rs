@@ -110,6 +110,7 @@ impl<T: Distance> Dtw<T> {
             .window
             .map(|w| w.max(n.abs_diff(m)))
             .unwrap_or(m.max(n));
+        let max_k = 2 * max_window - 1;
         let (mut cost, mut prev_cost) = (
             vec![f64::INFINITY; 2 * max_window + 1],
             vec![f64::INFINITY; 2 * max_window + 1],
@@ -146,7 +147,7 @@ impl<T: Distance> Dtw<T> {
                     y = cost_k_minus_1;
                 }
                 let min;
-                if k > prev_cost.len() {
+                if k > max_k {
                     min = y.min(z);
                 } else {
                     x = unsafe { *prev_cost.get_unchecked(k + 1) };
