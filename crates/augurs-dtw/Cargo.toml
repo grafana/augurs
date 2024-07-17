@@ -16,8 +16,9 @@ bench = false
 itertools.workspace = true
 rayon = { version = "1.10.0", optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
-thiserror.workspace = true
-tinyvec = { workspace = true, features = ["std"] }
+
+[features]
+parallel = ["dep:rayon"]
 
 [dev-dependencies]
 criterion.workspace = true
