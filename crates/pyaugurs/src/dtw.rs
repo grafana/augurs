@@ -5,7 +5,8 @@ use std::{fmt, str::FromStr};
 use numpy::PyReadonlyArray1;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use augurs_dtw::{DistanceMatrix, Euclidean, Manhattan};
+use augurs_core::DistanceMatrix;
+use augurs_dtw::{Euclidean, Manhattan};
 
 enum InnerDtw {
     Euclidean(augurs_dtw::Dtw<Euclidean>),

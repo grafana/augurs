@@ -6,7 +6,7 @@
     unreachable_pub
 )]
 
-use std::ops::Index;
+use augurs_core::DistanceMatrix;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -116,18 +116,18 @@ pub struct Dtw<T: Distance + Send + Sync> {
     parallelize: bool,
     // The maximum distance, used for early stopping.
     max_distance: Option<f64>,
+
+    // Lower bound for early abandoning.
+    lower_bound: Option<f64>,
+    // Upper bound for early abandoning.
+    upper_bound: Option<f64>,
 }
 
 impl Dtw<Euclidean> {
     /// Create a new DTW instance using Euclidean distance.
     #[must_use]
     pub fn euclidean() -> Self {
-        Self {
-            window: None,
-            distance_fn: Euclidean,
-            parallelize: false,
-            max_distance: None,
-        }
+        Self::new(Euclidean)
     }
 }
 
@@ -141,12 +141,7 @@ impl Dtw<Manhattan> {
     /// Create a new DTW instance using Manhattan distance.
     #[must_use]
     pub fn manhattan() -> Self {
-        Self {
-            distance_fn: Manhattan,
-            window: None,
-            parallelize: false,
-            max_distance: None,
-        }
+        Self::new(Manhattan)
     }
 }
 
@@ -159,6 +154,8 @@ impl<T: Distance + Send + Sync> Dtw<T> {
             window: None,
             parallelize: false,
             max_distance: None,
+            lower_bound: None,
+            upper_bound: None,
         }
     }
 }
@@ -180,11 +177,47 @@ impl<T: Distance + Send + Sync> Dtw<T> {
 
     /// Set the maximum distance for early stopping.
     ///
-    /// If the distance between two series exceeds this value, the computation will stop
+    /// During the `dtw` calculation, if the cumulative distance
+    /// between two series exceeds this value, the computation will stop
     /// and return `max_distance`.
     #[must_use]
     pub fn with_max_distance(mut self, max_distance: f64) -> Self {
         self.max_distance = Some(max_distance);
+        self
+    }
+
+    /// Set the lower bound limit for early abandoning.
+    ///
+    /// If the lower bound distance between two series exceeds this value, the computation will stop
+    /// and return `lower_bound`.
+    ///
+    /// Multiple lower bounds are calculated and cascaded in order of
+    /// cheapest to most expensive to compute:
+    ///
+    /// - `LB_Kim`, a constant time lower bound.
+    /// - `LB_Keogh`, a linear time lower bound.
+    ///
+    /// Generally it is a good idea to set this to the same as
+    /// the `max_distance` parameter, as this can speed up the computation
+    /// by avoiding unnecessary calculations.
+    #[must_use]
+    pub fn with_lower_bound(mut self, lower_bound: f64) -> Self {
+        self.lower_bound = Some(lower_bound);
+        self
+    }
+
+    /// Set the upper bound limit for early abandoning.
+    ///
+    /// If the upper bound on the distance between two series is less than `upper_bound`,
+    /// the computation will stop and return `upper_bound`.
+    ///
+    /// This can be used to speed up the computation by avoiding unnecessary calculations.
+    /// For example, if the distance matrix is only used for clustering with DBSCAN,
+    /// we only care if the distance is <= epsilon, so we can stop early if the upper bound
+    /// is < epsilon.
+    #[must_use]
+    pub fn with_upper_bound(mut self, upper_bound: f64) -> Self {
+        self.upper_bound = Some(upper_bound);
         self
     }
 
@@ -243,7 +276,6 @@ impl<T: Distance + Send + Sync> Dtw<T> {
             .map_or_else(|| m.max(n), |w| w.max(n.abs_diff(m)));
         let max_distance_transformed = self.max_distance.map(|d| self.distance_fn.distance(d, 0.0));
         let max_k = 2 * max_window - 1;
-        let mut max_cost = 0.0_f64;
         let (mut cost, mut prev_cost) = (
             vec![f64::INFINITY; 2 * max_window + 1],
             vec![f64::INFINITY; 2 * max_window + 1],
@@ -271,7 +303,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                 if i == 0 && j == 0 {
                     *c = self.distance_fn.distance(s_j, t_i);
                     cost_k_minus_1 = *c;
-                    min_cost = min_cost.max(*c);
+                    min_cost = *c;
                     k += 1;
                     continue;
                 }
@@ -304,20 +336,26 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                 cost_k_minus_1 = *c;
             }
 
-            max_cost = max_cost.max(min_cost);
-            if max_distance_transformed.map_or(false, |d| max_cost >= d) {
+            if max_distance_transformed.map_or(false, |d| min_cost >= d) {
                 return self.max_distance.unwrap();
             }
             (prev_cost, cost) = (cost, prev_cost);
         }
         k = k.saturating_sub(1);
 
-        self.distance_fn.transform_result(prev_cost[k])
+        // If the final cost exceeds the `max_distance` in the final loop then
+        // we won't catch it. Check here whether it 
+        let final_cost = prev_cost[k];
+        self.distance_fn.transform_result(
+            max_distance_transformed
+                .map(|d| final_cost.min(d))
+                .unwrap_or(final_cost),
+        )
     }
 
     /// Compute the distance between two sequences under Dynamic Time Warping with early stopping.
     ///
-    /// If `max_distance` is `None`, this just calls [`Dtw::distance`].
+    /// If `lower_bound` is `None`, this just calls [`Dtw::distance`].
     ///
     /// Otherwise, it cascades through various lower bounds on the distance,
     /// stopping early if any of the lower bounds exceed the `max_distance`.
@@ -331,24 +369,38 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     ///   we can stop early. Similarly, if we know that the upper bound is < epsilon,
     ///   we can also stop early.
     fn distance_with_early_stopping(&self, s: &[f64], t: &[f64]) -> f64 {
-        let Some(max_distance) = self.max_distance else {
-            return self.distance(s, t);
-        };
-        // LB_kim is constant time so try that first.
-        if self.lb_kim(s, t, max_distance) >= max_distance {
-            return max_distance;
+        if s.is_empty() && t.is_empty() {
+            return 0.0;
         }
-        // // LB_keogh is linear time.
-        // if lb_keogh(s, t) >= max_distance {
-        //     return max_distance;
-        // }
-        if self.ub_diag(s, t, max_distance) < max_distance {
-            return max_distance;
+        if s.is_empty() || t.is_empty() {
+            return f64::INFINITY;
+        }
+        if self.lower_bound.and(self.upper_bound).is_none() {
+            return self.distance(s, t);
+        }
+        if let Some(lower_bound) = self.lower_bound {
+            // LB_kim is constant time so try that first.
+            if self.lb_kim(s, t, lower_bound) >= lower_bound {
+                return lower_bound;
+            }
+            // // LB_keogh is linear time.
+            // if lb_keogh(s, t) >= max_distance {
+            //     return max_distance;
+            // }
+        };
+        if let Some(upper_bound) = self.upper_bound {
+            let ub = self.ub_diag(s, t, upper_bound);
+            if ub < upper_bound {
+                return ub;
+            }
         }
         self.distance(s, t)
     }
 
     fn lb_kim(&self, s: &[f64], t: &[f64], max_dist: f64) -> f64 {
+        if s.len() < 2 || t.len() < 2 {
+            return 0.0;
+        }
         // First check the first points at the front and back.
         let (s_0, t_0, s_last, t_last) = (s[0], t[0], s[s.len() - 1], t[t.len() - 1]);
         let mut sum =
@@ -364,7 +416,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
             .min(self.distance_fn.distance(s_1, t_0))
             .min(self.distance_fn.distance(s_1, t_1));
         sum += d;
-        if sum >= max_dist {
+        if sum >= max_dist || s.len() < 3 || t.len() < 3 {
             return sum;
         }
         // Next check the second point at the back.
@@ -396,8 +448,8 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     /// The series do not all have to be the same length.
     ///
     /// If the `parallel` feature is enabled _and_ the `Dtw` instance has
-    /// been configured
-    /// of the the calculation is done in parallel.
+    /// been configured to use parallelism using [`Dtw::parallelize`],
+    /// the calculation is done in parallel.
     ///
     /// # Example
     /// ```
@@ -450,94 +502,6 @@ impl<T: Distance + Send + Sync> Dtw<T> {
             })
             .collect();
         DistanceMatrix::try_from_square(matrix).unwrap()
-    }
-}
-
-/// An error that can occur when creating a `DistanceMatrix`.
-#[derive(Debug)]
-pub enum Error {
-    /// The input matrix is not square.
-    InvalidDistanceMatrix,
-}
-
-/// A matrix representing the distances between all pairs of series.
-///
-/// This is produced by [`Dtw::distance_matrix`].
-#[derive(Debug)]
-pub struct DistanceMatrix {
-    matrix: Vec<Vec<f64>>,
-}
-
-impl DistanceMatrix {
-    /// Create a new `DistanceMatrix` from a square matrix.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the input matrix is not square.
-    pub fn try_from_square(matrix: Vec<Vec<f64>>) -> Result<Self, Error> {
-        if matrix.iter().all(|x| x.len() == matrix.len()) {
-            Ok(Self { matrix })
-        } else {
-            Err(Error::InvalidDistanceMatrix)
-        }
-    }
-
-    /// Consumes the `DistanceMatrix` and returns the inner matrix.
-    pub fn into_inner(self) -> Vec<Vec<f64>> {
-        self.matrix
-    }
-
-    /// Returns an iterator over the rows of the matrix.
-    pub fn iter(&self) -> DistanceMatrixIter<'_> {
-        DistanceMatrixIter {
-            iter: self.matrix.iter(),
-        }
-    }
-
-    /// Returns the shape of the matrix.
-    ///
-    /// The first element is the number of rows and the second element
-    /// is the number of columns.
-    ///
-    /// The matrix is square, so the number of rows is equal to the number of columns
-    /// and the number of input series.
-    pub fn shape(&self) -> (usize, usize) {
-        (self.matrix.len(), self.matrix.len())
-    }
-}
-
-impl Index<usize> for DistanceMatrix {
-    type Output = [f64];
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.matrix[index]
-    }
-}
-
-impl Index<(usize, usize)> for DistanceMatrix {
-    type Output = f64;
-    fn index(&self, (i, j): (usize, usize)) -> &Self::Output {
-        &self.matrix[i][j]
-    }
-}
-
-impl IntoIterator for DistanceMatrix {
-    type Item = Vec<f64>;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.matrix.into_iter()
-    }
-}
-
-/// An iterator over the rows of a `DistanceMatrix`.
-#[derive(Debug)]
-pub struct DistanceMatrixIter<'a> {
-    iter: std::slice::Iter<'a, Vec<f64>>,
-}
-
-impl<'a> Iterator for DistanceMatrixIter<'a> {
-    type Item = &'a Vec<f64>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
     }
 }
 
@@ -629,5 +593,53 @@ mod test {
         let dists = dtw.distance_matrix(series);
         assert_eq!(dists.shape(), (3, 3));
         assert_eq!(dists[0], vec![0.0, 3.7416573867739413, 9.273618495495704]);
+    }
+
+    #[test]
+    fn distance_matrix_odd_lengths() {
+        // Test with an empty series.
+        let dtw = Dtw::euclidean();
+        let series: &[&[f64]] = &[&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0], &[6.0, 7.0, 8.0], &[]];
+        let dists = dtw.distance_matrix(series);
+        assert_eq!(
+            dists.into_inner(),
+            vec![
+                vec![0.0, 5.0990195135927845, 10.392304845413264, f64::INFINITY],
+                vec![5.0990195135927845, 0.0, 5.0990195135927845, f64::INFINITY],
+                vec![10.392304845413264, 5.0990195135927845, 0.0, f64::INFINITY],
+                vec![f64::INFINITY, f64::INFINITY, f64::INFINITY, 0.0],
+            ]
+        );
+
+        // Test with different length series.
+        let dtw = Dtw::euclidean();
+        let series: &[&[f64]] = &[&[0.0, 1.0, 2.0], &[3.0], &[6.0, 7.0]];
+        let dists = dtw.distance_matrix(series);
+        assert_eq!(dists.shape(), (3, 3));
+        assert_eq!(
+            dists.into_inner(),
+            vec![
+                vec![0.0, 3.7416573867739413, 9.273618495495704],
+                vec![3.7416573867739413, 0.0, 5.0],
+                vec![9.273618495495704, 5.0, 0.0],
+            ],
+        );
+    }
+
+    #[test]
+    fn distance_matrix_odd_lengths_window_max_distance() {
+        // Test with short series with max_distance set.
+        let dtw = Dtw::euclidean().with_window(10).with_max_distance(10.0);
+        let series: &[&[f64]] = &[&[0.0], &[1.0, 2.0], &[3.0, 4.0, 5.0], &[]];
+        let dists = dtw.distance_matrix(series);
+        assert_eq!(
+            dists.into_inner(),
+            vec![
+                vec![0.0, 2.23606797749979, 7.0710678118654755, f64::INFINITY],
+                vec![2.23606797749979, 0.0, 4.123105625617661, f64::INFINITY],
+                vec![7.0710678118654755, 4.123105625617661, 0.0, f64::INFINITY],
+                vec![f64::INFINITY, f64::INFINITY, f64::INFINITY, 0.0]
+            ]
+        );
     }
 }

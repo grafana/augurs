@@ -12,12 +12,14 @@ pub mod prelude {
     pub use crate::forecast::{Forecast, ForecastIntervals};
 }
 
+mod distance;
 mod forecast;
 pub mod interpolate;
 mod traits;
 
 use std::convert::Infallible;
 
+pub use distance::DistanceMatrix;
 pub use forecast::{Forecast, ForecastIntervals};
 pub use traits::{Fit, Predict};
 
