@@ -236,6 +236,11 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                     k += 1;
                     continue;
                 }
+                // SAFETY: prev_cost has length 2 * max_window + 1,
+                // and k is always in the range 0..=2 * max_window
+                // since we start at k = max_window and increment it
+                // by 1 each iteration, and the inner loop runs
+                // `max_window` times.
                 z = unsafe { *prev_cost.get_unchecked(k) };
                 if k == 0 {
                     y = f64::INFINITY;
@@ -245,6 +250,10 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                 let min = if k > max_k {
                     y.min(z)
                 } else {
+                    // SAFETY: prev_cost has length 2 * max_window + 1,
+                    // and k is always in the range 0..=(2 * max_window - 1)
+                    // since we start at k = max_window and bound it using
+                    // `max_k`, which is `2 * max_window - 1`.
                     x = unsafe { *prev_cost.get_unchecked(k + 1) };
                     x.min(y.min(z))
                 };
