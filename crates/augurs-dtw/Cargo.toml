@@ -9,19 +9,18 @@ edition.workspace = true
 keywords.workspace = true
 description = "Dynamic Time Warping (DTW) algorithm for Rust"
 
-[lib]
-bench = false
-
 [dependencies]
-itertools.workspace = true
 rayon = { version = "1.10.0", optional = true }
-serde = { workspace = true, features = ["derive"], optional = true }
 
 [features]
 parallel = ["dep:rayon"]
 
 [dev-dependencies]
 criterion.workspace = true
+itertools.workspace = true
+
+[lib]
+bench = false
 
 [[bench]]
 name = "dtw"

@@ -144,6 +144,16 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     }
 
     /// Compute the distance between two sequences under Dynamic Time Warping.
+    ///
+    /// # Example
+    /// ```
+    /// use augurs_dtw::Dtw;
+    ///
+    /// let a: &[f64] = &[0.0, 1.0, 2.0];
+    /// let b: &[f64] = &[3.0, 4.0, 5.0];
+    /// let dist = Dtw::euclidean().distance(a, b);
+    /// assert_eq!(dist, 5.0990195135927845);
+    /// ```
     pub fn distance(&self, s: &[f64], t: &[f64]) -> f64 {
         if s.is_empty() || t.is_empty() {
             return f64::INFINITY;
@@ -155,6 +165,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
         } else {
             (t.iter(), s.iter())
         };
+
         // The algorithm is based on the code from the UCR Suite:
         // https://www.cs.ucr.edu/~eamonn/UCRsuite.html
         let m = outer_iter.len();
@@ -225,94 +236,66 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     /// If the `parallel` feature is enabled _and_ the `Dtw` instance has
     /// been configured
     /// of the the calculation is done in parallel.
+    ///
+    /// # Example
+    /// ```
+    /// use augurs_dtw::Dtw;
+    /// let dtw = Dtw::euclidean();
+    /// let series: &[&[f64]] = &[
+    ///     &[0.0_f64, 1.0, 2.0],
+    ///     &[3.0_f64, 4.0, 5.0],
+    ///     &[6.0_f64, 7.0, 8.0],
+    /// ];
+    /// let dists = dtw.distance_matrix(&series);
+    /// assert_eq!(dists[0], vec![0.0, 5.0990195135927845, 10.392304845413264]);
+    /// assert_eq!(dists[(0, 1)], 5.0990195135927845);
+    /// ```
     pub fn distance_matrix(&self, series: &[&[f64]]) -> DistanceMatrix {
-        let n = series.len();
-
         #[cfg(feature = "parallel")]
         let matrix = if self.parallelize {
+            let n = series.len();
             let mut matrix = Vec::with_capacity(n);
             series
                 .par_iter()
-                .enumerate()
-                .map(|(i, s)| {
-                    series
-                        .iter()
-                        // Only calculate the upper diagonal.
-                        // The matrix is symmetric, so we can just
-                        // copy the values into the lower diagonal.
-                        // This is done in the `DistanceMatrix::from_upper_diag` method.
-                        .skip(i + 1)
-                        .map(|t| self.distance(s, t))
-                        .collect()
-                })
+                .map(|s| series.iter().map(|t| self.distance(s, t)).collect())
                 .collect_into_vec(&mut matrix);
             matrix
         } else {
             series
                 .iter()
-                .enumerate()
-                .map(|(i, s)| {
-                    series
-                        .iter()
-                        // Only calculate the upper diagonal.
-                        // The matrix is symmetric, so we can just
-                        // copy the values into the lower diagonal.
-                        // This is done in the `DistanceMatrix::from_upper_diag` method.
-                        .skip(i + 1)
-                        .map(|t| self.distance(s, t))
-                        .collect()
-                })
+                .map(|s| series.iter().map(|t| self.distance(s, t)).collect())
                 .collect()
         };
 
         #[cfg(not(feature = "parallel"))]
         let matrix = series
             .iter()
-            .enumerate()
-            .map(|(i, s)| {
-                series
-                    .iter()
-                    // Only calculate the upper diagonal.
-                    // The matrix is symmetric, so we can just
-                    // copy the values into the lower diagonal.
-                    // This is done in the `DistanceMatrix::from_upper_diag` method.
-                    .skip(i + 1)
-                    .map(|t| self.distance(s, t))
-                    .collect()
-            })
+            .map(|s| series.iter().map(|t| self.distance(s, t)).collect())
             .collect();
-        DistanceMatrix::from_upper_diag(matrix)
+        DistanceMatrix::try_from_square(matrix).unwrap()
     }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    InvalidDistanceMatrix,
 }
 
 /// A matrix representing the distances between all pairs of series.
 ///
-/// # Example
-/// ```
-/// use augurs_dtw::Dtw;
-/// let dtw = Dtw::euclidean();
-/// let series: &[&[f64]] = &[
-///     &[0.0_f64, 1.0, 2.0],
-///     &[3.0_f64, 4.0, 5.0],
-///     &[6.0_f64, 7.0, 8.0],
-/// ];
-/// let dists = dtw.distance_matrix(&series);
-/// assert_eq!(dists[0], vec![0.0, 5.0990195135927845, 10.392304845413264]);
-/// assert_eq!(dists[(0, 1)], 5.0990195135927845);
-/// ```
+/// This is produced by [`Dtw::distance_matrix`].
 #[derive(Debug)]
 pub struct DistanceMatrix {
     matrix: Vec<Vec<f64>>,
 }
 
 impl DistanceMatrix {
-    fn from_upper_diag(upper_diag: Vec<Vec<f64>>) -> Self {
-        let matrix = upper_diag
-            .into_iter()
-            .enumerate()
-            .map(|(i, x)| std::iter::repeat(0.0).take(i + 1).chain(x).collect())
-            .collect();
-        Self { matrix }
+    pub fn try_from_square(matrix: Vec<Vec<f64>>) -> Result<Self, Error> {
+        if matrix.iter().all(|x| x.len() == matrix.len()) {
+            Ok(Self { matrix })
+        } else {
+            Err(Error::InvalidDistanceMatrix)
+        }
     }
 
     /// Consumes the `DistanceMatrix` and returns the inner matrix.
