@@ -5,7 +5,7 @@ use std::{fmt, str::FromStr};
 use numpy::PyReadonlyArray1;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use augurs_dtw::{Euclidean, Manhattan};
+use augurs_dtw::{DistanceMatrix, Euclidean, Manhattan};
 
 enum InnerDtw {
     Euclidean(augurs_dtw::Dtw<Euclidean>),
@@ -31,6 +31,13 @@ impl InnerDtw {
         match self {
             InnerDtw::Euclidean(dtw) => dtw.distance(a, b),
             InnerDtw::Manhattan(dtw) => dtw.distance(a, b),
+        }
+    }
+
+    fn distance_matrix(&self, series: &[&[f64]]) -> DistanceMatrix {
+        match self {
+            InnerDtw::Euclidean(dtw) => dtw.distance_matrix(series),
+            InnerDtw::Manhattan(dtw) => dtw.distance_matrix(series),
         }
     }
 }
@@ -122,5 +129,17 @@ impl Dtw {
         b: PyReadonlyArray1<'_, f64>,
     ) -> PyResult<f64> {
         Ok(self.inner.distance(a.as_slice()?, b.as_slice()?))
+    }
+
+    /// Calculate the pairwise distance matrix between a list of arrays under Dynamic Time Warping.
+    pub fn distance_matrix(
+        &self,
+        series: Vec<PyReadonlyArray1<'_, f64>>,
+    ) -> PyResult<Vec<Vec<f64>>> {
+        let series: Vec<_> = series
+            .iter()
+            .map(|a| a.as_slice())
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(self.inner.distance_matrix(&series).into_inner())
     }
 }
