@@ -1,4 +1,10 @@
 #![doc = include_str!("../README.md")]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
 
 use std::ops::Index;
 
@@ -23,6 +29,11 @@ pub trait Distance {
 }
 
 /// Euclidean distance, also known as L2 distance.
+///
+/// This is the default distance function used in DTW.
+///
+/// It is defined as the square root of the sum of the squared difference
+/// between two points.
 #[derive(Debug)]
 pub struct Euclidean;
 
@@ -42,6 +53,9 @@ impl Distance for Euclidean {
 }
 
 /// Manhattan distance, also known as L1 distance.
+///
+/// It is defined as the sum of the absolute difference between
+/// two points.
 #[derive(Debug)]
 pub struct Manhattan;
 
@@ -70,12 +84,37 @@ impl Distance for Box<dyn Distance> {
 }
 
 /// Dynamic Time Warping (DTW) algorithm.
+///
+/// Dynamic time warping is used to compare two sequences that may vary in time or speed.
+///
+/// This implementation has built-in support for both Euclidean and Manhattan distance,
+/// and can be extended to support other distance functions by implementing the [`Distance`]
+/// trait and using the [`Dtw::new`] constructor.
+///
+/// The algorithm is based on the code from the [UCR Suite][ucr-suite].
+///
+/// # Example
+///
+/// ```
+/// use augurs_dtw::Dtw;
+/// let a = &[0.0, 1.0, 2.0];
+/// let b = &[3.0, 4.0, 5.0];
+/// let dist = Dtw::euclidean().distance(a, b);
+/// assert_eq!(dist, 5.0990195135927845);
+/// ```
+///
+/// [ucr-suite]: https://www.cs.ucr.edu/~eamonn/UCRsuite.html
 #[derive(Debug)]
 pub struct Dtw<T: Distance + Send + Sync> {
+    // The Sakoe-Chiba warping window.
     window: Option<usize>,
+    // The distance function.
     distance_fn: T,
+    // Whether to parallelize the computation of the distance matrix.
+    // Note that the `parallel` feature must be enabled for this to work,
+    // otherwise this flag is ignored.
     parallelize: bool,
-
+    // The maximum distance, used for early stopping.
     max_distance: Option<f64>,
 }
 
@@ -414,8 +453,10 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     }
 }
 
+/// An error that can occur when creating a `DistanceMatrix`.
 #[derive(Debug)]
 pub enum Error {
+    /// The input matrix is not square.
     InvalidDistanceMatrix,
 }
 
@@ -428,6 +469,11 @@ pub struct DistanceMatrix {
 }
 
 impl DistanceMatrix {
+    /// Create a new `DistanceMatrix` from a square matrix.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the input matrix is not square.
     pub fn try_from_square(matrix: Vec<Vec<f64>>) -> Result<Self, Error> {
         if matrix.iter().all(|x| x.len() == matrix.len()) {
             Ok(Self { matrix })
@@ -483,6 +529,7 @@ impl IntoIterator for DistanceMatrix {
 }
 
 /// An iterator over the rows of a `DistanceMatrix`.
+#[derive(Debug)]
 pub struct DistanceMatrixIter<'a> {
     iter: std::slice::Iter<'a, Vec<f64>>,
 }
