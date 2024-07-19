@@ -28,6 +28,27 @@ impl InnerDtw {
         }
     }
 
+    fn with_max_distance(self, max_distance: f64) -> Self {
+        match self {
+            InnerDtw::Euclidean(dtw) => InnerDtw::Euclidean(dtw.with_max_distance(max_distance)),
+            InnerDtw::Manhattan(dtw) => InnerDtw::Manhattan(dtw.with_max_distance(max_distance)),
+        }
+    }
+
+    fn with_lower_bound(self, lower_bound: f64) -> Self {
+        match self {
+            InnerDtw::Euclidean(dtw) => InnerDtw::Euclidean(dtw.with_lower_bound(lower_bound)),
+            InnerDtw::Manhattan(dtw) => InnerDtw::Manhattan(dtw.with_lower_bound(lower_bound)),
+        }
+    }
+
+    fn with_upper_bound(self, upper_bound: f64) -> Self {
+        match self {
+            InnerDtw::Euclidean(dtw) => InnerDtw::Euclidean(dtw.with_upper_bound(upper_bound)),
+            InnerDtw::Manhattan(dtw) => InnerDtw::Manhattan(dtw.with_upper_bound(upper_bound)),
+        }
+    }
+
     fn distance(&self, a: &[f64], b: &[f64]) -> f64 {
         match self {
             InnerDtw::Euclidean(dtw) => dtw.distance(a, b),
@@ -80,6 +101,8 @@ impl FromStr for DistanceFn {
 /// This will use the Euclidean distance by default. You can also use the Manhattan distance by
 /// passing `distance_fn="manhattan"`.
 ///
+/// # Example
+///
 /// ```python
 /// import numpy as np
 /// from augurs import Dtw
@@ -89,6 +112,22 @@ impl FromStr for DistanceFn {
 /// distance = Dtw(window=2).distance(a, b)
 /// distance = Dtw(window=2, distance_fn="manhattan").distance(a, b)
 /// ```
+///
+/// :param window: Sakoe-Chiba band size (default: None).
+/// :param distance_fn: Distance function to use (default: "euclidean"). Must be one of
+///    "euclidean" or "manhattan".
+/// :param max_distance: Maximum distance allowed between two series (default: None).
+///    During distance matrix computation, if the distance between a pair of series
+///    exceeds this maximum, the computation for that pair will exit early with this
+///    maximum distance.
+/// :param lower_bound: The lower bound, used for early abandoning (default: None).
+///    If specified, before calculating the DTW (which can be expensive), check if the
+///    lower bound of the DTW is greater than this distance; if so, skip the DTW
+///    calculation and return this bound instead.
+/// :param upper_bound: The upper bound, used for early abandoning (default: None).
+///    If specified, before calculating the DTW (which can be expensive), check if the
+///    upper bound of the DTW is less than this distance; if so, skip the DTW
+///    calculation and return this bound instead.
 #[derive(Debug)]
 #[pyclass]
 pub struct Dtw {
@@ -108,7 +147,13 @@ impl Dtw {
     }
 
     #[new]
-    fn new(window: Option<usize>, distance_fn: Option<&str>) -> PyResult<Self> {
+    fn new(
+        window: Option<usize>,
+        distance_fn: Option<&str>,
+        max_distance: Option<f64>,
+        lower_bound: Option<f64>,
+        upper_bound: Option<f64>,
+    ) -> PyResult<Self> {
         let mut inner = match distance_fn
             .map(|x| x.parse())
             .transpose()?
@@ -120,6 +165,16 @@ impl Dtw {
         if let Some(window) = window {
             inner = inner.with_window(window);
         }
+        if let Some(max_distance) = max_distance {
+            inner = inner.with_max_distance(max_distance);
+        }
+        if let Some(lower_bound) = lower_bound {
+            inner = inner.with_lower_bound(lower_bound);
+        }
+        if let Some(upper_bound) = upper_bound {
+            inner = inner.with_upper_bound(upper_bound);
+        }
+
         Ok(Self { inner })
     }
 

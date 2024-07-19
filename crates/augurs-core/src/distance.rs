@@ -7,9 +7,7 @@ pub enum DistanceMatrixError {
     InvalidDistanceMatrix,
 }
 
-/// A matrix representing the distances between all pairs of series.
-///
-/// This is produced by [`Dtw::distance_matrix`].
+/// A matrix representing the distances between pairs of items.
 #[derive(Debug)]
 pub struct DistanceMatrix {
     matrix: Vec<Vec<f64>>,

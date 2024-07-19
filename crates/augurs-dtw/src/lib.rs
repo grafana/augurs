@@ -19,13 +19,25 @@ pub trait Distance {
     /// Compute the distance between two points.
     ///
     /// E.g. Euclidean distance or Manhattan distance.
+    ///
+    /// This function is called in a hot loop, so should be annotated with
+    /// `#[inline]` for performance (this was confirmed by benchmarks of the
+    /// Euclidean distance).
     fn distance(&self, a: f64, b: f64) -> f64;
 
     /// Transform the final distance.
     ///
-    /// E.g. Square root for Euclidean distance, or identity
-    /// for Manhattan distance.
-    fn transform_result(&self, dist: f64) -> f64;
+    /// This is offered as an optimization to avoid performing certain operations
+    /// on every distance calculation. For example, when using the Euclidean distance,
+    /// the square root can be applied only once to the final distance, rather than
+    /// on every distance calculation, which can be expensive.
+    ///
+    /// The default function is the identity function, but this should be overridden
+    /// if the distance function implementation requires a transformation.
+    #[inline]
+    fn transform_result(&self, dist: f64) -> f64 {
+        dist
+    }
 }
 
 /// Euclidean distance, also known as L2 distance.
@@ -64,11 +76,6 @@ impl Distance for Manhattan {
     fn distance(&self, a: f64, b: f64) -> f64 {
         f64::abs(a - b)
     }
-
-    #[inline]
-    fn transform_result(&self, dist: f64) -> f64 {
-        dist
-    }
 }
 
 impl Distance for Box<dyn Distance> {
@@ -97,6 +104,7 @@ impl Distance for Box<dyn Distance> {
 ///
 /// ```
 /// use augurs_dtw::Dtw;
+///
 /// let a = &[0.0, 1.0, 2.0];
 /// let b = &[3.0, 4.0, 5.0];
 /// let dist = Dtw::euclidean().distance(a, b);
@@ -344,7 +352,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
         k = k.saturating_sub(1);
 
         // If the final cost exceeds the `max_distance` in the final loop then
-        // we won't catch it. Check here whether it 
+        // we won't catch it. Check here whether it
         let final_cost = prev_cost[k];
         self.distance_fn.transform_result(
             max_distance_transformed
@@ -357,10 +365,10 @@ impl<T: Distance + Send + Sync> Dtw<T> {
     ///
     /// If `lower_bound` is `None`, this just calls [`Dtw::distance`].
     ///
-    /// Otherwise, it cascades through various lower bounds on the distance,
-    /// stopping early if any of the lower bounds exceed the `max_distance`.
-    /// Only if none of the lower bounds exceed the `max_distance` is the full
-    /// DTW distance computed.
+    /// Otherwise, it cascades through various lower and upper bounds on the distance,
+    /// stopping early if any of the lower bounds exceed `lower_bound` or if the upper
+    /// bound is less than `upper_bound`.
+    /// Only if none of these are true is the actual DTW distance computed.
     ///
     /// This is useful in many cases:
     /// - when clustering with DBSCAN we only care if the distance is <= epsilon,
