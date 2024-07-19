@@ -31,6 +31,10 @@ impl From<DistanceMatrix> for augurs_core::DistanceMatrix {
 
 #[pymethods]
 impl DistanceMatrix {
+    fn __repr__(&self) -> String {
+        format!("DistanceMatrix(shape={:?})", self.inner.shape())
+    }
+
     /// Convert the distance matrix to a numpy array.
     ///
     /// The resulting array will be a 2D array of f64.
