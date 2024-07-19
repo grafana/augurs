@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use augurs_clustering::Dbscan;
-use augurs_dtw::DistanceMatrix;
+use augurs_core::DistanceMatrix;
 
 fn dbscan(c: &mut Criterion) {
     let distance_matrix = include_str!("../data/dist.csv")
