@@ -130,7 +130,7 @@ impl Dtw {
     /// Compute the distance matrix between all pairs of series.
     ///
     /// The series do not all have to be the same length.
-    pub fn distance_matrix(&self, series: Vec<Float64Array>) -> DistanceMatrix {
+    pub fn distanceMatrix(&self, series: Vec<Float64Array>) -> DistanceMatrix {
         let vecs: Vec<_> = series.iter().map(|x| x.to_vec()).collect();
         let slices = vecs.iter().map(Vec::as_slice).collect::<Vec<_>>();
         self.inner.distance_matrix(&slices)
