@@ -56,7 +56,21 @@ pub struct DtwOpts {
     /// Only used when calculating distance matrices using [`Dtw::distanceMatrix`],
     /// not when calculating the distance between two series.
     #[tsify(optional)]
-    pub max_distance: Option<String>,
+    pub max_distance: Option<f64>,
+
+    /// The lower bound, used for early abandoning.
+    /// If specified, before calculating the DTW (which can be expensive), check if the
+    /// lower bound of the DTW is greater than this distance; if so, skip the DTW
+    /// calculation and return this bound instead.
+    #[tsify(optional)]
+    pub lower_bound: Option<f64>,
+
+    /// The upper bound, used for early abandoning.
+    /// If specified, before calculating the DTW (which can be expensive), check if the
+    /// upper bound of the DTW is less than this distance; if so, skip the DTW
+    /// calculation and return this bound instead.
+    #[tsify(optional)]
+    pub upper_bound: Option<f64>,
 }
 
 /// A distance matrix.
@@ -104,6 +118,15 @@ impl Dtw {
         if let Some(window) = opts.window {
             dtw = dtw.with_window(window);
         }
+        if let Some(max_distance) = opts.max_distance {
+            dtw = dtw.with_max_distance(max_distance);
+        }
+        if let Some(lower_bound) = opts.lower_bound {
+            dtw = dtw.with_lower_bound(lower_bound);
+        }
+        if let Some(upper_bound) = opts.upper_bound {
+            dtw = dtw.with_upper_bound(upper_bound);
+        }
         Ok(Dtw {
             inner: InnerDtw::Euclidean(dtw),
         })
@@ -116,6 +139,15 @@ impl Dtw {
         let mut dtw = augurs_dtw::Dtw::manhattan();
         if let Some(window) = opts.window {
             dtw = dtw.with_window(window);
+        }
+        if let Some(max_distance) = opts.max_distance {
+            dtw = dtw.with_max_distance(max_distance);
+        }
+        if let Some(lower_bound) = opts.lower_bound {
+            dtw = dtw.with_lower_bound(lower_bound);
+        }
+        if let Some(upper_bound) = opts.upper_bound {
+            dtw = dtw.with_upper_bound(upper_bound);
         }
         Ok(Dtw {
             inner: InnerDtw::Manhattan(dtw),
