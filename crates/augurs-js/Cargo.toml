@@ -19,6 +19,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 augurs-changepoint = { workspace = true }
+augurs-clustering = { workspace = true }
 augurs-core = { workspace = true }
 augurs-dtw = { workspace = true }
 augurs-ets = { workspace = true, features = ["mstl"] }
