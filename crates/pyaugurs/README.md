@@ -61,4 +61,16 @@ model.fit(y)
 model.predict(10, level=0.95)
 ```
 
+### Dynamic Time Warping
+
+```python
+import augurs as aug
+
+a = np.array([1.0, 2.0, 3.0])
+b = np.array([4.0, 5.0, 6.0])
+dtw = aug.Dtw()
+dist = dtw.distance(a, b)
+dist_matrix = dtw.distance_matrix([a, b])
+```
+
 More to come!
