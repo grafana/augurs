@@ -16,7 +16,7 @@ impl fmt::Display for DistanceMatrixError {
 impl std::error::Error for DistanceMatrixError {}
 
 /// A matrix representing the distances between pairs of items.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DistanceMatrix {
     matrix: Vec<Vec<f64>>,
 }

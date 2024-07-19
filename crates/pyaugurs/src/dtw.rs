@@ -5,8 +5,9 @@ use std::{fmt, str::FromStr};
 use numpy::PyReadonlyArray1;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use augurs_core::DistanceMatrix;
 use augurs_dtw::{Euclidean, Manhattan};
+
+use crate::distance::DistanceMatrix;
 
 enum InnerDtw {
     Euclidean(augurs_dtw::Dtw<Euclidean>),
@@ -58,8 +59,8 @@ impl InnerDtw {
 
     fn distance_matrix(&self, series: &[&[f64]]) -> DistanceMatrix {
         match self {
-            InnerDtw::Euclidean(dtw) => dtw.distance_matrix(series),
-            InnerDtw::Manhattan(dtw) => dtw.distance_matrix(series),
+            InnerDtw::Euclidean(dtw) => dtw.distance_matrix(series).into(),
+            InnerDtw::Manhattan(dtw) => dtw.distance_matrix(series).into(),
         }
     }
 }
@@ -191,11 +192,11 @@ impl Dtw {
     pub fn distance_matrix(
         &self,
         series: Vec<PyReadonlyArray1<'_, f64>>,
-    ) -> PyResult<Vec<Vec<f64>>> {
+    ) -> PyResult<DistanceMatrix> {
         let series: Vec<_> = series
             .iter()
             .map(|a| a.as_slice())
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(self.inner.distance_matrix(&series).into_inner())
+        Ok(self.inner.distance_matrix(&series))
     }
 }
