@@ -14,6 +14,7 @@
 use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;
 
+pub mod clustering;
 mod distance;
 pub mod dtw;
 pub mod ets;
@@ -113,6 +114,7 @@ fn augurs(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<mstl::MSTL>()?;
     m.add_class::<trend::PyTrendModel>()?;
     m.add_class::<Forecast>()?;
+    m.add_class::<clustering::Dbscan>()?;
     m.add_class::<distance::DistanceMatrix>()?;
     m.add_class::<dtw::Dtw>()?;
     m.add_function(wrap_pyfunction!(seasons::seasonalities, m)?)?;
