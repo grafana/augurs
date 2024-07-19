@@ -1,0 +1,23 @@
+[package]
+name = "augurs-clustering"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "Time series clustering."
+
+[dependencies]
+augurs-core.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[lib]
+bench = false
+
+[[bench]]
+name = "dbscan"
+harness = false
