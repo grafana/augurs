@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::{fmt, ops::Index};
 
 /// An error that can occur when creating a `DistanceMatrix`.
 #[derive(Debug)]
@@ -6,6 +6,14 @@ pub enum DistanceMatrixError {
     /// The input matrix is not square.
     InvalidDistanceMatrix,
 }
+
+impl fmt::Display for DistanceMatrixError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("invalid distance matrix")
+    }
+}
+
+impl std::error::Error for DistanceMatrixError {}
 
 /// A matrix representing the distances between pairs of items.
 #[derive(Debug)]
