@@ -8,7 +8,7 @@ Javascript bindings to the [`augurs`][repo] time series framework.
 
 ```json
 "dependencies": {
-    "@bsull/augurs": "^0.1.0"
+    "@bsull/augurs": "^0.3.0"
 }
 ```
 
