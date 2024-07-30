@@ -89,9 +89,8 @@ impl DBSCANDetector {
 
     fn run(&self, data: &Data) -> OutlierOutput {
         let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(data);
-        let n_series = data.sorted[0].indices.len();
         let n_timestamps = data.sorted.len();
-        let mut serieses = Series::preallocated(n_series, n_timestamps);
+        let mut serieses = Series::preallocated(data.n_series, n_timestamps);
         let mut normal_band = Band::new(n_timestamps);
 
         // TODO: come up with an educated guess for capacity.
@@ -274,16 +273,17 @@ impl Index {
 #[derive(Debug)]
 pub struct Data {
     sorted: Vec<SortedData>,
+    n_series: usize,
 }
 
 impl Data {
     /// Create a `Data` struct from row-major data.
     #[instrument(skip(data))]
     pub fn from_row_major(data: &[&[f64]]) -> Self {
-        let n_columns = data.len();
+        let n_series = data.len();
         let n_timestamps = data[0].len();
         // First transpose the data.
-        let mut transposed = vec![vec![f64::NAN; n_columns]; n_timestamps];
+        let mut transposed = vec![vec![f64::NAN; n_series]; n_timestamps];
         data.iter().enumerate().for_each(|(i, chunk)| {
             chunk.iter().enumerate().for_each(|(j, value)| {
                 transposed[j][i] = *value;
@@ -293,21 +293,26 @@ impl Data {
         debug_assert_eq!(transposed.len(), n_timestamps);
         #[cfg(debug_assertions)]
         transposed.iter().for_each(|row| {
-            debug_assert_eq!(row.len(), n_columns);
+            debug_assert_eq!(row.len(), n_series);
         });
         transposed.iter().for_each(|row| {
-            debug_assert_eq!(row.len(), n_columns);
+            debug_assert_eq!(row.len(), n_series);
         });
         // Then sort values at each timestamp.
         let sorted = transposed.into_iter().map(SortedData::new).collect();
-        Self { sorted }
+        Self { sorted, n_series }
     }
 
     /// Create a `Data` struct from column-major data.
     #[instrument(skip(data))]
     pub fn from_column_major(data: &[&[f64]]) -> Self {
-        let sorted = data.iter().map(|x| SortedData::new(x.to_vec())).collect();
-        Self { sorted }
+        let mut sorted = Vec::with_capacity(data.len());
+        let mut n_series = 0;
+        for ts in data {
+            sorted.push(SortedData::new(ts.to_vec()));
+            n_series = n_series.max(ts.len());
+        }
+        Self { sorted, n_series }
     }
 
     /// Calculate the span of the data: the difference between the highest and lowest values.
@@ -603,5 +608,26 @@ mod tests {
         assert_eq!(results.series_results[2].outlier_intervals.indices[3], 142);
         assert_eq!(results.series_results[2].outlier_intervals.indices[4], 240);
         assert_eq!(results.series_results[2].outlier_intervals.indices[5], 242);
+    }
+
+    // Test that the DBSCAN detector can handle missing data at the start of a series.
+    // This is a regression test for a bug where the DBSCAN detector would panic when
+    // the first value in a series was missing, because we used the number of values
+    // at timestamp 0 _after_ omitting NANs to determine the number of series.
+    #[test]
+    fn test_missing_data_at_start() {
+        let data: &[&[f64]] = &[
+            &[f64::NAN, 2.0, 1.5, 2.3],
+            &[1.9, 2.2, f64::NAN, 2.4],
+            &[1.5, 2.1, 6.4, 8.5],
+        ];
+        let dbscan = DBSCANDetector::with_epsilon(1.0);
+        let processed = dbscan.preprocess(data).unwrap();
+        // Should not panic.
+        let results = dbscan.detect(&processed).unwrap();
+
+        assert!(!results.outlying_series.contains(&0));
+        assert!(!results.outlying_series.contains(&1));
+        assert!(results.outlying_series.contains(&2));
     }
 }
