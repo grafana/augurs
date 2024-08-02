@@ -312,7 +312,11 @@ pub struct OutlierOutput {
     series_results: Vec<OutlierSeries>,
     /// The band indicating the min and max value considered outlying
     /// at each timestamp.
-    cluster_band: ClusterBand,
+    ///
+    /// This may be undefined if no cluster was found (for example if
+    /// there were fewer than 3 series in the input data in the case of
+    /// DBSCAN).
+    cluster_band: Option<ClusterBand>,
 }
 
 impl From<augurs_outlier::OutlierOutput> for OutlierOutput {
@@ -320,7 +324,7 @@ impl From<augurs_outlier::OutlierOutput> for OutlierOutput {
         Self {
             outlying_series: r.outlying_series,
             series_results: r.series_results.into_iter().map(Into::into).collect(),
-            cluster_band: r.cluster_band.into(),
+            cluster_band: r.cluster_band.map(Into::into),
         }
     }
 }
