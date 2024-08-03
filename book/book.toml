@@ -1,0 +1,6 @@
+[book]
+authors = ["Ben Sully"]
+language = "en"
+multilingual = false
+src = "src"
+title = "augurs - time series forecasting with Rust"
