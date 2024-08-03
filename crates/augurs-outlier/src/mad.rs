@@ -214,10 +214,10 @@ impl MADDetector {
             .ok_or(MADError::EmptyInput)?;
 
         // The normal band is constant across all timestamps.
-        let normal_band = Band {
+        let normal_band = Some(Band {
             min: vec![lower_limit; n_timestamps],
             max: vec![upper_limit; n_timestamps],
-        };
+        });
 
         // For each series, track the indices where it started/stopped being an outlier.
         let mut serieses = Series::preallocated(n_series, n_timestamps);

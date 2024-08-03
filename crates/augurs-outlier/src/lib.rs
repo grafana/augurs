@@ -47,12 +47,16 @@ pub struct OutlierOutput {
 
     /// The band indicating the min and max value considered outlying
     /// at each timestamp.
-    pub cluster_band: Band,
+    ///
+    /// This may be `None` if no cluster was found (for example if
+    /// there were fewer than 3 series in the input data in the case of
+    /// DBSCAN).
+    pub cluster_band: Option<Band>,
 }
 
 impl OutlierOutput {
     /// Create a new `OutlierResult` from the given series results.
-    pub fn new(series_results: Vec<Series>, cluster_band: Band) -> Self {
+    pub fn new(series_results: Vec<Series>, cluster_band: Option<Band>) -> Self {
         Self {
             outlying_series: series_results
                 .iter()

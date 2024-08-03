@@ -91,7 +91,7 @@ impl DBSCANDetector {
         let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(data);
         let n_timestamps = data.sorted.len();
         let mut serieses = Series::preallocated(data.n_series, n_timestamps);
-        let mut normal_band = Band::new(n_timestamps);
+        let mut normal_band = None;
 
         // TODO: come up with an educated guess for capacity.
         let mut outliers_so_far = TinyVec::with_capacity(data.sorted.len());
@@ -125,8 +125,9 @@ impl DBSCANDetector {
 
             // Construct the normal band, if found.
             if let Some((min, max)) = cluster_min.zip(cluster_max) {
-                normal_band.min[i] = min - epsilon / 2.0;
-                normal_band.max[i] = max + epsilon / 2.0;
+                let band = normal_band.get_or_insert_with(|| Band::new(n_timestamps));
+                band.min[i] = min - epsilon / 2.0;
+                band.max[i] = max + epsilon / 2.0;
             }
 
             // Mark the outlier series and fill in any positive scores.
@@ -560,6 +561,7 @@ mod tests {
         assert!(outliers.outlying_series.contains(&2));
         assert!(outliers.series_results[2].is_outlier);
         assert_eq!(outliers.series_results[2].scores, vec![0.0, 0.0, 1.0, 1.0]);
+        assert!(outliers.cluster_band.is_some());
     }
 
     #[test]
@@ -608,6 +610,7 @@ mod tests {
         assert_eq!(results.series_results[2].outlier_intervals.indices[3], 142);
         assert_eq!(results.series_results[2].outlier_intervals.indices[4], 240);
         assert_eq!(results.series_results[2].outlier_intervals.indices[5], 242);
+        assert!(results.cluster_band.is_some());
     }
 
     // Test that the DBSCAN detector can handle missing data at the start of a series.
@@ -629,5 +632,28 @@ mod tests {
         assert!(!results.outlying_series.contains(&0));
         assert!(!results.outlying_series.contains(&1));
         assert!(results.outlying_series.contains(&2));
+        assert!(results.cluster_band.is_some());
+    }
+
+    #[test]
+    fn test_no_cluster_band_small_eps() {
+        let data: &[&[f64]] = &[
+            &[1.0, 2.0, 3.0, 4.0],
+            &[4.0, 5.0, 6.0, 7.0],
+            &[7.0, 8.0, 9.0, 10.0],
+        ];
+        let dbscan = DBSCANDetector::with_epsilon(1.0);
+        let processed = dbscan.preprocess(data).unwrap();
+        let results = dbscan.detect(&processed).unwrap();
+        assert!(results.cluster_band.is_none());
+    }
+
+    #[test]
+    fn test_no_cluster_band_two_series() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0, 4.0], &[4.0, 5.0, 6.0, 7.0]];
+        let dbscan = DBSCANDetector::with_epsilon(4.0);
+        let processed = dbscan.preprocess(data).unwrap();
+        let results = dbscan.detect(&processed).unwrap();
+        assert!(results.cluster_band.is_none());
     }
 }
