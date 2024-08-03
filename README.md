@@ -42,7 +42,7 @@ The first exception to the `release-plz` flow is the `augurs` Python library, wh
 E.g.:
 
 ```
-git tag pyaugurs-v0.2.0 -m "Release pyaugurs v0.2.0"
+git tag pyaugurs-v0.3.0 -m "Release pyaugurs v0.3.0"
 git push --tags
 ```
 
