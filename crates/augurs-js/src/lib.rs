@@ -14,6 +14,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 mod changepoints;
+pub mod clustering;
 mod dtw;
 pub mod ets;
 pub mod mstl;

@@ -16,6 +16,7 @@ bench = false
 crate-type = ["cdylib"]
 
 [dependencies]
+augurs-clustering.workspace = true
 augurs-core.workspace = true
 augurs-dtw.workspace = true
 augurs-ets = { workspace = true, features = ["mstl"] }
