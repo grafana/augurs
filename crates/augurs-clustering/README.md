@@ -2,7 +2,7 @@
 
 This crate contains algorithms for clustering time series.
 
-So far only DBSCAN is implemented, and the distance matrix must be passed directly.
+So far, only DBSCAN is implemented, and the distance matrix must be passed directly.
 A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for now.
 
 ## Usage
@@ -27,7 +27,7 @@ assert_eq!(clusters, vec![-1, -1, -1, -1]);
 
 ## Credits
 
-This implementation based heavily on to the implementation in [`linfa-clustering`] and [`scikit-learn`].
+This implementation is based heavily on to the implementation in [`linfa-clustering`] and [`scikit-learn`].
 The main difference between these is that we operate directly on the distance matrix rather than calculating
 it as part of the clustering algorithm.
 
