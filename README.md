@@ -22,7 +22,7 @@ APIs are subject to change, and functionality may not be fully implemented.
 | ------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | [`augurs-changepoint`][] | Changepoint detection for time series                                | alpha - API is flexible right now                                    |
 | [`augurs-core`][]        | Common structs and traits                                            | alpha - API is flexible right now                                    |
-| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)
+| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)                                        | alpha - API is flexible right now                                    |
 | [`augurs-ets`][]         | Automatic exponential smoothing models                               | alpha - non-seasonal models working and tested against statsforecast |
 | [`augurs-mstl`][]        | Multiple Seasonal Trend Decomposition using LOESS (MSTL)             | beta - working and tested against R                                  |
 | [`augurs-outlier`][]     | Outlier detection for time series                                    | alpha - API is flexible right now                                    |
