@@ -92,7 +92,7 @@ impl<T: TrendModel> MSTLModel<T> {
     /// Set the parameters for the MSTL algorithm.
     ///
     /// This can be used to control the parameters for the inner STL algorithm
-    /// by using [`MstlParams::stl_params`].
+    /// by using [`stlrs::MstlParams`].
     pub fn mstl_params(mut self, params: stlrs::MstlParams) -> Self {
         self.mstl_params = params;
         self

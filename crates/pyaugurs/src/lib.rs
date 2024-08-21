@@ -14,6 +14,8 @@
 use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;
 
+mod distance;
+pub mod dtw;
 pub mod ets;
 pub mod mstl;
 pub mod seasons;
@@ -111,6 +113,8 @@ fn augurs(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<mstl::MSTL>()?;
     m.add_class::<trend::PyTrendModel>()?;
     m.add_class::<Forecast>()?;
+    m.add_class::<distance::DistanceMatrix>()?;
+    m.add_class::<dtw::Dtw>()?;
     m.add_function(wrap_pyfunction!(seasons::seasonalities, m)?)?;
     Ok(())
 }

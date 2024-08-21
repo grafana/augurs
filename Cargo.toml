@@ -21,9 +21,9 @@ keywords = [
 ]
 
 [workspace.dependencies]
-
 augurs-changepoint = { version = "0.3.1", path = "crates/augurs-changepoint" }
 augurs-core = { version = "0.3.1", path = "crates/augurs-core" }
+augurs-dtw = { version = "0.3.1", path = "crates/augurs-dtw" }
 augurs-ets = { version = "0.3.1", path = "crates/augurs-ets" }
 augurs-forecaster = { path = "crates/augurs-forecaster" }
 augurs-mstl = { version = "0.3.1", path = "crates/augurs-mstl" }
@@ -43,3 +43,13 @@ assert_approx_eq = "1.1.0"
 criterion = "0.5.1"
 iai = "0.1.1"
 pprof = { version = "0.13.0", features = ["criterion", "frame-pointer", "prost-codec"] }
+
+# See https://nnethercote.github.io/perf-book/build-configuration.html
+# for more information on why we're using these settings.
+[profile.release]
+codegen-units = 1
+lto = false
+
+[profile.profiling]
+inherits = "release"
+debug = true
