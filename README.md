@@ -41,7 +41,7 @@ The first exception to the `release-plz` flow is the `augurs` Python library, wh
 
 E.g.:
 
-```
+```bash
 git tag pyaugurs-v0.3.0 -m "Release pyaugurs v0.3.0"
 git push --tags
 ```
@@ -50,7 +50,7 @@ git push --tags
 
 The `augurs` npm library must also be published manually. This can be done using `just publish-npm`; note you'll need to login with npm first.
 
-```
+```bash
 npm login
 # Log in online, etc...
 just publish-npm
