@@ -37,7 +37,7 @@ jobs:
           repository: ${{ github.event.pull_request.base.repo.full_name }}
 
       - name: Benchmark base
-        run: cargo bench -- --save-baseline main > base.txt
+        run: cargo bench --all-features -- --save-baseline main > base.txt
 
       - name: Upload base benchmark Results
         uses: actions/upload-artifact@v4

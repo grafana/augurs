@@ -21,8 +21,9 @@ APIs are subject to change, and functionality may not be fully implemented.
 | Name                     | Purpose                                                              | Status                                                               |
 | ------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | [`augurs-changepoint`][] | Changepoint detection for time series                                | alpha - API is flexible right now                                    |
+| [`augurs-clustering`][]  | Time series clustering algorithms                                    | alpha - API is flexible right now                                    |
 | [`augurs-core`][]        | Common structs and traits                                            | alpha - API is flexible right now                                    |
-| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)                                        | alpha - API is flexible right now                                    |
+| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)                                           | alpha - API is flexible right now                                    |
 | [`augurs-ets`][]         | Automatic exponential smoothing models                               | alpha - non-seasonal models working and tested against statsforecast |
 | [`augurs-mstl`][]        | Multiple Seasonal Trend Decomposition using LOESS (MSTL)             | beta - working and tested against R                                  |
 | [`augurs-outlier`][]     | Outlier detection for time series                                    | alpha - API is flexible right now                                    |
@@ -62,6 +63,7 @@ Dual-licensed to be compatible with the Rust project.
 Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/LICENSE-2.0>` or the MIT license `<http://opensource.org/licenses/MIT>`, at your option.
 
 [`augurs-changepoint`]: https://crates.io/crates/augurs-changepoint
+[`augurs-clustering`]: https://crates.io/crates/augurs-clustering
 [`augurs-core`]: https://crates.io/crates/augurs-core
 [`augurs-dtw`]: https://crates.io/crates/augurs-dtw
 [`augurs-ets`]: https://crates.io/crates/augurs-ets

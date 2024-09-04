@@ -80,20 +80,24 @@ pub struct DtwOpts {
 #[derive(Debug)]
 #[wasm_bindgen]
 pub struct DistanceMatrix {
-    inner: Vec<Vec<f64>>,
+    inner: augurs_core::DistanceMatrix,
+}
+
+impl DistanceMatrix {
+    pub fn inner(&self) -> &augurs_core::DistanceMatrix {
+        &self.inner
+    }
 }
 
 impl From<augurs_core::DistanceMatrix> for DistanceMatrix {
-    fn from(matrix: augurs_core::DistanceMatrix) -> Self {
-        Self {
-            inner: matrix.into_inner(),
-        }
+    fn from(inner: augurs_core::DistanceMatrix) -> Self {
+        Self { inner }
     }
 }
 
 impl From<DistanceMatrix> for augurs_core::DistanceMatrix {
     fn from(matrix: DistanceMatrix) -> Self {
-        Self::try_from_square(matrix.inner).unwrap()
+        Self::try_from_square(matrix.inner.into_inner()).unwrap()
     }
 }
 
