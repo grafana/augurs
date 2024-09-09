@@ -12,6 +12,7 @@ description = "Dynamic Time Warping (DTW) algorithm for Rust"
 [dependencies]
 augurs-core.workspace = true
 rayon = { version = "1.10.0", optional = true }
+tracing.workspace = true
 
 [features]
 parallel = ["dep:rayon"]

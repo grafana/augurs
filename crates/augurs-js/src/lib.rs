@@ -13,6 +13,12 @@ use serde::Serialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+/// Initialize the rayon thread pool.
+///
+/// This is required before using 'parallel' modes of algorithms.
+#[cfg(feature = "parallel")]
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 mod changepoints;
 pub mod clustering;
 mod dtw;

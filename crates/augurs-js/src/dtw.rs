@@ -71,6 +71,9 @@ pub struct DtwOpts {
     /// calculation and return this bound instead.
     #[tsify(optional)]
     pub upper_bound: Option<f64>,
+
+    #[tsify(optional)]
+    pub parallelize: Option<bool>,
 }
 
 /// A distance matrix.
@@ -131,6 +134,9 @@ impl Dtw {
         if let Some(upper_bound) = opts.upper_bound {
             dtw = dtw.with_upper_bound(upper_bound);
         }
+        if let Some(parallelize) = opts.parallelize {
+            dtw = dtw.parallelize(parallelize);
+        }
         Ok(Dtw {
             inner: InnerDtw::Euclidean(dtw),
         })
@@ -159,6 +165,7 @@ impl Dtw {
     }
 
     /// Calculate the distance between two arrays under Dynamic Time Warping.
+    #[wasm_bindgen]
     pub fn distance(&self, a: Float64Array, b: Float64Array) -> f64 {
         self.inner.distance(&a.to_vec(), &b.to_vec())
     }
@@ -166,7 +173,8 @@ impl Dtw {
     /// Compute the distance matrix between all pairs of series.
     ///
     /// The series do not all have to be the same length.
-    pub fn distanceMatrix(&self, series: Vec<Float64Array>) -> DistanceMatrix {
+    #[wasm_bindgen(js_name = distanceMatrix)]
+    pub fn distance_matrix(&self, series: Vec<Float64Array>) -> DistanceMatrix {
         let vecs: Vec<_> = series.iter().map(|x| x.to_vec()).collect();
         let slices = vecs.iter().map(Vec::as_slice).collect::<Vec<_>>();
         self.inner.distance_matrix(&slices)
