@@ -1,3 +1,5 @@
+// This script adds the "snippets/" directory to the files array in package.json.
+// Needed because of https://github.com/rustwasm/wasm-pack/issues/1206.
 const fs = require('fs');
 const path = require('path');
 
