@@ -10,6 +10,7 @@ use augurs_core::DistanceMatrix;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use tracing::debug;
 
 /// A trait for defining a distance function.
 ///
@@ -477,6 +478,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
         let matrix = if self.parallelize {
             let n = series.len();
             let mut matrix = Vec::with_capacity(n);
+            debug!("Calculating distance matrix in parallel");
             series
                 .par_iter()
                 .map(|s| {

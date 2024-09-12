@@ -13,6 +13,49 @@ use serde::Serialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+/// Initialize the rayon thread pool.
+///
+/// This must be called once (from a Javascript context) and awaited
+/// before using parallel mode of algorithms, to set up the thread pool.
+///
+/// # Example (JS)
+///
+/// ```js
+/// // worker.ts
+/// import init, { Dbscan, Dtw, initThreadPool} from '@bsull/augurs';
+///
+/// init().then(async () => {
+///   console.debug('augurs initialized');
+///   await initThreadPool(navigator.hardwareConcurrency * 2);
+///   console.debug('augurs thread pool initialized');
+/// });
+///
+/// export function dbscan(series: Float64Array[], epsilon: number, minClusterSize: number): number[] {
+///   const distanceMatrix = Dtw.euclidean({ window: 10, parallelize: true }).distanceMatrix(series);
+///   const clusterLabels = new Dbscan({ epsilon, minClusterSize }).fit(distanceMatrix);
+///   return Array.from(clusterLabels);
+/// }
+///
+/// // index.js
+/// import { dbscan } from './worker';
+///
+/// async function runClustering(series: Float64Array[]): Promise<number[]> {
+///   return dbscan(series, 0.1, 10);  // await only required if using workerize-loader
+/// }
+///
+/// // or using e.g. workerize-loader to run in a dedicated worker:
+/// import worker from 'workerize-loader?ready&name=augurs!./worker';
+///
+/// const instance = worker()
+///
+/// async function runClustering(series: Float64Array[]): Promise<number[]> {
+///   await instance.ready;
+///   return instance.dbscan(series, 0.1, 10);
+/// }
+/// ```
+#[cfg(feature = "parallel")]
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 mod changepoints;
 pub mod clustering;
 mod dtw;
