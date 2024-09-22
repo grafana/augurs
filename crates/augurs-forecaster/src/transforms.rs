@@ -15,7 +15,7 @@ impl Transforms {
         Self(transforms)
     }
 
-    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + '_>
+    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
@@ -81,7 +81,7 @@ impl Transform {
         Self::Log
     }
 
-    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + '_>
+    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
@@ -93,7 +93,7 @@ impl Transform {
         }
     }
 
-    pub(crate) fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + '_>
+    pub(crate) fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
