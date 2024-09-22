@@ -1,5 +1,5 @@
 [package]
-name = "augurs"
+name = "augurs-js"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
