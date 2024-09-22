@@ -65,4 +65,24 @@ impl Forecast {
             intervals: Some(ForecastIntervals::with_capacity(level, capacity)),
         }
     }
+
+    /// Chain two forecasts together.
+    ///
+    /// This can be useful after producing in-sample and out-of-sample forecasts
+    /// to combine them into a single forecast.
+    pub fn chain(self, other: Self) -> Self {
+        let mut out = Self::empty();
+        out.point.extend(self.point);
+        out.point.extend(other.point);
+        if let Some(mut intervals) = self.intervals {
+            if let Some(other_intervals) = other.intervals {
+                intervals.lower.extend(other_intervals.lower);
+                intervals.upper.extend(other_intervals.upper);
+            }
+            out.intervals = Some(intervals);
+        } else if let Some(other_intervals) = other.intervals {
+            out.intervals = Some(other_intervals);
+        }
+        out
+    }
 }
