@@ -113,7 +113,7 @@ impl Distance for Box<dyn Distance> {
 /// ```
 ///
 /// [ucr-suite]: https://www.cs.ucr.edu/~eamonn/UCRsuite.html
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Dtw<T: Distance + Send + Sync> {
     // The Sakoe-Chiba warping window.
     window: Option<usize>,
