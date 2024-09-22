@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use augurs_outlier::OutlierDetector as _;
 use js_sys::Float64Array;
@@ -271,7 +271,12 @@ impl From<augurs_outlier::Series> for OutlierSeries {
     fn from(s: augurs_outlier::Series) -> Self {
         Self {
             is_outlier: s.is_outlier,
-            outlier_intervals: convert_intervals(s.outlier_intervals),
+            outlier_intervals: s
+                .outlier_intervals
+                .intervals
+                .into_iter()
+                .map(Into::into)
+                .collect(),
             scores: s.scores,
         }
     }
@@ -287,18 +292,13 @@ struct OutlierInterval {
     end: Option<usize>,
 }
 
-fn convert_intervals(intervals: augurs_outlier::OutlierIntervals) -> Vec<OutlierInterval> {
-    let mut out = Vec::with_capacity(intervals.indices.len() / 2);
-    if intervals.indices.is_empty() {
-        return out;
+impl From<augurs_outlier::OutlierInterval> for OutlierInterval {
+    fn from(i: augurs_outlier::OutlierInterval) -> Self {
+        Self {
+            start: i.start,
+            end: i.end,
+        }
     }
-    for chunk in intervals.indices.chunks(2) {
-        out.push(OutlierInterval {
-            start: chunk[0],
-            end: chunk.get(1).copied(),
-        });
-    }
-    out
 }
 
 /// The result of applying an outlier detection algorithm to a group of time series.
@@ -307,7 +307,7 @@ fn convert_intervals(intervals: augurs_outlier::OutlierIntervals) -> Vec<Outlier
 #[tsify(into_wasm_abi)]
 pub struct OutlierOutput {
     /// The indexes of the series considered outliers.
-    outlying_series: HashSet<usize>,
+    outlying_series: BTreeSet<usize>,
     /// The results of the detection for each series.
     series_results: Vec<OutlierSeries>,
     /// The band indicating the min and max value considered outlying

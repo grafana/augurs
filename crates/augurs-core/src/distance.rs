@@ -17,6 +17,7 @@ impl std::error::Error for DistanceMatrixError {}
 
 /// A matrix representing the distances between pairs of items.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DistanceMatrix {
     matrix: Vec<Vec<f64>>,
 }

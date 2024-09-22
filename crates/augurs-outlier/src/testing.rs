@@ -1,3 +1,5 @@
+use crate::OutlierInterval;
+
 pub const SERIES: &[&[f64]] = &[
     &[
         84.57766308278907,
@@ -873,3 +875,17 @@ pub const SERIES: &[&[f64]] = &[
         90.21207715366646,
     ],
 ];
+
+/// Convert an `OutlierIntervals` to a list of indices.
+pub(crate) fn flatten_intervals(intervals: &[OutlierInterval]) -> Vec<usize> {
+    intervals
+        .iter()
+        .flat_map(|x| {
+            let mut out = vec![x.start];
+            if let Some(end) = x.end {
+                out.push(end);
+            }
+            out
+        })
+        .collect()
+}

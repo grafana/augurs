@@ -383,7 +383,7 @@ mod test {
     use itertools::Itertools;
     use rv::prelude::*;
 
-    use crate::{MADDetector, OutlierDetector};
+    use crate::{testing::flatten_intervals, MADDetector, OutlierDetector};
 
     use super::Medians;
 
@@ -711,8 +711,9 @@ mod test {
                     );
                     let output = result.unwrap();
                     assert_eq!(output.series_results.len(), 1, "case {} failed", tc.name);
-                    let got_intervals = &output.series_results[0].outlier_intervals.indices;
-                    assert_eq!(intervals, got_intervals, "case {} failed", tc.name);
+                    let got_intervals =
+                        flatten_intervals(&output.series_results[0].outlier_intervals.intervals);
+                    assert_eq!(intervals, &got_intervals, "case {} failed", tc.name);
                 }
                 Err(exp) => {
                     assert!(result.is_err(), "case {} failed", tc.name);
