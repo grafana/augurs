@@ -357,7 +357,7 @@ impl SortedData {
 
 #[cfg(test)]
 mod tests {
-    use crate::{OutlierDetector, OutlierOutput};
+    use crate::{testing::flatten_intervals, OutlierDetector, OutlierOutput};
 
     use super::*;
 
@@ -516,12 +516,13 @@ mod tests {
         // in the matrix.
         for (j, series) in results.series_results.iter().enumerate() {
             let mut outlier_state = false;
-            let mut outlier_indices = series.outlier_intervals.indices.iter();
-            let mut next_idx = outlier_indices.next();
+            let outlier_indices = flatten_intervals(&series.outlier_intervals.intervals);
+            let mut iter = outlier_indices.iter();
+            let mut next_idx = iter.next();
             for (i, item) in matrix.iter_mut().enumerate() {
                 if next_idx.map_or(false, |next_idx| i >= *next_idx) {
                     outlier_state = !outlier_state;
-                    next_idx = outlier_indices.next();
+                    next_idx = iter.next();
                 }
                 item[j] = outlier_state;
             }
@@ -598,18 +599,19 @@ mod tests {
 
         assert!(results.series_results[0]
             .outlier_intervals
-            .indices
+            .intervals
             .is_empty());
         assert!(results.series_results[1]
             .outlier_intervals
-            .indices
+            .intervals
             .is_empty());
-        assert_eq!(results.series_results[2].outlier_intervals.indices[0], 40);
-        assert_eq!(results.series_results[2].outlier_intervals.indices[1], 42);
-        assert_eq!(results.series_results[2].outlier_intervals.indices[2], 140);
-        assert_eq!(results.series_results[2].outlier_intervals.indices[3], 142);
-        assert_eq!(results.series_results[2].outlier_intervals.indices[4], 240);
-        assert_eq!(results.series_results[2].outlier_intervals.indices[5], 242);
+        let indices = flatten_intervals(&results.series_results[2].outlier_intervals.intervals);
+        assert_eq!(indices[0], 40);
+        assert_eq!(indices[1], 42);
+        assert_eq!(indices[2], 140);
+        assert_eq!(indices[3], 142);
+        assert_eq!(indices[4], 240);
+        assert_eq!(indices[5], 242);
         assert!(results.cluster_band.is_some());
     }
 

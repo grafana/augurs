@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 mod dbscan;
 mod error;
@@ -38,9 +38,13 @@ impl Band {
 
 /// The result of applying an outlier detection algorithm to a time series.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct OutlierOutput {
     /// The indexes of the series considered outliers.
-    pub outlying_series: HashSet<usize>,
+    ///
+    /// This is a `BTreeSet` to ensure that the order of the series is preserved.
+    pub outlying_series: BTreeSet<usize>,
 
     /// The results of the detection for each series.
     pub series_results: Vec<Series>,
@@ -76,6 +80,8 @@ impl OutlierOutput {
 
 /// A potentially outlying series.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Series {
     /// Whether the series is an outlier for at least one of the samples.
     pub is_outlier: bool,
@@ -124,33 +130,22 @@ impl Series {
 }
 
 /// A list of outlier intervals for a single series.
-// We manually implement [`Serialize`] for this struct, serializing
-// just the `timestamps` field as an array.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase", transparent))]
 pub struct OutlierIntervals {
-    /// A list of indices, where 'even' elements are the start and
-    /// 'odd' elements are the end of an outlier interval.
-    pub indices: Vec<usize>,
+    /// The list of outlier intervals.
+    pub intervals: Vec<OutlierInterval>,
 
     /// Are we expecting a start or end timestamp to be pushed next?
+    #[cfg_attr(feature = "serde", serde(skip))]
     expecting_end: bool,
 }
 
 impl OutlierIntervals {
-    // fn new(idx: usize) -> Self {
-    //     // We're expecting at least two indices, so we might
-    //     // as well allocate it now.
-    //     let mut indices = Vec::with_capacity(2);
-    //     indices.push(idx);
-    //     Self {
-    //         indices,
-    //         expecting_end: true,
-    //     }
-    // }
-
     fn empty() -> Self {
         Self {
-            indices: Vec::new(),
+            intervals: Vec::new(),
             expecting_end: false,
         }
     }
@@ -160,7 +155,11 @@ impl OutlierIntervals {
             !self.expecting_end,
             "Expected end of outlier interval, got start"
         );
-        self.indices.push(ts);
+
+        self.intervals.push(OutlierInterval {
+            start: ts,
+            end: None,
+        });
         self.expecting_end = true;
     }
 
@@ -169,9 +168,31 @@ impl OutlierIntervals {
             self.expecting_end,
             "Expected start of outlier interval, got end"
         );
-        self.indices.push(ts);
+
+        match self.intervals.last_mut() {
+            Some(x @ OutlierInterval { end: None, .. }) => {
+                x.end = Some(ts);
+            }
+            _ => unreachable!("tried to add end to an open-ended interval"),
+        };
         self.expecting_end = false;
     }
+}
+
+/// A single outlier interval.
+///
+/// An outlier interval is a contiguous range of indices in a time series
+/// where an outlier is detected.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+pub struct OutlierInterval {
+    /// The start index of the interval.
+    pub start: usize,
+    /// The end index of the interval, if it exists.
+    ///
+    /// If the interval is open-ended, this will be `None`.
+    pub end: Option<usize>,
 }
 
 /// An outlier detection algorithm.
@@ -214,38 +235,59 @@ pub trait OutlierDetector {
     fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error>;
 }
 
-// fn transpose(data: &[&[f64]]) -> Vec<Vec<f64>> {
-//     let mut transposed = vec![vec![]; data.len()];
-//     for row in data {
-//         transposed.reserve(data.len());
-//         for (i, value) in row.iter().enumerate() {
-//             transposed[i].push(*value);
-//         }
-//     }
-//     transposed
-// }
+#[cfg(test)]
+mod test {
+    use super::*;
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
+    struct DummyDetector;
 
-//     struct DummyDetector;
+    impl OutlierDetector for DummyDetector {
+        type PreprocessedData = Vec<Vec<f64>>;
 
-//     impl OutlierDetector for DummyDetector {
-//         fn detect(&self, y: &[InputSeries<'_>]) -> OutlierResult {
-//             let serieses = y
-//                 .iter()
-//                 .map(|series| {
-//                     let is_outlier = series.iter().any(|&x| x > 10.0);
-//                     let scores = series.to_vec();
-//                     Series::new(is_outlier, scores)
-//                 })
-//                 .collect();
-//             let band = Band {
-//                 min: vec![-1.0; y[0].len()],
-//                 max: vec![1.0; y[0].len()],
-//             };
-//             OutlierResult::new(serieses, band)
-//         }
-//     }
-// }
+        fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
+            Ok(y.iter().map(|x| x.to_vec()).collect())
+        }
+
+        fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error> {
+            let serieses = y
+                .iter()
+                .map(|series| {
+                    let mut intervals = OutlierIntervals::empty();
+                    intervals.add_start(1);
+                    Series {
+                        is_outlier: series.iter().any(|&x| x > 10.0),
+                        scores: series.to_vec(),
+                        outlier_intervals: intervals,
+                    }
+                })
+                .collect();
+            let band = Band {
+                min: vec![-1.0; y[0].len()],
+                max: vec![1.0; y[0].len()],
+            };
+            Ok(OutlierOutput::new(serieses, Some(band)))
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serialize() {
+        let mut outlier_intervals = OutlierIntervals::empty();
+        outlier_intervals.add_start(1);
+        let series = Series {
+            is_outlier: true,
+            scores: vec![1.0, 2.0, 3.0],
+            outlier_intervals,
+        };
+        let output = OutlierOutput {
+            outlying_series: BTreeSet::from([0, 1]),
+            series_results: vec![series],
+            cluster_band: None,
+        };
+        let serialized = serde_json::to_string(&output).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{"outlyingSeries":[0,1],"seriesResults":[{"isOutlier":true,"outlierIntervals":[{"start":1,"end":null}],"scores":[1.0,2.0,3.0]}],"clusterBand":null}"#
+        );
+    }
+}
