@@ -14,6 +14,7 @@ publish = false
 name = "augurs"
 bench = false
 crate-type = ["cdylib"]
+doc = false
 
 [dependencies]
 augurs-clustering.workspace = true
