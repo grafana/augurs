@@ -1,11 +1,9 @@
 # Changepoint detection models.
 
-This crate provides algorithms for performing changepoint detection.
+Changepoint detection of time series.
 
 For now it is mostly just a wrapper around the [`changepoint`] crate, with
 a common `Detector` trait to allow for more implementations in future.
-
-This crate is alpha quality - APIs will almost certainly change!
 
 ## Example
 

@@ -1,6 +1,6 @@
 # Time series clustering algorithms
 
-This crate contains algorithms for clustering time series.
+Time series clustering algorithms.
 
 So far, only DBSCAN is implemented, and the distance matrix must be passed directly.
 A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for now.

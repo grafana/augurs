@@ -51,7 +51,7 @@ use augurs::{
 let data = &[
     1.0, 1.2, 1.4, 1.5, 1.4, 1.4, 1.2,
     1.5, 1.6, 2.0, 1.9, 1.8, 1.9, 2.0,
-];;
+];
 
 let periods = vec![7];  // Daily data with weekly seasonality.
 let trend_model = AutoETS::non_seasonal().into_trend_model();  // Or, use a non-seasonal ETS model as the trend model.
