@@ -13,6 +13,9 @@ publish = false
 [lib]
 bench = false
 crate-type = ["cdylib", "rlib"]
+doc = false
+doctest = false
+test = false
 
 [features]
 default = ["console_error_panic_hook"]

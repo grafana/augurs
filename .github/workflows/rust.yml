@@ -33,12 +33,12 @@ jobs:
       - name: Install Rust toolchain
         uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest
+          bins: cargo-nextest,just
 
       - name: Run cargo nextest
-        run: cargo nextest run
+        run: just test
       - name: Run doc tests
-        run: cargo test --doc
+        run: just doctest
 
   fmt:
     name: Rustfmt
