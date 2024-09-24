@@ -527,13 +527,11 @@ impl Ets {
 
 #[cfg(test)]
 mod tests {
+    use augurs_testing::{assert_approx_eq, data::AIR_PASSENGERS as AP};
 
-    use crate::{
-        data::AIR_PASSENGERS as AP,
-        model::{
-            ErrorComponent, ModelType, OptimizationCriteria, OptimizeParams, Params,
-            SeasonalComponent, TrendComponent,
-        },
+    use crate::model::{
+        ErrorComponent, ModelType, OptimizationCriteria, OptimizeParams, Params, SeasonalComponent,
+        TrendComponent,
     };
 
     use super::Ets;
@@ -568,7 +566,7 @@ mod tests {
         let mut amse = vec![0.0; 3];
         let mut denom = vec![0.0; 3];
         let fit = ets.etscalc_in(
-            &AP,
+            AP,
             &mut init_states,
             params,
             &mut residuals,
@@ -577,9 +575,9 @@ mod tests {
             &mut denom,
             true,
         );
-        assert_approx_eq::assert_approx_eq!(fit.lik, 2070.2270304137766);
-        assert_approx_eq::assert_approx_eq!(amse[0], 12170.41518101);
-        assert_approx_eq::assert_approx_eq!(amse[1], 12649.04373164);
-        assert_approx_eq::assert_approx_eq!(amse[2], 13109.83417796);
+        assert_approx_eq!(fit.lik, 2070.2270304137766);
+        assert_approx_eq!(amse[0], 12170.41518101);
+        assert_approx_eq!(amse[1], 12649.04373164);
+        assert_approx_eq!(amse[2], 13109.83417796);
     }
 }

@@ -581,11 +581,10 @@ impl Predict for FittedAutoETS {
 #[cfg(test)]
 mod test {
     use augurs_core::Fit;
+    use augurs_testing::{assert_within_pct, data::AIR_PASSENGERS};
 
     use super::{AutoETS, AutoSpec};
     use crate::{
-        assert_closeish,
-        data::AIR_PASSENGERS,
         model::{ErrorComponent, SeasonalComponent, TrendComponent},
         Error,
     };
@@ -628,11 +627,11 @@ mod test {
     #[test]
     fn air_passengers_fit() {
         let auto = AutoETS::new(1, "ZZN").unwrap();
-        let fit = auto.fit(&AIR_PASSENGERS).expect("fit failed");
+        let fit = auto.fit(AIR_PASSENGERS).expect("fit failed");
         assert_eq!(fit.model.model_type().error, ErrorComponent::Multiplicative);
         assert_eq!(fit.model.model_type().trend, TrendComponent::Additive);
         assert_eq!(fit.model.model_type().season, SeasonalComponent::None);
-        assert_closeish!(fit.model.log_likelihood(), -831.4883541595792, 0.01);
-        assert_closeish!(fit.model.aic(), 1672.9767083191584, 0.01);
+        assert_within_pct!(fit.model.log_likelihood(), -831.4883541595792, 0.01);
+        assert_within_pct!(fit.model.aic(), 1672.9767083191584, 0.01);
     }
 }

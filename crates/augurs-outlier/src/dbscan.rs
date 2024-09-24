@@ -43,14 +43,14 @@ impl EpsilonOrSensitivity {
 /// the size of the total number of values, then the cluster is considered
 /// normal, and the rest are outliers.
 #[derive(Debug, Clone)]
-pub struct DBSCANDetector {
+pub struct DbscanDetector {
     /// The maximum distance between points in a cluster.
     epsilon_or_sensitivity: EpsilonOrSensitivity,
 
     parallelize: bool,
 }
 
-impl OutlierDetector for DBSCANDetector {
+impl OutlierDetector for DbscanDetector {
     type PreprocessedData = Data;
     fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
         Ok(Data::from_row_major(y))
@@ -61,7 +61,7 @@ impl OutlierDetector for DBSCANDetector {
     }
 }
 
-impl DBSCANDetector {
+impl DbscanDetector {
     /// Create a new DBSCAN detector with the given epsilon.
     pub fn with_epsilon(epsilon: f64) -> Self {
         Self {
@@ -554,7 +554,7 @@ mod tests {
             &[1.5, 2.1, 6.4, 8.5],
         ];
         let detector =
-            DBSCANDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
+            DbscanDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
         let processed = detector.preprocess(data).unwrap();
         let outliers = detector.detect(&processed).unwrap();
 
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     fn test_synthetic() {
         for TestCase { eps, expected } in CASES {
-            let dbscan = DBSCANDetector::with_epsilon(*eps);
+            let dbscan = DbscanDetector::with_epsilon(*eps);
             let data = Data::from_column_major(DBSCAN_DATASET);
             let results = dbscan.detect(&data).unwrap();
             let table = outlier_intervals_to_boolean_table(&results);
@@ -590,7 +590,7 @@ mod tests {
 
     #[test]
     fn test_realistic() {
-        let dbscan = DBSCANDetector::with_sensitivity(0.8).unwrap();
+        let dbscan = DbscanDetector::with_sensitivity(0.8).unwrap();
         let data = dbscan.preprocess(crate::testing::SERIES).unwrap();
         let results = dbscan.detect(&data).unwrap();
         assert!(!results.outlying_series.contains(&0));
@@ -626,7 +626,7 @@ mod tests {
             &[1.9, 2.2, f64::NAN, 2.4],
             &[1.5, 2.1, 6.4, 8.5],
         ];
-        let dbscan = DBSCANDetector::with_epsilon(1.0);
+        let dbscan = DbscanDetector::with_epsilon(1.0);
         let processed = dbscan.preprocess(data).unwrap();
         // Should not panic.
         let results = dbscan.detect(&processed).unwrap();
@@ -644,7 +644,7 @@ mod tests {
             &[4.0, 5.0, 6.0, 7.0],
             &[7.0, 8.0, 9.0, 10.0],
         ];
-        let dbscan = DBSCANDetector::with_epsilon(1.0);
+        let dbscan = DbscanDetector::with_epsilon(1.0);
         let processed = dbscan.preprocess(data).unwrap();
         let results = dbscan.detect(&processed).unwrap();
         assert!(results.cluster_band.is_none());
@@ -653,7 +653,7 @@ mod tests {
     #[test]
     fn test_no_cluster_band_two_series() {
         let data: &[&[f64]] = &[&[1.0, 2.0, 3.0, 4.0], &[4.0, 5.0, 6.0, 7.0]];
-        let dbscan = DBSCANDetector::with_epsilon(4.0);
+        let dbscan = DbscanDetector::with_epsilon(4.0);
         let processed = dbscan.preprocess(data).unwrap();
         let results = dbscan.detect(&processed).unwrap();
         assert!(results.cluster_band.is_none());

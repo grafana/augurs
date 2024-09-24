@@ -11,13 +11,10 @@ use tracing::instrument;
 
 use augurs_core::{Forecast, ForecastIntervals, ModelError, Predict};
 
-// mod approx;
-// pub mod mstl;
-// mod stationarity;
 mod trend;
-// mod utils;
 
 pub use crate::trend::{FittedTrendModel, NaiveTrend, TrendModel};
+pub use stlrs;
 
 /// Errors that can occur when using this crate.
 #[derive(Debug, thiserror::Error)]
@@ -273,23 +270,10 @@ impl Predict for FittedMSTLModel {
 
 #[cfg(test)]
 mod tests {
-    use assert_approx_eq::assert_approx_eq;
-
     use augurs_core::prelude::*;
-    use augurs_testing::data::VIC_ELEC;
+    use augurs_testing::{assert_all_close, data::VIC_ELEC};
 
     use crate::{trend::NaiveTrend, ForecastIntervals, MSTLModel};
-
-    #[track_caller]
-    fn assert_all_close(actual: &[f64], expected: &[f64]) {
-        for (actual, expected) in actual.iter().zip(expected) {
-            if actual.is_nan() {
-                assert!(expected.is_nan());
-            } else {
-                assert_approx_eq!(actual, expected, 1e-1);
-            }
-        }
-    }
 
     #[test]
     fn results_match_r() {
@@ -312,6 +296,7 @@ mod tests {
         let fit = mstl.fit(&y).unwrap();
 
         let in_sample = fit.predict_in_sample(0.95).unwrap();
+        // The first 12 values from R.
         let expected_in_sample = vec![
             f64::NAN,
             7952.216,
@@ -327,7 +312,7 @@ mod tests {
             9870.213,
         ];
         assert_eq!(in_sample.point.len(), y.len());
-        assert_all_close(&in_sample.point, &expected_in_sample);
+        assert_all_close(&in_sample.point[..12], &expected_in_sample);
 
         let out_of_sample = fit.predict(10, 0.95).unwrap();
         let expected_out_of_sample: Vec<f64> = vec![

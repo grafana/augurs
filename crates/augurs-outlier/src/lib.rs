@@ -10,7 +10,7 @@ mod sensitivity;
 #[cfg(test)]
 mod testing;
 
-pub use dbscan::DBSCANDetector;
+pub use dbscan::DbscanDetector;
 pub use error::Error;
 pub use mad::MADDetector;
 use sensitivity::Sensitivity;

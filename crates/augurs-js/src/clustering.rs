@@ -24,7 +24,7 @@ pub struct DbscanOpts {
 #[derive(Debug)]
 #[wasm_bindgen]
 pub struct Dbscan {
-    inner: augurs_clustering::Dbscan,
+    inner: augurs_clustering::DbscanClusterer,
 }
 
 #[wasm_bindgen]
@@ -33,7 +33,7 @@ impl Dbscan {
     #[wasm_bindgen(constructor)]
     pub fn new(opts: DbscanOpts) -> Self {
         Self {
-            inner: augurs_clustering::Dbscan::new(opts.epsilon, opts.min_cluster_size),
+            inner: augurs_clustering::DbscanClusterer::new(opts.epsilon, opts.min_cluster_size),
         }
     }
 

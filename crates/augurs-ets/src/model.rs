@@ -1533,15 +1533,11 @@ fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
 
 #[cfg(test)]
 mod test {
-    use assert_approx_eq::assert_approx_eq;
     use augurs_core::prelude::*;
+    use augurs_testing::{assert_approx_eq, assert_within_pct, data::AIR_PASSENGERS as AP};
 
-    use crate::{
-        assert_closeish,
-        data::AIR_PASSENGERS as AP,
-        model::{
-            ErrorComponent, ForecastIntervals, ModelType, SeasonalComponent, TrendComponent, Unfit,
-        },
+    use crate::model::{
+        ErrorComponent, ForecastIntervals, ModelType, SeasonalComponent, TrendComponent, Unfit,
     };
 
     #[test]
@@ -1567,12 +1563,12 @@ mod test {
         })
         .damped(true);
         let model = unfit.fit(&AP[AP.len() - 20..]).unwrap();
-        assert_closeish!(model.log_likelihood(), -109.6248525790271, 0.01);
-        assert_closeish!(model.aic(), 231.2497051580542, 0.01);
-        assert_closeish!(model.bic(), 237.22409879937817, 0.01);
-        assert_closeish!(model.aicc(), 237.71124361959266, 0.01);
-        assert_closeish!(model.mse(), 2883.47944444736, 0.01);
-        assert_closeish!(model.amse(), 8292.71075580747, 0.01);
+        assert_within_pct!(model.log_likelihood(), -109.6248525790271, 0.01);
+        assert_within_pct!(model.aic(), 231.2497051580542, 0.01);
+        assert_within_pct!(model.bic(), 237.22409879937817, 0.01);
+        assert_within_pct!(model.aicc(), 237.71124361959266, 0.01);
+        assert_within_pct!(model.mse(), 2883.47944444736, 0.01);
+        assert_within_pct!(model.amse(), 8292.71075580747, 0.01);
     }
 
     #[test]
@@ -1582,13 +1578,13 @@ mod test {
             trend: TrendComponent::Additive,
             season: SeasonalComponent::None,
         });
-        let model = unfit.fit(&AP).unwrap();
-        assert_closeish!(model.log_likelihood(), -831.4883541595792, 0.01);
-        assert_closeish!(model.aic(), 1672.9767083191584, 0.01);
-        assert_closeish!(model.bic(), 1687.8257748170383, 0.01);
-        assert_closeish!(model.aicc(), 1673.4114909278542, 0.01);
-        assert_closeish!(model.mse(), 1127.443938773091, 0.01);
-        assert_closeish!(model.amse(), 2888.3802507845635, 0.01);
+        let model = unfit.fit(AP).unwrap();
+        assert_within_pct!(model.log_likelihood(), -831.4883541595792, 0.01);
+        assert_within_pct!(model.aic(), 1672.9767083191584, 0.01);
+        assert_within_pct!(model.bic(), 1687.8257748170383, 0.01);
+        assert_within_pct!(model.aicc(), 1673.4114909278542, 0.01);
+        assert_within_pct!(model.mse(), 1127.443938773091, 0.01);
+        assert_within_pct!(model.amse(), 2888.3802507845635, 0.01);
     }
 
     #[test]
@@ -1660,7 +1656,7 @@ mod test {
             trend: TrendComponent::Additive,
             season: SeasonalComponent::None,
         });
-        let model = unfit.fit(&AP).unwrap();
+        let model = unfit.fit(AP).unwrap();
         let forecasts = model.predict(10, 0.95).unwrap();
         let expected_p = [
             436.15668239,
@@ -1774,7 +1770,7 @@ mod test {
             trend: TrendComponent::Additive,
             season: SeasonalComponent::None,
         });
-        let model = unfit.fit(&AP).unwrap();
+        let model = unfit.fit(AP).unwrap();
         let forecasts = model.predict(0, 0.95).unwrap();
         assert!(forecasts.point.is_empty());
         let ForecastIntervals { lower, upper, .. } = forecasts.intervals.unwrap();

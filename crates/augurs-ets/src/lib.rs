@@ -25,7 +25,6 @@
 #![warn(missing_docs)]
 
 mod auto;
-pub mod data;
 mod ets;
 pub mod model;
 mod stat;
@@ -34,21 +33,6 @@ pub mod trend;
 
 use augurs_core::ModelError;
 pub use auto::{AutoETS, AutoSpec, FittedAutoETS};
-
-#[cfg(test)]
-// Assert that a is within (tol * 100)% of b.
-#[macro_export]
-macro_rules! assert_closeish {
-    ($a:expr, $b:expr, $tol:expr) => {
-        assert!(
-            (($a - $b) / $a).abs() < $tol,
-            "{} is not within {}% of {}",
-            $a,
-            $tol * 100.0,
-            $b
-        );
-    };
-}
 
 /// Errors returned by this crate.
 #[derive(Debug, thiserror::Error)]

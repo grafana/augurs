@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use augurs_clustering::Dbscan;
+use augurs_clustering::DbscanClusterer;
 use augurs_core::DistanceMatrix;
 
 fn dbscan(c: &mut Criterion) {
@@ -15,7 +15,7 @@ fn dbscan(c: &mut Criterion) {
     let distance_matrix = DistanceMatrix::try_from_square(distance_matrix).unwrap();
     c.bench_function("dbscan", |b| {
         b.iter(|| {
-            Dbscan::new(10.0, 3).fit(&distance_matrix);
+            DbscanClusterer::new(10.0, 3).fit(&distance_matrix);
         });
     });
 }

@@ -12,12 +12,12 @@ pub use augurs_core::DistanceMatrix;
 
 /// DBSCAN clustering algorithm.
 #[derive(Debug)]
-pub struct Dbscan {
+pub struct DbscanClusterer {
     epsilon: f64,
     min_cluster_size: usize,
 }
 
-impl Dbscan {
+impl DbscanClusterer {
     /// Create a new DBSCAN instance clustering instance.
     ///
     /// # Arguments
@@ -125,22 +125,22 @@ mod test {
         ];
         let distance_matrix = DistanceMatrix::try_from_square(distance_matrix).unwrap();
 
-        let clusters = Dbscan::new(0.5, 2).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(0.5, 2).fit(&distance_matrix);
         assert_eq!(clusters, vec![-1, -1, -1, -1]);
 
-        let clusters = Dbscan::new(1.0, 2).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(1.0, 2).fit(&distance_matrix);
         assert_eq!(clusters, vec![0, 0, -1, -1]);
 
-        let clusters = Dbscan::new(1.0, 3).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(1.0, 3).fit(&distance_matrix);
         assert_eq!(clusters, vec![-1, -1, -1, -1]);
 
-        let clusters = Dbscan::new(2.0, 2).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(2.0, 2).fit(&distance_matrix);
         assert_eq!(clusters, vec![0, 0, 0, -1]);
 
-        let clusters = Dbscan::new(2.0, 3).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(2.0, 3).fit(&distance_matrix);
         assert_eq!(clusters, vec![0, 0, 0, -1]);
 
-        let clusters = Dbscan::new(3.0, 3).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(3.0, 3).fit(&distance_matrix);
         assert_eq!(clusters, vec![0, 0, 0, 0]);
     }
 
@@ -155,7 +155,7 @@ mod test {
             })
             .collect::<Vec<Vec<f64>>>();
         let distance_matrix = DistanceMatrix::try_from_square(distance_matrix).unwrap();
-        let clusters = Dbscan::new(10.0, 3).fit(&distance_matrix);
+        let clusters = DbscanClusterer::new(10.0, 3).fit(&distance_matrix);
         let expected = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

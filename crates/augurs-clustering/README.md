@@ -8,7 +8,7 @@ A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for
 ## Usage
 
 ```rust
-use augurs_clustering::{Dbscan, DistanceMatrix};
+use augurs_clustering::{DbscanClusterer, DistanceMatrix};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 let distance_matrix = DistanceMatrix::try_from_square(
@@ -19,7 +19,7 @@ let distance_matrix = DistanceMatrix::try_from_square(
         vec![3.0, 3.0, 4.0, 0.0],
     ],
 )?;
-let clusters = Dbscan::new(0.5, 2).fit(&distance_matrix);
+let clusters = DbscanClusterer::new(0.5, 2).fit(&distance_matrix);
 assert_eq!(clusters, vec![-1, -1, -1, -1]);
 # Ok(())
 # }
