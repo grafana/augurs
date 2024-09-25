@@ -10,7 +10,7 @@ fn test_changepoint() {
     ];
     let changepoints = dbg!(ArgpcpDetector::builder().build().detect_changepoints(&data));
     // 1 changepoint, but the start is considered a changepoint too.
-    assert_eq!(changepoints.len(), 2);
+    assert_eq!(changepoints, vec![0, 33]);
 }
 
 #[cfg(feature = "clustering")]
