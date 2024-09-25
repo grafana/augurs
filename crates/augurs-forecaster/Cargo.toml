@@ -18,6 +18,4 @@ itertools.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-augurs-ets = { workspace = true, features = ["mstl"] }
-augurs-mstl.workspace = true
-augurs-testing.workspace = true
+augurs.workspace = true

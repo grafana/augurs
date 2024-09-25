@@ -14,9 +14,11 @@ augurs-mstl = "*"
 ```
 
 ```rust
-use augurs_ets::{AutoETS, trend::AutoETSTrendModel};
-use augurs_forecaster::{Forecaster, Transform, transforms::MinMaxScaleParams};
-use augurs_mstl::MSTLModel;
+use augurs::{
+    ets::{AutoETS, trend::AutoETSTrendModel},
+    forecaster::{Forecaster, Transform, transforms::MinMaxScaleParams},
+    mstl::MSTLModel
+};
 
 let data = &[
     1.0, 1.2, 1.4, 1.5, f64::NAN, 1.4, 1.2, 1.5, 1.6, 2.0, 1.9, 1.8

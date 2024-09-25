@@ -9,8 +9,8 @@ Seasonal models are not yet implemented, and some model types have not been test
 
 # Example
 
-```
-use augurs_ets::AutoETS;
+```rust
+use augurs::ets::AutoETS;
 
 let data: Vec<_> = (0..10).map(|x| x as f64).collect();
 let mut search = AutoETS::new(1, "ZZN")

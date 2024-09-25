@@ -8,7 +8,7 @@ a common `Detector` trait to allow for more implementations in future.
 ## Example
 
 ```rust
-use augurs_changepoint::{Detector, DefaultArgpcpDetector};
+use augurs::changepoint::{Detector, DefaultArgpcpDetector};
 
 let data = [0.5, 1.0, 0.4, 0.8, 1.5, 0.9, 0.6, 25.3, 20.4, 27.3, 30.0];
 let changepoints = DefaultArgpcpDetector::default().detect_changepoints(&data);

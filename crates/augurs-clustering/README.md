@@ -8,7 +8,7 @@ A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for
 ## Usage
 
 ```rust
-use augurs_clustering::{DbscanClusterer, DistanceMatrix};
+use augurs::clustering::{DbscanClusterer, DistanceMatrix};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 // Start with a distance matrix.

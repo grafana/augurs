@@ -10,7 +10,7 @@ Two implementations are planned:
 # Example
 
 ```rust
-use augurs_outlier::{OutlierDetector, DbscanDetector};
+use augurs::outlier::{OutlierDetector, DbscanDetector};
 
 // Each slice inside `data` is a time series.
 // The third one behaves differently at indexes 2 and 3.

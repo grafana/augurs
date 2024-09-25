@@ -22,8 +22,7 @@ The latter use case is the main entrypoint of this crate.
 ## Usage
 
 ```rust
-use augurs_core::prelude::*;
-use augurs_mstl::MSTLModel;
+use augurs::{mstl::MSTLModel, prelude::*};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 // Input data must be a `&[f64]` for the MSTL algorithm.

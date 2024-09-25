@@ -7,7 +7,7 @@ It currently contains implementations to do so using periodograms, similar to th
 ## Usage
 
 ```rust
-use augurs_seasons::{Detector, PeriodogramDetector};
+use augurs::seasons::{Detector, PeriodogramDetector};
 
 # fn main() {
 let y = &[
