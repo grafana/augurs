@@ -13,6 +13,7 @@ description = "Time series clustering."
 augurs-core.workspace = true
 
 [dev-dependencies]
+augurs.workspace = true
 criterion.workspace = true
 
 [lib]

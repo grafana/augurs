@@ -22,6 +22,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 assert_approx_eq.workspace = true
+augurs.workspace = true
 augurs-testing.workspace = true
 criterion.workspace = true
 iai.workspace = true

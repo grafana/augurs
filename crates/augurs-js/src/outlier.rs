@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Debug)]
 enum Detector {
-    Dbscan(augurs_outlier::DBSCANDetector),
+    Dbscan(augurs_outlier::DbscanDetector),
     Mad(augurs_outlier::MADDetector),
 }
 
@@ -67,8 +67,8 @@ impl Detector {
 #[derive(Debug)]
 enum LoadedDetector {
     Dbscan {
-        detector: augurs_outlier::DBSCANDetector,
-        data: <augurs_outlier::DBSCANDetector as augurs_outlier::OutlierDetector>::PreprocessedData,
+        detector: augurs_outlier::DbscanDetector,
+        data: <augurs_outlier::DbscanDetector as augurs_outlier::OutlierDetector>::PreprocessedData,
     },
     Mad {
         detector: augurs_outlier::MADDetector,
@@ -90,7 +90,7 @@ impl LoadedDetector {
 /// Options for the DBSCAN outlier detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
-pub struct DBSCANDetectorOptions {
+pub struct DbscanDetectorOptions {
     /// A scale-invariant sensitivity parameter.
     ///
     /// This must be in (0, 1) and will be used to estimate a sensible
@@ -113,7 +113,7 @@ pub struct MADDetectorOptions {
 /// Options for outlier detectors.
 pub enum OutlierDetectorOptions {
     #[serde(rename = "dbscan")]
-    Dbscan(DBSCANDetectorOptions),
+    Dbscan(DbscanDetectorOptions),
     #[serde(rename = "mad")]
     Mad(MADDetectorOptions),
 }
@@ -130,9 +130,9 @@ pub struct OutlierDetector {
 impl OutlierDetector {
     /// Create a new outlier detector using the DBSCAN algorithm.
     #[wasm_bindgen]
-    pub fn dbscan(options: DBSCANDetectorOptions) -> Result<OutlierDetector, JsError> {
+    pub fn dbscan(options: DbscanDetectorOptions) -> Result<OutlierDetector, JsError> {
         Ok(Self {
-            detector: Detector::Dbscan(augurs_outlier::DBSCANDetector::with_sensitivity(
+            detector: Detector::Dbscan(augurs_outlier::DbscanDetector::with_sensitivity(
                 options.sensitivity,
             )?),
         })
@@ -211,7 +211,7 @@ impl LoadedOutlierDetector {
                 // trait, which would in turn require some sort of config associated type.
                 let _ = std::mem::replace(
                     detector,
-                    augurs_outlier::DBSCANDetector::with_sensitivity(options.sensitivity)?,
+                    augurs_outlier::DbscanDetector::with_sensitivity(options.sensitivity)?,
                 );
             }
             (

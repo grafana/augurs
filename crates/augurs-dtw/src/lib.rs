@@ -10,6 +10,7 @@ use augurs_core::DistanceMatrix;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+#[cfg(feature = "parallel")]
 use tracing::debug;
 
 /// A trait for defining a distance function.

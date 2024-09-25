@@ -1,10 +1,10 @@
-# High level forecasting API for the augurs time series library
+# High level forecasting API for augurs
 
 `augurs-forecaster` contains a high-level API for training and predicting with time series models. It currently allows you to combine a model with a set of transformations (such as imputation of missing data, min-max scaling, and log/logit transforms) and fit the model on the transformed data, automatically handling back-transformation of forecasts and prediction intervals.
 
 ## Usage
 
-First add this crate, `augurs-core`, and any required model crates to your `Cargo.toml`:
+First add this crate and any required model crates to your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -14,9 +14,11 @@ augurs-mstl = "*"
 ```
 
 ```rust
-use augurs_ets::{AutoETS, trend::AutoETSTrendModel};
-use augurs_forecaster::{Forecaster, Transform, transforms::MinMaxScaleParams};
-use augurs_mstl::MSTLModel;
+use augurs::{
+    ets::{AutoETS, trend::AutoETSTrendModel},
+    forecaster::{Forecaster, Transform, transforms::MinMaxScaleParams},
+    mstl::MSTLModel
+};
 
 let data = &[
     1.0, 1.2, 1.4, 1.5, f64::NAN, 1.4, 1.2, 1.5, 1.6, 2.0, 1.9, 1.8

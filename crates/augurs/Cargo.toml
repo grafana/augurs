@@ -1,0 +1,37 @@
+[package]
+name = "augurs"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+
+[dependencies]
+augurs-changepoint = { workspace = true, optional = true }
+augurs-clustering = { workspace = true, optional = true }
+augurs-core = { workspace = true }
+augurs-dtw = { workspace = true, optional = true }
+augurs-ets = { workspace = true, optional = true }
+augurs-forecaster = { workspace = true, optional = true }
+augurs-mstl = { workspace = true, optional = true }
+augurs-outlier = { workspace = true, optional = true }
+augurs-seasons = { workspace = true, optional = true }
+
+[dev-dependencies]
+augurs-testing.workspace = true
+itertools.workspace = true
+
+[features]
+default = []
+changepoint = ["augurs-changepoint"]
+clustering = ["augurs-clustering"]
+dtw = ["augurs-dtw"]
+ets = ["augurs-ets"]
+forecaster = ["augurs-forecaster"]
+full = ["changepoint", "clustering", "dtw", "ets", "forecaster", "mstl", "outlier", "parallel", "seasons"]
+mstl = ["augurs-mstl", "augurs-ets?/mstl"]
+parallel = ["augurs-dtw?/parallel", "augurs-outlier?/parallel"]
+outlier = ["augurs-outlier"]
+seasons = ["augurs-seasons"]

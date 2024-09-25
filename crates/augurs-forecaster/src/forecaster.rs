@@ -71,6 +71,7 @@ where
             .map_err(|e| Error::Predict {
                 source: Box::new(e) as _,
             })
+            .map(|f| self.transforms.inverse_transform(f))
     }
 }
 
@@ -78,7 +79,7 @@ where
 mod test {
     use itertools::{Itertools, MinMaxResult};
 
-    use augurs_mstl::{MSTLModel, NaiveTrend};
+    use augurs::mstl::{MSTLModel, NaiveTrend};
 
     use crate::transforms::MinMaxScaleParams;
 

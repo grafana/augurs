@@ -23,8 +23,8 @@ Pull requests for missing features would be very welcome.
 
 ## Usage
 
-```
-use augurs_dtw::Dtw;
+```rust
+use augurs::dtw::Dtw;
 
 let a = &[0.0, 1.0, 2.0];
 let b = &[3.0, 4.0, 5.0];

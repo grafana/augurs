@@ -28,7 +28,6 @@ mstl = ["dep:augurs-mstl"]
 serde = ["dep:serde"]
 
 [dev-dependencies]
-assert_approx_eq.workspace = true
 augurs-testing.workspace = true
 criterion.workspace = true
 iai.workspace = true

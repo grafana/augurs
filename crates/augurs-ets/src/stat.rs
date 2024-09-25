@@ -32,7 +32,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use assert_approx_eq::assert_approx_eq;
+
+    use augurs_testing::assert_approx_eq;
 
     use super::VarExt;
 

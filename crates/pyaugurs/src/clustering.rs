@@ -50,7 +50,7 @@ impl TryFrom<InputDistanceMatrix<'_>> for augurs_core::DistanceMatrix {
 #[derive(Debug)]
 #[pyclass]
 pub struct Dbscan {
-    inner: augurs_clustering::Dbscan,
+    inner: augurs_clustering::DbscanClusterer,
 }
 
 #[pymethods]
@@ -66,7 +66,7 @@ impl Dbscan {
     #[new]
     fn new(eps: f64, min_cluster_size: usize) -> Dbscan {
         Dbscan {
-            inner: augurs_clustering::Dbscan::new(eps, min_cluster_size),
+            inner: augurs_clustering::DbscanClusterer::new(eps, min_cluster_size),
         }
     }
 

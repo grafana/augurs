@@ -1,6 +1,6 @@
 # Time series clustering algorithms
 
-This crate contains algorithms for clustering time series.
+Time series clustering algorithms.
 
 So far, only DBSCAN is implemented, and the distance matrix must be passed directly.
 A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for now.
@@ -8,19 +8,31 @@ A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for
 ## Usage
 
 ```rust
-use augurs_clustering::{Dbscan, DistanceMatrix};
+use augurs::clustering::{DbscanClusterer, DistanceMatrix};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
+// Start with a distance matrix.
+// This can be calculated using e.g. dynamic time warping
+// using the `augurs-dtw` crate.
 let distance_matrix = DistanceMatrix::try_from_square(
     vec![
-        vec![0.0, 1.0, 2.0, 3.0],
-        vec![1.0, 0.0, 3.0, 3.0],
-        vec![2.0, 3.0, 0.0, 4.0],
-        vec![3.0, 3.0, 4.0, 0.0],
+        vec![0.0, 0.1, 0.2, 2.0, 1.9],
+        vec![0.1, 0.0, 0.15, 2.1, 2.2],
+        vec![0.2, 0.15, 0.0, 2.2, 2.3],
+        vec![2.0, 2.1, 2.2, 0.0, 0.1],
+        vec![1.9, 2.2, 2.3, 0.1, 0.0],
     ],
 )?;
-let clusters = Dbscan::new(0.5, 2).fit(&distance_matrix);
-assert_eq!(clusters, vec![-1, -1, -1, -1]);
+
+// Epsilon is the maximum distance between two series for them to be considered in the same cluster.
+let epsilon = 0.3;
+// The minimum number of series in a cluster before it is considered non-noise.
+let min_cluster_size = 2;
+
+// Use DBSCAN to detect clusters of series.
+// Note that we don't need to specify the number of clusters in advance.
+let clusters = DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
+assert_eq!(clusters, vec![0, 0, 0, 1, 1]);
 # Ok(())
 # }
 ```

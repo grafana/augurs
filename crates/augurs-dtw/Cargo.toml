@@ -18,6 +18,7 @@ tracing.workspace = true
 parallel = ["dep:rayon"]
 
 [dev-dependencies]
+augurs.workspace = true
 criterion.workspace = true
 itertools.workspace = true
 
