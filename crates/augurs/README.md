@@ -54,7 +54,7 @@ let data = &[
 ];
 
 let periods = vec![7];  // Daily data with weekly seasonality.
-let trend_model = AutoETS::non_seasonal().into_trend_model();  // Or, use a non-seasonal ETS model as the trend model.
+let trend_model = AutoETS::non_seasonal().into_trend_model();  // Use a non-seasonal ETS model as the trend model.
 let mstl = MSTLModel::new(periods, trend_model);
 let fit = mstl.fit(data).unwrap();
 let forecasts = fit.predict(10, 0.95).unwrap();
