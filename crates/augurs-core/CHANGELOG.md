@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/grafana/augurs/compare/augurs-core-v0.3.1...augurs-core-v0.4.0) - 2024-09-25
+
+### Added
+
+- add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
+- add 'Forecast::chain' method to chain two forecasts together ([#115](https://github.com/grafana/augurs/pull/115))
+- add `augurs-dtw` crate with dynamic time warping implementation ([#98](https://github.com/grafana/augurs/pull/98))
+
+### Fixed
+
+- [**breaking**] add serde derives for more types ([#112](https://github.com/grafana/augurs/pull/112))
+
 ## [0.3.1](https://github.com/grafana/augurs/compare/augurs-core-v0.3.0...augurs-core-v0.3.1) - 2024-07-30
 
 No notable changes in this release.
