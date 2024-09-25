@@ -37,7 +37,7 @@ macro_rules! assert_within_pct {
     ($a:expr, $b:expr, $tol:expr) => {
         if $a == 0.0 {
             assert!(
-                $b.abs() < $tol,
+                ($b as f64).abs() < $tol,
                 "{} is not within {}% of 0",
                 $b,
                 $tol * 100.0
