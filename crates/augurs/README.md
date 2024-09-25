@@ -59,7 +59,7 @@ let data = &[
 let periods = vec![7];
 
 // Create a non-seasonal ETS model for the trend component.
-let trend_model = AutoETS::non_seasonal().into_trend_model();  // Use a non-seasonal ETS model as the trend model.
+let trend_model = AutoETS::non_seasonal().into_trend_model();
 
 // Initialize the MSTL model.
 let mstl = MSTLModel::new(periods, trend_model);
