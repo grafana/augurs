@@ -2,8 +2,8 @@
 
 [![Python](https://github.com/grafana/augurs/actions/workflows/python.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/python.yml)
 [![Rust](https://github.com/grafana/augurs/actions/workflows/rust.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/rust.yml)
-[![docs.rs](https://docs.rs/augurs-core/badge.svg)](https://docs.rs/augurs-core)
-[![crates.io](https://img.shields.io/crates/v/augurs-core.svg)](https://crates.io/crates/augurs-core)
+[![docs.rs](https://docs.rs/augurs/badge.svg)](https://docs.rs/augurs)
+[![crates.io](https://img.shields.io/crates/v/augurs.svg)](https://crates.io/crates/augurs)
 
 `augurs` is a time series toolkit built in Rust. It contains functionality for
 outlier detection, clustering, seasonality detection, changepoint detection
