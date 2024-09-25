@@ -1,6 +1,7 @@
 [workspace]
 members = [
-  "crates/*"
+  "crates/*",
+  "examples/*",
 ]
 resolver = "2"
 
@@ -21,6 +22,7 @@ keywords = [
 ]
 
 [workspace.dependencies]
+augurs = { version = "0.3.1", path = "crates/augurs" }
 augurs-changepoint = { version = "0.3.1", path = "crates/augurs-changepoint" }
 augurs-clustering = { version = "0.3.1", path = "crates/augurs-clustering" }
 augurs-core = { version = "0.3.1", path = "crates/augurs-core" }
