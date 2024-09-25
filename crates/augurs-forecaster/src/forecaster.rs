@@ -71,6 +71,7 @@ where
             .map_err(|e| Error::Predict {
                 source: Box::new(e) as _,
             })
+            .map(|f| self.transforms.inverse_transform(f))
     }
 }
 
