@@ -13,14 +13,15 @@ use augurs_clustering::{DbscanClusterer, DistanceMatrix};
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 let distance_matrix = DistanceMatrix::try_from_square(
     vec![
-        vec![0.0, 1.0, 2.0, 3.0],
-        vec![1.0, 0.0, 3.0, 3.0],
-        vec![2.0, 3.0, 0.0, 4.0],
-        vec![3.0, 3.0, 4.0, 0.0],
+        vec![0.0, 0.1, 0.2, 2.0, 1.9],
+        vec![0.1, 0.0, 0.15, 2.1, 2.2],
+        vec![0.2, 0.15, 0.0, 2.2, 2.3],
+        vec![2.0, 2.1, 2.2, 0.0, 0.1],
+        vec![1.9, 2.2, 2.3, 0.1, 0.0],
     ],
 )?;
-let clusters = DbscanClusterer::new(0.5, 2).fit(&distance_matrix);
-assert_eq!(clusters, vec![-1, -1, -1, -1]);
+let clusters = DbscanClusterer::new(0.3, 2).fit(&distance_matrix);
+assert_eq!(clusters, vec![0, 0, 0, 1, 1]);
 # Ok(())
 # }
 ```
