@@ -30,7 +30,7 @@ fn main() {
 
     // Optionally, turn on parallel processing.
     // This requires the `parallel` feature to be enabled, otherwise it will be ignored.
-    detector.parallelize(true);
+    detector = detector.parallelize(true);
 
     // Preprocess the data using the detector.
     // This function will return an error if the input data is invalid.

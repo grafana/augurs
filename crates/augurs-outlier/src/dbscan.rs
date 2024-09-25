@@ -85,8 +85,9 @@ impl DbscanDetector {
     /// Parallelize the DBSCAN algorithm.
     ///
     /// This requires the `parallel` feature to be enabled, otherwise it will be ignored.
-    pub fn parallelize(&mut self, parallelize: bool) {
+    pub fn parallelize(mut self, parallelize: bool) -> Self {
         self.parallelize = parallelize;
+        self
     }
 
     fn run(&self, data: &Data) -> OutlierOutput {
