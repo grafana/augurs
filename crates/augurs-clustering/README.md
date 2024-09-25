@@ -1,4 +1,4 @@
-# Time series clustering algorithms.
+# Time series clustering algorithms
 
 Time series clustering algorithms.
 

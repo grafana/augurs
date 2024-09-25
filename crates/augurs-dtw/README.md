@@ -1,4 +1,4 @@
-# Dynamic Time Warping (DTW).
+# Dynamic Time Warping (DTW)
 
 Implementation of the dynamic time warping (DTW) algorithm.
 

@@ -1,4 +1,4 @@
-# Exponential smoothing models.
+# Exponential smoothing models
 
 This crate provides exponential smoothing models for time series forecasting
 in the `augurs` framework. The models are implemented entirely in Rust and are based

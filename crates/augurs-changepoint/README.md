@@ -1,4 +1,4 @@
-# Changepoint detection models.
+# Changepoint detection models
 
 Changepoint detection of time series.
 

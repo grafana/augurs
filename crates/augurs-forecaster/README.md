@@ -1,4 +1,4 @@
-# High level forecasting API for augurs.
+# High level forecasting API for augurs
 
 `augurs-forecaster` contains a high-level API for training and predicting with time series models. It currently allows you to combine a model with a set of transformations (such as imputation of missing data, min-max scaling, and log/logit transforms) and fit the model on the transformed data, automatically handling back-transformation of forecasts and prediction intervals.
 
