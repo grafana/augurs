@@ -48,15 +48,26 @@ use augurs::{
     prelude::*,
 };
 
+// Create some sample data.
 let data = &[
     1.0, 1.2, 1.4, 1.5, 1.4, 1.4, 1.2,
     1.5, 1.6, 2.0, 1.9, 1.8, 1.9, 2.0,
 ];
 
-let periods = vec![7];  // Daily data with weekly seasonality.
+// Define seasonal periods: we have daily data with weekly seasonality,
+// so our periods are 7 days.
+let periods = vec![7];
+
+// Create a non-seasonal ETS model for the trend component.
 let trend_model = AutoETS::non_seasonal().into_trend_model();  // Use a non-seasonal ETS model as the trend model.
+
+// Initialize the MSTL model.
 let mstl = MSTLModel::new(periods, trend_model);
+
+// Fit the model to the data.
 let fit = mstl.fit(data).unwrap();
+
+// Generate forecasts for the next 10 values, with a 95% prediction interval.
 let forecasts = fit.predict(10, 0.95).unwrap();
 ```
 
