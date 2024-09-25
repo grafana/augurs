@@ -1,0 +1,14 @@
+[package]
+name = "forecasting"
+description = "Example of forecasting using augurs"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+publish = false
+
+[dependencies]
+augurs = { workspace = true, features = ["ets", "mstl", "forecaster", "seasons"] }
