@@ -90,7 +90,7 @@ impl LoadedDetector {
 /// Options for the DBSCAN outlier detector.
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
-pub struct DBSCANDetectorOptions {
+pub struct DbscanDetectorOptions {
     /// A scale-invariant sensitivity parameter.
     ///
     /// This must be in (0, 1) and will be used to estimate a sensible
@@ -113,7 +113,7 @@ pub struct MADDetectorOptions {
 /// Options for outlier detectors.
 pub enum OutlierDetectorOptions {
     #[serde(rename = "dbscan")]
-    Dbscan(DBSCANDetectorOptions),
+    Dbscan(DbscanDetectorOptions),
     #[serde(rename = "mad")]
     Mad(MADDetectorOptions),
 }
@@ -130,7 +130,7 @@ pub struct OutlierDetector {
 impl OutlierDetector {
     /// Create a new outlier detector using the DBSCAN algorithm.
     #[wasm_bindgen]
-    pub fn dbscan(options: DBSCANDetectorOptions) -> Result<OutlierDetector, JsError> {
+    pub fn dbscan(options: DbscanDetectorOptions) -> Result<OutlierDetector, JsError> {
         Ok(Self {
             detector: Detector::Dbscan(augurs_outlier::DbscanDetector::with_sensitivity(
                 options.sensitivity,
