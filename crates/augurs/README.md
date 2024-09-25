@@ -24,8 +24,8 @@ feature flags can be enabled to include only the functionality you need:
 - `ets`: exponential smoothing models
 - `forecaster`: forecasting
 - `mstl`: multiple seasonal trend decomposition
-- `mstl-ets`: use ETS models as the trend model for MSTL
 - `outlier`: outlier detection
+- `parallel`: enable parallel processing of algorithms, where available
 - `seasons`: seasonality detection
 
 Alternatively, use the `full` feature flag to enable all of the above.
