@@ -11,6 +11,9 @@ A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for
 use augurs_clustering::{DbscanClusterer, DistanceMatrix};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
+// Start with a distance matrix.
+// This can be calculated using e.g. dynamic time warping
+// using the `augurs-dtw` crate.
 let distance_matrix = DistanceMatrix::try_from_square(
     vec![
         vec![0.0, 0.1, 0.2, 2.0, 1.9],
@@ -20,7 +23,15 @@ let distance_matrix = DistanceMatrix::try_from_square(
         vec![1.9, 2.2, 2.3, 0.1, 0.0],
     ],
 )?;
-let clusters = DbscanClusterer::new(0.3, 2).fit(&distance_matrix);
+
+// Epsilon is the maximum distance between two series for them to be considered in the same cluster.
+let epsilon = 0.3;
+// The minimum number of series in a cluster before it is considered non-noise.
+let min_cluster_size = 2;
+
+// Use DBSCAN to detect clusters of series.
+// Note that we don't need to specify the number of clusters in advance.
+let clusters = DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
 assert_eq!(clusters, vec![0, 0, 0, 1, 1]);
 # Ok(())
 # }
