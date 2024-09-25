@@ -1,4 +1,4 @@
-# Multiple Seasonal-Trend decomposition with LOESS (MSTL)
+# Multiple Seasonal-Trend decomposition with LOESS (MSTL).
 
 Fast, effective forecasting of time series exhibiting multiple seasonality and trend.
 

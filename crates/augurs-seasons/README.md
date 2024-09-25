@@ -1,4 +1,4 @@
-# Seasonality detection for time series
+# Seasonality detection for time series.
 
 `augurs-seasons` contains methods for detecting seasonality or periodicity in time series.
 
