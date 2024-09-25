@@ -10,9 +10,9 @@ mod sensitivity;
 #[cfg(test)]
 mod testing;
 
-pub use dbscan::DbscanDetector;
+pub use dbscan::{Data as DbscanData, DbscanDetector};
 pub use error::Error;
-pub use mad::MADDetector;
+pub use mad::{MADDetector, PreprocessedData as MADData};
 use sensitivity::Sensitivity;
 
 /// A band indicating the min and max value considered outlying
