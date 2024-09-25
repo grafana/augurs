@@ -35,12 +35,21 @@ pub fn assert_all_close(actual: &[f64], expected: &[f64]) {
 #[macro_export]
 macro_rules! assert_within_pct {
     ($a:expr, $b:expr, $tol:expr) => {
-        assert!(
-            (($a - $b) / $a).abs() < $tol,
-            "{} is not within {}% of {}",
-            $a,
-            $tol * 100.0,
-            $b
-        );
+        if $a == 0.0 {
+            assert!(
+                $b.abs() < $tol,
+                "{} is not within {}% of 0",
+                $b,
+                $tol * 100.0
+            );
+        } else {
+            assert!(
+                (($a - $b) / $a).abs() < $tol,
+                "{} is not within {}% of {}",
+                $a,
+                $tol * 100.0,
+                $b
+            );
+        }
     };
 }
