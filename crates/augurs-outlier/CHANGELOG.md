@@ -11,11 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
+- export the data types used by MAD and DBSCAN detectors ([#117](https://github.com/grafana/augurs/pull/117))
 
 ### Fixed
 
 - [**breaking**] add serde derives for more types ([#112](https://github.com/grafana/augurs/pull/112))
 - [**breaking**] make `cluster_band` optional, undefined if no cluster is found ([#105](https://github.com/grafana/augurs/pull/105))
+
+### Changed
+
+- rename `DBSCANDetector` to `DbscanDetector` ([#117](https://github.com/grafana/augurs/pull/117))
+- `DbscanDetector::parallelize` now takes self by value rather than mutable reference to encourage chaining ([#117](https://github.com/grafana/augurs/pull/117))
 
 ## [0.3.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.3.0...augurs-outlier-v0.3.1) - 2024-07-30
 

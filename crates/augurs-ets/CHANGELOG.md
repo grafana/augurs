@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
 
+### Removed
+
+- Remove `data` module from `augurs-ets` crate ([#117](https://github.com/grafana/augurs/pull/117))
+
 ## [0.3.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.3.0...augurs-ets-v0.3.1) - 2024-07-30
 
 No notable changes in this release.
