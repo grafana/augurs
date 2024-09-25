@@ -55,18 +55,20 @@ fn test_dtw() {
 #[test]
 fn test_dtw_distance_matrix() {
     use augurs::dtw::Dtw;
+    use augurs_testing::assert_all_close;
+
     let dtw = Dtw::euclidean();
     let series: &[&[f64]] = &[&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0], &[6.0, 7.0, 8.0]];
     let dists = dtw.distance_matrix(series);
     assert_eq!(dists.shape(), (3, 3));
-    assert_eq!(dists[0], vec![0.0, 5.0990195135927845, 10.392304845413264]);
+    assert_all_close(&dists[0], &[0.0, 5.0990195135927845, 10.392304845413264]);
 
     // Test with different length series.
     let dtw = Dtw::euclidean();
     let series: &[&[f64]] = &[&[0.0, 1.0, 2.0], &[3.0], &[6.0, 7.0]];
     let dists = dtw.distance_matrix(series);
     assert_eq!(dists.shape(), (3, 3));
-    assert_eq!(dists[0], vec![0.0, 3.7416573867739413, 9.273618495495704]);
+    assert_all_close(&dists[0], &[0.0, 3.7416573867739413, 9.273618495495704]);
 }
 
 #[cfg(feature = "ets")]
