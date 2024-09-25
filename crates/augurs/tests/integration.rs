@@ -47,8 +47,9 @@ fn test_clustering() {
 #[test]
 fn test_dtw() {
     use augurs::dtw::Dtw;
+    use augurs_testing::assert_approx_eq;
     let result = Dtw::euclidean().distance(&[0.0, 1.0, 2.0], &[3.0, 4.0, 5.0]);
-    assert_eq!(result, 5.0990195135927845);
+    assert_approx_eq!(result, 5.0990195135927845);
 }
 
 #[cfg(feature = "dtw")]
