@@ -14,3 +14,6 @@ doctest:
   # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
   # or doesn't have any meaningful doctests anyway, since they're not published.
   cargo test --doc --all-features --workspace --exclude augurs-js --exclude pyaugurs
+
+doc:
+  cargo doc --all-features --workspace --exclude augurs-js --exclude pyaugurs --open
