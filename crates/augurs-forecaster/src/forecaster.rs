@@ -79,7 +79,7 @@ where
 mod test {
     use itertools::{Itertools, MinMaxResult};
 
-    use augurs_mstl::{MSTLModel, NaiveTrend};
+    use augurs::mstl::{MSTLModel, NaiveTrend};
 
     use crate::transforms::MinMaxScaleParams;
 
