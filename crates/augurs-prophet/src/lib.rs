@@ -1,10 +1,10 @@
+#![doc = include_str!("../README.md")]
 #![warn(
     missing_docs,
     missing_debug_implementations,
     rust_2018_idioms,
     unreachable_pub
 )]
-//! `augurs-prophet` is a re-implementation of the Prophet forecasting algorithm.
 mod data;
 mod error;
 mod features;
