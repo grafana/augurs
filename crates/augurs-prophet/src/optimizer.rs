@@ -21,8 +21,6 @@
 //       WASM Components?
 // TODO: write a pure Rust optimizer for the default case.
 
-use std::collections::HashMap;
-
 use crate::positive_float::PositiveFloat;
 
 /// The initial parameters for the optimization.
@@ -132,15 +130,20 @@ pub struct OptimizeOpts {
 #[derive(Debug, Clone)]
 pub struct OptimizedParams {
     /// Mapping from parameter name to its maximum likelihood estimation.
-    params: HashMap<String, f64>,
-}
+    // params: HashMap<String, f64>,
 
-impl From<(Vec<String>, Vec<f64>)> for OptimizedParams {
-    fn from((names, params): (Vec<String>, Vec<f64>)) -> Self {
-        Self {
-            params: names.into_iter().zip(params).collect(),
-        }
-    }
+    /// Base trend growth rate.
+    pub k: f64,
+    /// Trend offset.
+    pub m: f64,
+    /// Observation noise.
+    pub sigma_obs: f64,
+    /// Trend rate adjustments.
+    pub delta: Vec<f64>,
+    /// Regressor coefficients.
+    pub beta: Vec<f64>,
+    /// Transformed trend.
+    pub trend: Vec<f64>,
 }
 
 /// An error that occurred during the optimization procedure.
@@ -203,12 +206,17 @@ pub mod dummy_optimizer {
     impl Optimizer for DummyOptimizer {
         fn optimize(
             &self,
-            _: InitialParams,
+            init: InitialParams,
             _: Data,
             _: OptimizeOpts,
         ) -> Result<OptimizedParams, Error> {
             Ok(OptimizedParams {
-                params: HashMap::new(),
+                k: init.k,
+                m: init.m,
+                sigma_obs: init.sigma_obs,
+                delta: init.delta,
+                beta: init.beta.clone(),
+                trend: init.beta,
             })
         }
     }
