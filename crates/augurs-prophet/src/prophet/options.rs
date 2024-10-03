@@ -72,22 +72,89 @@ pub enum EstimationMode {
 /// Optional version of Prophet's options, before applying any defaults.
 #[derive(Default, Debug, Clone)]
 pub struct OptProphetOptions {
+    /// The type of growth (trend) to use.
     pub growth: Option<GrowthType>,
+
+    /// An optional list of changepoints.
+    ///
+    /// If not provided, changepoints will be automatically selected.
     pub changepoints: Option<Vec<u64>>,
+
+    /// The number of potential changepoints to include.
+    ///
+    /// Not used if `changepoints` is provided.
+    ///
+    /// If provided and `changepoints` is not provided, then
+    /// `n_changepoints` potential changepoints will be selected
+    /// uniformly from the first `changepoint_range` proportion of
+    /// the history.
     pub n_changepoints: Option<u32>,
+
+    /// The proportion of the history to consider for potential changepoints.
+    ///
+    /// Not used if `changepoints` is provided.
     pub changepoint_range: Option<f64>,
+
+    /// How to fit yearly seasonality.
     pub yearly_seasonality: Option<SeasonalityOption>,
+    /// How to fit weekly seasonality.
     pub weekly_seasonality: Option<SeasonalityOption>,
+    /// How to fit daily seasonality.
     pub daily_seasonality: Option<SeasonalityOption>,
+
+    /// How to model seasonality.
     pub seasonality_mode: Option<FeatureMode>,
+
+    /// The prior scale for seasonality.
+    ///
+    /// This modulates the strength of seasonality,
+    /// with larger values allowing the model to fit
+    /// larger seasonal fluctuations and smaller values
+    /// dampening the seasonality.
+    ///
+    /// Can be specified for individual seasonalities
+    /// using [`Prophet::add_seasonality`].
     pub seasonality_prior_scale: Option<PositiveFloat>,
+
+    /// The prior scale for changepoints.
+    ///
+    /// This modulates the flexibility of the automatic
+    /// changepoint selection. Large values will allow many
+    /// changepoints, while small values will allow few
+    /// changepoints.
     pub changepoint_prior_scale: Option<PositiveFloat>,
+
+    /// How to perform parameter estimation.
+    ///
+    /// When [`EstimationMode::Mle`] or [`EstimationMode::Map`]
+    /// are used then no MCMC samples are taken.
     pub estimation: Option<EstimationMode>,
+
+    /// The width of the uncertainty intervals.
+    ///
+    /// Must be between `0.0` and `1.0`. Common values are
+    /// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
     pub interval_width: Option<f64>,
+
+    /// The number of simulated draws used to estimate uncertainty intervals.
+    ///
+    /// Setting this value to `0` will disable uncertainty
+    /// estimation and speed up the calculation.
     pub uncertainty_samples: Option<u32>,
+
+    /// How to scale the data prior to fitting the model.
     pub scaling: Option<Scaling>,
+
+    /// Holidays to include in the model.
     pub holidays: Option<HashMap<String, Holiday>>,
+    /// Prior scale for holidays.
+    ///
+    /// This parameter modulates the strength of the holiday
+    /// components model, unless overridden in each individual
+    /// holiday's input.
     pub holidays_prior_scale: Option<PositiveFloat>,
+
+    /// How to model holidays.
     pub holidays_mode: Option<FeatureMode>,
 }
 
