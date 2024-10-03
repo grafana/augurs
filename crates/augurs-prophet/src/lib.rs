@@ -23,7 +23,7 @@ pub use data::TrainingData;
 pub use error::Error;
 pub use features::{FeatureMode, Holiday, Regressor, Seasonality, Standardize};
 pub use optimizer::{Algorithm, Optimizer, TrendIndicator};
-pub use positive_float::PositiveFloat;
+pub use positive_float::{PositiveFloat, TryFromFloatError};
 pub use prophet::{
     options::{EstimationMode, GrowthType, ProphetOptions, Scaling, SeasonalityOption},
     Prophet,

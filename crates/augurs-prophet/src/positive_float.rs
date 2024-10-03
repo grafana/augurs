@@ -6,7 +6,7 @@ pub struct PositiveFloat(f64);
 /// An invalid float was provided when trying to create a [`PositiveFloat`].
 #[derive(Debug, thiserror::Error)]
 #[error("negative float provided: {0}")]
-pub struct NegativeFloatError(f64);
+pub struct TryFromFloatError(f64);
 
 impl PositiveFloat {
     /// Attempt to create a new `PositiveFloat`.
@@ -14,9 +14,9 @@ impl PositiveFloat {
     /// # Errors
     ///
     /// Returns an error if the provided float is less than 0.0.
-    pub fn try_new(f: f64) -> Result<Self, NegativeFloatError> {
+    pub fn try_new(f: f64) -> Result<Self, TryFromFloatError> {
         if f <= 0.0 {
-            return Err(NegativeFloatError(f));
+            return Err(TryFromFloatError(f));
         }
         Ok(Self(f))
     }
@@ -28,7 +28,7 @@ impl PositiveFloat {
 }
 
 impl TryFrom<f64> for PositiveFloat {
-    type Error = NegativeFloatError;
+    type Error = TryFromFloatError;
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         Self::try_new(value)
     }
