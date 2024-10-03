@@ -1,4 +1,4 @@
-pub mod options;
+pub(crate) mod options;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -27,12 +27,12 @@ struct Scales {
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-struct SeasonalityModes {
+struct Modes {
     additive: HashSet<String>,
     multiplicative: HashSet<String>,
 }
 
-impl SeasonalityModes {
+impl Modes {
     /// Convenience method for inserting a name into the appropriate set.
     fn insert(&mut self, mode: FeatureMode, name: String) {
         if mode == FeatureMode::Additive {
@@ -93,6 +93,7 @@ impl ComponentColumns {
     }
 }
 
+/// The name of a feature column in the `X` matrix passed to Stan.
 #[derive(Debug, Clone)]
 enum FeatureName {
     /// A seasonality feature.
@@ -138,14 +139,35 @@ impl FeaturesFrame {
     }
 }
 
+/// Final features to be included in the Stan model.
 #[derive(Debug)]
 struct Features {
+    /// The actual feature data.
     features: FeaturesFrame,
+    /// The indicator columns for the various features.
     component_columns: ComponentColumns,
+    /// The prior scales for each of the features.
     prior_scales: Vec<PositiveFloat>,
-    modes: SeasonalityModes,
+    /// The modes of the features.
+    modes: Modes,
 }
 
+/// The Prophet time series forecasting model.
+///
+/// # Example
+///
+/// ```
+/// use augurs_prophet::{Prophet, TrainingData};
+///
+/// let data = TrainingData::new(
+///    vec![0, 1, 2, 3, 4],
+///    vec![0.5, 1.4, 2.6, 3.5, 4.4],
+/// );
+/// let optimizer = DummyOptimizer;
+///
+/// let model = Prophet::new(Default::default(), &opt)?;
+/// model.fit(&data);
+/// ```
 #[derive(Debug)]
 pub struct Prophet {
     /// Options to be used for fitting.
@@ -174,7 +196,7 @@ pub struct Prophet {
     changepoints_t: Option<Vec<f64>>,
 
     /// The modes of the components.
-    component_modes: Option<SeasonalityModes>,
+    component_modes: Option<Modes>,
 
     /// The component columns used for training.
     train_component_columns: Option<ComponentColumns>,
@@ -193,6 +215,16 @@ pub struct Prophet {
 }
 
 impl Prophet {
+    /// Create a new Prophet model with the given options and optimizer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use augurs_prophet::Prophet;
+    ///
+    /// let optimizer = DummyOptimizer;
+    /// let model = Prophet::new(Default::default(), &opt)?;
+    /// ```
     pub fn new(opts: ProphetOptions, optimizer: &'static dyn Optimizer) -> Self {
         Self {
             opts,
@@ -210,31 +242,16 @@ impl Prophet {
         }
     }
 
-    pub fn add_seasonality(
-        &mut self,
-        name: String,
-        period: PositiveFloat,
-        fourier_order: NonZeroU32,
-        prior_scale: Option<PositiveFloat>,
-        mode: Option<FeatureMode>,
-        condition_name: Option<String>,
-    ) -> Result<(), Error> {
+    /// Add a custom seasonality to the model.
+    pub fn add_seasonality(&mut self, name: String, seasonality: Seasonality) -> Result<(), Error> {
         // TODO: validate name
-        let prior_scale = prior_scale.unwrap_or(self.opts.seasonality_prior_scale);
-        let mode = mode.unwrap_or(self.opts.seasonality_mode);
-        self.seasonalities.insert(
-            name,
-            Seasonality {
-                period,
-                fourier_order,
-                prior_scale,
-                mode,
-                condition_name,
-            },
-        );
+        // let prior_scale = prior_scale.unwrap_or(self.opts.seasonality_prior_scale);
+        // let mode = mode.unwrap_or(self.opts.seasonality_mode);
+        self.seasonalities.insert(name, seasonality);
         Ok(())
     }
 
+    /// Add a regressor to the model.
     pub fn add_regressor(&mut self, name: String, regressor: Regressor) {
         self.extra_regressors.insert(name, regressor);
     }
@@ -556,6 +573,7 @@ impl Prophet {
     }
 
     /// Setup seasonalities that were configured to be automatically determined.
+    ///
     /// Turns on yearly seasonality if there is >=2 years of history.
     /// Turns on weekly seasonality if there is >=2 weeks of history, and the
     /// spacing between dates in the history is <7 days.
@@ -589,11 +607,7 @@ impl Prophet {
         ) {
             self.add_seasonality(
                 "yearly".to_string(),
-                365.25.try_into().unwrap(),
-                fourier_order,
-                Some(self.opts.seasonality_prior_scale),
-                Some(self.opts.seasonality_mode),
-                None,
+                Seasonality::new(365.25.try_into().unwrap(), fourier_order),
             )?;
         }
 
@@ -608,11 +622,7 @@ impl Prophet {
         ) {
             self.add_seasonality(
                 "weekly".to_string(),
-                7.0.try_into().unwrap(),
-                fourier_order,
-                Some(self.opts.seasonality_prior_scale),
-                Some(self.opts.seasonality_mode),
-                None,
+                Seasonality::new(7.0.try_into().unwrap(), fourier_order),
             )?;
         }
 
@@ -627,11 +637,7 @@ impl Prophet {
         ) {
             self.add_seasonality(
                 "daily".to_string(),
-                1.0.try_into().unwrap(),
-                fourier_order,
-                Some(self.opts.seasonality_prior_scale),
-                Some(self.opts.seasonality_mode),
-                None,
+                Seasonality::new(1.0.try_into().unwrap(), fourier_order),
             )?;
         }
 
@@ -724,7 +730,7 @@ impl Prophet {
         Ok(all_holidays)
     }
 
-    fn make_holiday_features(&self, modes: &mut SeasonalityModes) {
+    fn make_holiday_features(&self, modes: &mut Modes) {
         todo!()
     }
 
@@ -735,7 +741,7 @@ impl Prophet {
     fn make_all_features(&self, history: &ProcessedData) -> Result<Features, Error> {
         let mut features = FeaturesFrame::new();
         let mut prior_scales = Vec::with_capacity(self.seasonalities.len());
-        let mut modes = SeasonalityModes::default();
+        let mut modes = Modes::default();
 
         // Add seasonality features.
         for (name, seasonality) in &self.seasonalities {
@@ -746,8 +752,14 @@ impl Prophet {
                 history,
                 &mut features,
             )?;
-            prior_scales.extend(std::iter::repeat(seasonality.prior_scale).take(n_new));
-            modes.insert(seasonality.mode, name.clone())
+            let prior_scale = seasonality
+                .prior_scale
+                .unwrap_or(self.opts.seasonality_prior_scale);
+            prior_scales.extend(std::iter::repeat(prior_scale).take(n_new));
+            modes.insert(
+                seasonality.mode.unwrap_or(self.opts.seasonality_mode),
+                name.clone(),
+            )
         }
 
         // TODO: Add holiday features.
@@ -797,7 +809,7 @@ impl Prophet {
     fn regressor_column_matrix(
         &self,
         feature_names: &[FeatureName],
-        modes: &mut SeasonalityModes,
+        modes: &mut Modes,
     ) -> ComponentColumns {
         // TODO: get rid of strings below, we can use a `ComponentName` enum instead.
 
@@ -930,6 +942,7 @@ impl Prophet {
         self.optimized.is_some()
     }
 
+    /// Fit the Prophet model to some training data.
     #[instrument(level = "debug", skip(self, data, opts))]
     pub fn fit(&mut self, data: TrainingData, opts: OptimizeOpts) -> Result<(), Error> {
         let preprocessed = self.preprocess(data)?;
@@ -943,6 +956,9 @@ impl Prophet {
         Ok(())
     }
 
+    /// Predict using the Prophet model.
+    ///
+    /// That will fail if the model has not been fit.
     #[instrument(level = "debug", skip(self, ds))]
     pub fn predict(&self, ds: Option<Vec<TimestampSeconds>>) -> Result<Vec<f64>, Error> {
         // TODO!
@@ -950,6 +966,7 @@ impl Prophet {
     }
 }
 
+/// Historical data after preprocessing.
 struct ProcessedData {
     ds: Vec<TimestampSeconds>,
     t: Vec<f64>,
@@ -962,6 +979,7 @@ struct ProcessedData {
     seasonal_indicators: HashMap<String, Vec<bool>>,
 }
 
+/// Processed data used for fitting.
 struct Preprocessed {
     data: Data,
     history: ProcessedData,
@@ -1100,7 +1118,7 @@ mod tests {
             "binary_feature2".to_string(),
             Regressor::additive().with_standardize(Standardize::Yes),
         );
-        let mut modes = SeasonalityModes {
+        let mut modes = Modes {
             additive: HashSet::from([
                 "weekly".to_string(),
                 "binary_feature".to_string(),
@@ -1155,7 +1173,7 @@ mod tests {
         );
         assert_eq!(
             modes,
-            SeasonalityModes {
+            Modes {
                 additive: HashSet::from([
                     "weekly".to_string(),
                     "binary_feature".to_string(),

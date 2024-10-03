@@ -13,7 +13,7 @@ pub enum FeatureMode {
     Multiplicative,
 }
 
-/// A holiday.
+/// A holiday to be considered by the Prophet model.
 #[derive(Debug, Clone)]
 pub struct Holiday {
     pub(crate) ds: Vec<TimestampSeconds>,
@@ -55,9 +55,15 @@ impl Holiday {
 /// Whether or not to standardize a regressor.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Standardize {
+    /// Automatically determine whether to standardize.
+    ///
+    /// Numeric regressors will be standardized while
+    /// binary regressors will not.
     #[default]
     Auto,
+    /// Standardize this regressor.
     Yes,
+    /// Do not standardize this regressor.
     No,
 }
 
@@ -122,9 +128,55 @@ impl Regressor {
 pub struct Seasonality {
     pub(crate) period: PositiveFloat,
     pub(crate) fourier_order: NonZeroU32,
-    pub(crate) prior_scale: PositiveFloat,
-    pub(crate) mode: FeatureMode,
+    pub(crate) prior_scale: Option<PositiveFloat>,
+    pub(crate) mode: Option<FeatureMode>,
     pub(crate) condition_name: Option<String>,
 }
 
-// TODO: add constructors and methods to Seasonality.
+impl Seasonality {
+    /// Create a new `Seasonality` with the given period and fourier order.
+    ///
+    /// By default, the prior scale and mode will be inherited from the
+    /// Prophet model config, and the seasonality is assumed to be
+    /// non-conditional.
+    pub fn new(period: PositiveFloat, fourier_order: NonZeroU32) -> Self {
+        Self {
+            period,
+            fourier_order,
+            prior_scale: None,
+            mode: None,
+            condition_name: None,
+        }
+    }
+
+    /// Set the prior scale of this seasonality.
+    ///
+    /// By default, seasonalities inherit the prior scale
+    /// configured on the Prophet model; this allows the
+    /// prior scale to be customised for each seasonality.
+    pub fn with_prior_scale(mut self, prior_scale: PositiveFloat) -> Self {
+        self.prior_scale = Some(prior_scale);
+        self
+    }
+
+    /// Set the mode of this seasonality.
+    ///
+    /// By default, seasonalities inherit the mode
+    /// configured on the Prophet model; this allows the
+    /// mode to be customised for each seasonality.
+    pub fn with_mode(mut self, mode: FeatureMode) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+
+    /// Set this seasonality as conditional.
+    ///
+    /// A column with the provided condition name must be
+    /// present in the data passed to Prophet otherwise
+    /// training will fail. This can be added with
+    /// [`TrainingData::with_seasonality_indicators`].
+    pub fn with_condition(mut self, condition_name: String) -> Self {
+        self.condition_name = Some(condition_name);
+        self
+    }
+}

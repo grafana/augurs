@@ -9,6 +9,7 @@ use crate::TimestampSeconds;
 ///
 /// Optionally, you can add seasonality indicators, regressors,
 /// floor and cap columns.
+#[derive(Clone, Debug)]
 pub struct TrainingData {
     pub(crate) ds: Vec<TimestampSeconds>,
     pub(crate) y: Vec<f64>,

@@ -8,10 +8,8 @@ use crate::{FeatureMode, Holiday, PositiveFloat, TrendIndicator};
 pub enum GrowthType {
     /// Linear growth (default).
     Linear,
-    /// 0
     /// Logistic growth.
     Logistic,
-    /// 1
     /// Flat growth.
     Flat,
 }
@@ -30,6 +28,17 @@ impl From<GrowthType> for TrendIndicator {
 #[derive(Clone, Copy, Debug, Default)]
 pub enum SeasonalityOption {
     /// Automatically determine whether to include this seasonality.
+    ///
+    /// Yearly seasonality is automatically included if there is >=2
+    /// years of history.
+    ///
+    /// Weekly seasonality is automatically included if there is >=2
+    /// weeks of history, and the spacing between the dates in the
+    /// data is <7 days.
+    ///
+    /// Daily seasonality is automatically included if there is >=2
+    /// days of history, and the spacing between the dates in the
+    /// data is <1 day.
     #[default]
     Auto,
     /// Manually specify whether to include this seasonality.
@@ -126,22 +135,119 @@ impl From<OptProphetOptions> for ProphetOptions {
 /// Options for Prophet, after applying defaults.
 #[derive(Debug, Clone)]
 pub struct ProphetOptions {
+    /// The type of growth (trend) to use.
+    ///
+    /// Defaults to [`GrowthType::Linear`].
     pub growth: GrowthType,
+
+    /// An optional list of changepoints.
+    ///
+    /// If not provided, changepoints will be automatically selected.
     pub changepoints: Option<Vec<u64>>,
+
+    /// The number of potential changepoints to include.
+    ///
+    /// Not used if `changepoints` is provided.
+    ///
+    /// If provided and `changepoints` is not provided, then
+    /// `n_changepoints` potential changepoints will be selected
+    /// uniformly from the first `changepoint_range` proportion of
+    /// the history.
+    ///
+    /// Defaults to 25.
     pub n_changepoints: u32,
+
+    /// The proportion of the history to consider for potential changepoints.
+    ///
+    /// Not used if `changepoints` is provided.
+    ///
+    /// Defaults to `0.8` for the first 80% of the data.
     pub changepoint_range: f64,
+
+    /// How to fit yearly seasonality.
+    ///
+    /// Defaults to [`SeasonalityOption::Auto`].
     pub yearly_seasonality: SeasonalityOption,
+    /// How to fit weekly seasonality.
+    ///
+    /// Defaults to [`SeasonalityOption::Auto`].
     pub weekly_seasonality: SeasonalityOption,
+    /// How to fit daily seasonality.
+    ///
+    /// Defaults to [`SeasonalityOption::Auto`].
     pub daily_seasonality: SeasonalityOption,
+
+    /// How to model seasonality.
+    ///
+    /// Defaults to [`FeatureMode::Additive`].
     pub seasonality_mode: FeatureMode,
+
+    /// The prior scale for seasonality.
+    ///
+    /// This modulates the strength of seasonality,
+    /// with larger values allowing the model to fit
+    /// larger seasonal fluctuations and smaller values
+    /// dampening the seasonality.
+    ///
+    /// Can be specified for individual seasonalities
+    /// using [`Prophet::add_seasonality`].
+    ///
+    /// Defaults to `10.0`.
     pub seasonality_prior_scale: PositiveFloat,
+
+    /// The prior scale for changepoints.
+    ///
+    /// This modulates the flexibility of the automatic
+    /// changepoint selection. Large values will allow many
+    /// changepoints, while small values will allow few
+    /// changepoints.
+    ///
+    /// Defaults to `0.05`.
     pub changepoint_prior_scale: PositiveFloat,
+
+    /// How to perform parameter estimation.
+    ///
+    /// When [`EstimationMode::Mle`] or [`EstimationMode::Map`]
+    /// are used then no MCMC samples are taken.
+    ///
+    /// Defaults to [`EstimationMode::Mle`].
     pub estimation: EstimationMode,
+
+    /// The width of the uncertainty intervals.
+    ///
+    /// Must be between `0.0` and `1.0`. Common values are
+    /// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
+    ///
+    /// Defaults to `0.8` for 80% intervals.
     pub interval_width: f64,
+
+    /// The number of simulated draws used to estimate uncertainty intervals.
+    ///
+    /// Setting this value to `0` will disable uncertainty
+    /// estimation and speed up the calculation.
+    ///
+    /// Defaults to `1000`.
     pub uncertainty_samples: u32,
+
+    /// How to scale the data prior to fitting the model.
+    ///
+    /// Defaults to [`Scaling::AbsMax`].
     pub scaling: Scaling,
+
+    /// Holidays to include in the model.
     pub holidays: HashMap<String, Holiday>,
+    /// Prior scale for holidays.
+    ///
+    /// This parameter modulates the strength of the holiday
+    /// components model, unless overridden in each individual
+    /// holiday's input.
+    ///
+    /// Defaults to `100.0`.
     pub holidays_prior_scale: PositiveFloat,
+
+    /// How to model holidays.
+    ///
+    /// Defaults to [`FeatureMode::Additive`].
     pub holidays_mode: FeatureMode,
 }
 

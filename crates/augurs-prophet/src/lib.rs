@@ -1,4 +1,10 @@
-//! Prophet is a re-implementation of the Prophet forecasting algorithm.
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
+//! `augurs-prophet` is a re-implementation of the Prophet forecasting algorithm.
 mod data;
 mod error;
 mod features;
@@ -8,6 +14,7 @@ pub mod optimizer;
 mod positive_float;
 mod prophet;
 
+/// A timestamp represented as seconds since the epoch.
 pub type TimestampSeconds = u64;
 
 // Re-export everything at the root so that users don't have to

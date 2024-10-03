@@ -1,3 +1,26 @@
+//! Methods for optimizing the Prophet model.
+//!
+//! This module contains the `Optimize` trait, which represents
+//! a way of finding the optimal parameters for the Prophet model
+//! given the data.
+//!
+//! The original Prophet library uses Stan for this; specifically,
+//! it uses the `optimize` command of Stan to find the maximum
+//! likelihood estimate (or maximum a-priori estimates) of the
+//! parameters.
+//!
+//! The `cmdstan` feature of this crate provides an implementation
+//! of the `Optimize` trait that uses `cmdstan` to do the same.
+//! This requires a working installation of `cmdstan`.
+//!
+//! The `libstan` feature uses FFI calls to call out to the Stan
+//! C++ library to do the same. This requires a C++ compiler.
+//!
+// TODO: actually add these features.
+// TODO: come up with a way of doing something in WASM. Maybe
+//       WASM Components?
+// TODO: write a pure Rust optimizer for the default case.
+
 use std::collections::HashMap;
 
 use crate::positive_float::PositiveFloat;
@@ -180,9 +203,9 @@ pub mod dummy_optimizer {
     impl Optimizer for DummyOptimizer {
         fn optimize(
             &self,
-            init: InitialParams,
-            data: Data,
-            opts: OptimizeOpts,
+            _: InitialParams,
+            _: Data,
+            _: OptimizeOpts,
         ) -> Result<OptimizedParams, Error> {
             Ok(OptimizedParams {
                 params: HashMap::new(),
