@@ -11,8 +11,8 @@ use tracing::instrument;
 
 use crate::{
     optimizer::{Data, InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
-    Error, FeatureMode, Holiday, PositiveFloat, PredictionData, Regressor, Seasonality,
-    Standardize, TimestampSeconds, TrainingData,
+    Error, FeatureMode, FloatIterExt, Holiday, PositiveFloat, PredictionData, Regressor,
+    Seasonality, Standardize, TimestampSeconds, TrainingData,
 };
 
 const NO_REGRESSORS_PLACEHOLDER: &str = "__no_regressors_zeros__";
@@ -207,6 +207,9 @@ pub struct Prophet {
     /// The optimizer to use.
     optimizer: &'static dyn Optimizer,
 
+    /// The processed data used for fitting.
+    processed: Option<Preprocessed>,
+
     /// The initial parameters passed to optimization.
     init: Option<InitialParams>,
 
@@ -237,6 +240,7 @@ impl Prophet {
             train_component_columns: None,
             train_holiday_names: None,
             optimizer,
+            processed: None,
             init: None,
             optimized: None,
         }
@@ -482,15 +486,8 @@ impl Prophet {
                         scales.y_scale = y_scale;
                     }
                     (Scaling::MinMax, Some(cap)) => {
-                        scales.y_min = *floor
-                            .iter()
-                            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                            .ok_or(Error::Scaling)?;
-                        scales.y_scale = cap
-                            .iter()
-                            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                            .ok_or(Error::Scaling)?
-                            - scales.y_min;
+                        scales.y_min = floor.iter().copied().nanmin(true);
+                        scales.y_scale = cap.iter().copied().nanmax(true) - scales.y_min;
                     }
                     _ => {
                         return Err(Error::MissingCap);
@@ -500,22 +497,11 @@ impl Prophet {
             Some(_) | None => match self.opts.scaling {
                 Scaling::AbsMax => {
                     scales.y_min = 0.0;
-                    scales.y_scale = y
-                        .iter()
-                        .map(|y| y.abs())
-                        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                        .ok_or(Error::Scaling)?;
+                    scales.y_scale = y.iter().map(|y| y.abs()).nanmax(true);
                 }
                 Scaling::MinMax => {
-                    scales.y_min = *y
-                        .iter()
-                        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                        .ok_or(Error::Scaling)?;
-                    scales.y_scale = *y
-                        .iter()
-                        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                        .ok_or(Error::Scaling)?
-                        - scales.y_min;
+                    scales.y_min = y.iter().copied().nanmin(true);
+                    scales.y_scale = y.iter().copied().nanmax(true) - scales.y_min;
                 }
             },
         };
@@ -730,7 +716,15 @@ impl Prophet {
         Ok(all_holidays)
     }
 
-    fn make_holiday_features(&self, modes: &mut Modes) {
+    /// Construct a frame of features representing holidays.
+    fn make_holiday_features(
+        &self,
+        ds: &[TimestampSeconds],
+        holidays: HashMap<String, Holiday>,
+        features: &mut FeaturesFrame,
+        prior_scales: &mut Vec<PositiveFloat>,
+        modes: &mut Modes,
+    ) {
         todo!()
     }
 
@@ -763,16 +757,16 @@ impl Prophet {
         }
 
         // TODO: Add holiday features.
-        // let holidays = self.construct_holidays(&history.ds)?;
-        // if holidays.len() > 0 {
-        //     self.make_holiday_features(
-        //         &history.ds,
-        //         &holidays,
-        //         &mut features,
-        //         &mut prior_scales,
-        //         &mut modes,
-        //     );
-        // }
+        let holidays = self.construct_holidays(&history.ds)?;
+        if !holidays.is_empty() {
+            self.make_holiday_features(
+                &history.ds,
+                holidays,
+                &mut features,
+                &mut prior_scales,
+                &mut modes,
+            );
+        }
 
         // Add regressors.
         for (name, regressor) in &self.extra_regressors {
@@ -952,6 +946,7 @@ impl Prophet {
                 .optimize(init.clone(), preprocessed.data.clone(), opts)
                 .map_err(|e| Error::OptimizationFailed(e.to_string()))?,
         );
+        self.processed = Some(preprocessed);
         self.init = Some(init);
         Ok(())
     }
@@ -967,6 +962,7 @@ impl Prophet {
 }
 
 /// Historical data after preprocessing.
+#[derive(Debug)]
 struct ProcessedData {
     ds: Vec<TimestampSeconds>,
     t: Vec<f64>,
@@ -980,6 +976,7 @@ struct ProcessedData {
 }
 
 /// Processed data used for fitting.
+#[derive(Debug)]
 struct Preprocessed {
     data: Data,
     history: ProcessedData,
@@ -1064,7 +1061,6 @@ impl Preprocessed {
         } = &self.history;
 
         let cap_scaled = cap_scaled.as_ref().ok_or(Error::MissingCap)?;
-
         let t_diff = t[i1] - t[i0];
 
         // Force valid values, in case y > cap or y < 0
@@ -1074,7 +1070,6 @@ impl Preprocessed {
 
         let mut r0 = c0 / y0;
         let r1 = c1 / y1;
-
         if (r0 - r1).abs() <= 0.01 {
             r0 *= 1.05;
         }
@@ -1091,23 +1086,16 @@ impl Preprocessed {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{
-        optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts, Standardize,
-    };
+mod test_trend_component {
+    use crate::{optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts};
 
     use super::*;
     use augurs_testing::assert_approx_eq;
-    use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_growth_init() {
+    fn growth_init() {
         let mut data = daily_univariate_ts().head(468);
-        let max = *data
-            .y
-            .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
+        let max = data.y.iter().copied().nanmax(true);
         data = data.with_cap(vec![max; 468]);
 
         let mut opts = ProphetOptions::default();
@@ -1131,13 +1119,9 @@ mod tests {
     }
 
     #[test]
-    fn test_growth_init_minmax() {
+    fn growth_init_minmax() {
         let mut data = daily_univariate_ts().head(468);
-        let max = *data
-            .y
-            .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
+        let max = data.y.iter().copied().nanmax(true);
         data = data.with_cap(vec![max; 468]);
 
         let mut opts = ProphetOptions {
@@ -1161,6 +1145,134 @@ mod tests {
         let init = preprocessed.calculate_initial_params(&opts).unwrap();
         assert_approx_eq!(init.k, 0.0);
         assert_approx_eq!(init.m, 0.32792770);
+    }
+}
+
+#[cfg(test)]
+mod test_data_prep {
+    use crate::{
+        optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts,
+        util::FloatIterExt, Standardize,
+    };
+
+    use super::*;
+    use augurs_testing::assert_approx_eq;
+    use pretty_assertions::assert_eq;
+
+    fn train_test_split(data: TrainingData, ratio: f64) -> (TrainingData, TrainingData) {
+        let n = data.len();
+        let split = (n as f64 * ratio).round() as usize;
+        (data.clone().head(split), data.tail(n - split))
+    }
+
+    #[test]
+    fn setup_dataframe() {
+        let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let mut prophet = Prophet::new(ProphetOptions::default(), &DummyOptimizer);
+        let (history, _) = prophet.setup_dataframe(data, None).unwrap();
+
+        assert_approx_eq!(history.t.iter().copied().nanmin(true), 0.0);
+        assert_approx_eq!(history.t.iter().copied().nanmax(true), 1.0);
+        assert_approx_eq!(history.y_scaled.iter().copied().nanmax(true), 1.0);
+    }
+
+    #[test]
+    fn logistic_floor() {
+        let (mut data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let n = data.len();
+        data = data.with_floor(vec![10.0; n]);
+        data = data.with_cap(vec![80.0; n]);
+        let opts = ProphetOptions {
+            growth: GrowthType::Logistic,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        prophet.fit(data.clone(), Default::default()).unwrap();
+        assert!(prophet.scales.unwrap().logistic_floor);
+        assert_approx_eq!(prophet.processed.unwrap().history.y_scaled[0], 1.0);
+
+        data.y.iter_mut().for_each(|y| *y += 10.0);
+        for f in data.floor.as_mut().unwrap() {
+            *f += 10.0;
+        }
+        for c in data.cap.as_mut().unwrap() {
+            *c += 10.0;
+        }
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        prophet.fit(data, Default::default()).unwrap();
+        assert_eq!(prophet.processed.unwrap().history.y_scaled[0], 1.0);
+    }
+
+    #[test]
+    fn logistic_floor_minmax() {
+        let (mut data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let n = data.len();
+        data = data.with_floor(vec![10.0; n]);
+        data = data.with_cap(vec![80.0; n]);
+        let opts = ProphetOptions {
+            growth: GrowthType::Logistic,
+            scaling: Scaling::MinMax,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        prophet.fit(data.clone(), Default::default()).unwrap();
+        assert!(prophet.scales.unwrap().logistic_floor);
+        assert!(
+            prophet
+                .processed
+                .as_ref()
+                .unwrap()
+                .history
+                .y_scaled
+                .iter()
+                .copied()
+                .nanmin(true)
+                > 0.0
+        );
+        assert!(
+            prophet
+                .processed
+                .unwrap()
+                .history
+                .y_scaled
+                .iter()
+                .copied()
+                .nanmax(true)
+                < 1.0
+        );
+
+        data.y.iter_mut().for_each(|y| *y += 10.0);
+        for f in data.floor.as_mut().unwrap() {
+            *f += 10.0;
+        }
+        for c in data.cap.as_mut().unwrap() {
+            *c += 10.0;
+        }
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        prophet.fit(data, Default::default()).unwrap();
+        assert!(
+            prophet
+                .processed
+                .as_ref()
+                .unwrap()
+                .history
+                .y_scaled
+                .iter()
+                .copied()
+                .nanmin(true)
+                > 0.0
+        );
+        assert!(
+            prophet
+                .processed
+                .unwrap()
+                .history
+                .y_scaled
+                .iter()
+                .copied()
+                .nanmax(true)
+                < 1.0
+        );
     }
 
     #[test]
@@ -1259,7 +1371,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_group_component() {
+    fn add_group_component() {
         let mut components = vec![
             (0, "weekly".to_string()),
             (1, "weekly".to_string()),

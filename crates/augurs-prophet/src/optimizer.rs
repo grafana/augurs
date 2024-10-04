@@ -95,7 +95,7 @@ pub enum Algorithm {
 }
 
 /// Arguments for optimization.
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct OptimizeOpts {
     /// Algorithm to use.
     pub algorithm: Option<Algorithm>,

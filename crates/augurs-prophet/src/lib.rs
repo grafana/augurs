@@ -15,6 +15,7 @@ mod positive_float;
 mod prophet;
 #[cfg(test)]
 mod testdata;
+mod util;
 
 /// A timestamp represented as seconds since the epoch.
 pub type TimestampSeconds = u64;
@@ -32,3 +33,4 @@ pub use prophet::{
     },
     Prophet,
 };
+use util::FloatIterExt;
