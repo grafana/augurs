@@ -19,7 +19,7 @@ pub type TimestampSeconds = u64;
 
 // Re-export everything at the root so that users don't have to
 // navigate the module hierarchy.
-pub use data::TrainingData;
+pub use data::{PredictionData, TrainingData};
 pub use error::Error;
 pub use features::{FeatureMode, Holiday, Regressor, Seasonality, Standardize};
 pub use optimizer::{Algorithm, Optimizer, TrendIndicator};

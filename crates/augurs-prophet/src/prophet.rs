@@ -11,8 +11,8 @@ use tracing::instrument;
 
 use crate::{
     optimizer::{Data, InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
-    Error, FeatureMode, Holiday, PositiveFloat, Regressor, Seasonality, Standardize,
-    TimestampSeconds, TrainingData,
+    Error, FeatureMode, Holiday, PositiveFloat, PredictionData, Regressor, Seasonality,
+    Standardize, TimestampSeconds, TrainingData,
 };
 
 const NO_REGRESSORS_PLACEHOLDER: &str = "__no_regressors_zeros__";
@@ -959,8 +959,8 @@ impl Prophet {
     /// Predict using the Prophet model.
     ///
     /// That will fail if the model has not been fit.
-    #[instrument(level = "debug", skip(self, ds))]
-    pub fn predict(&self, ds: Option<Vec<TimestampSeconds>>) -> Result<Vec<f64>, Error> {
+    #[instrument(level = "debug", skip(self, data))]
+    pub fn predict(&self, data: Option<PredictionData>) -> Result<Vec<f64>, Error> {
         // TODO!
         Err(Error::Notimplemented)
     }
