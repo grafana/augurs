@@ -962,7 +962,7 @@ impl Prophet {
     #[instrument(level = "debug", skip(self, ds))]
     pub fn predict(&self, ds: Option<Vec<TimestampSeconds>>) -> Result<Vec<f64>, Error> {
         // TODO!
-        unimplemented!()
+        Err(Error::Notimplemented)
     }
 }
 
