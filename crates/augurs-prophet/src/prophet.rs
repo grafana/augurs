@@ -1131,6 +1131,39 @@ mod tests {
     }
 
     #[test]
+    fn test_growth_init_minmax() {
+        let mut data = daily_univariate_ts().head(468);
+        let max = *data
+            .y
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        data = data.with_cap(vec![max; 468]);
+
+        let mut opts = ProphetOptions {
+            scaling: Scaling::MinMax,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data.clone()).unwrap();
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 0.4053406);
+        assert_approx_eq!(init.m, 0.3775322);
+
+        opts.growth = GrowthType::Logistic;
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data).unwrap();
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 1.782523);
+        assert_approx_eq!(init.m, 0.280521);
+
+        opts.growth = GrowthType::Flat;
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 0.0);
+        assert_approx_eq!(init.m, 0.32792770);
+    }
+
+    #[test]
     fn regressor_column_matrix() {
         // TODO: add holidays back in and update assertions.
         let opts = ProphetOptions::default();

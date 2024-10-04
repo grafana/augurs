@@ -55,6 +55,7 @@ command = [
     "run", "--all-features", "--workspace",
 ]
 need_stdout = true
+analyzer = "nextest"
 
 [jobs.doc]
 command = ["cargo", "doc", "--color", "always", "--no-deps"]
