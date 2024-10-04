@@ -7,13 +7,13 @@ use crate::TimestampSeconds;
 /// Create a `TrainingData` object with the `new` method, which
 /// takes a vector of dates and a vector of values.
 ///
-/// Optionally, you can add seasonality indicators, regressors,
+/// Optionally, you can add seasonality conditions, regressors,
 /// floor and cap columns.
 #[derive(Clone, Debug)]
 pub struct TrainingData {
     pub(crate) ds: Vec<TimestampSeconds>,
     pub(crate) y: Vec<f64>,
-    pub(crate) seasonal_indicators: HashMap<String, Vec<bool>>,
+    pub(crate) seasonality_conditions: HashMap<String, Vec<bool>>,
     pub(crate) x: HashMap<String, Vec<f64>>,
     pub(crate) floor: Option<Vec<f64>>,
     pub(crate) cap: Option<Vec<f64>>,
@@ -25,19 +25,19 @@ impl TrainingData {
         Self {
             ds,
             y,
-            seasonal_indicators: HashMap::new(),
+            seasonality_conditions: HashMap::new(),
             x: HashMap::new(),
             floor: None,
             cap: None,
         }
     }
 
-    /// Add indicators for conditional seasonalities.
-    pub fn with_seasonality_indicators(
+    /// Add condition columns for conditional seasonalities.
+    pub fn with_seasonality_conditions(
         mut self,
-        seasonal_indicators: HashMap<String, Vec<bool>>,
+        seasonality_conditions: HashMap<String, Vec<bool>>,
     ) -> Self {
-        self.seasonal_indicators = seasonal_indicators;
+        self.seasonality_conditions = seasonality_conditions;
         self
     }
 

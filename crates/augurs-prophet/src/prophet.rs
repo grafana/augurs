@@ -335,7 +335,7 @@ impl Prophet {
         TrainingData {
             mut ds,
             mut y,
-            mut seasonal_indicators,
+            mut seasonality_conditions,
             mut x,
             floor,
             cap,
@@ -367,7 +367,7 @@ impl Prophet {
         }
         for Seasonality { condition_name, .. } in self.seasonalities.values() {
             if let Some(condition_name) = condition_name {
-                let col = seasonal_indicators
+                let col = seasonality_conditions
                     .get(condition_name)
                     .ok_or_else(|| Error::MissingSeasonalityCondition(condition_name.clone()))?;
                 let column_length = col.len();
@@ -387,8 +387,8 @@ impl Prophet {
         sort_indices.sort_unstable_by_key(|i| ds[*i]);
         ds.sort_unstable();
         y = sort_indices.iter().map(|i| y[*i]).collect();
-        for indicator in seasonal_indicators.values_mut() {
-            *indicator = sort_indices.iter().map(|i| indicator[*i]).collect();
+        for condition in seasonality_conditions.values_mut() {
+            *condition = sort_indices.iter().map(|i| condition[*i]).collect();
         }
         for regressor in x.values_mut() {
             *regressor = sort_indices.iter().map(|i| regressor[*i]).collect();
@@ -449,7 +449,7 @@ impl Prophet {
             cap_scaled,
             floor,
             extra_regressors: x,
-            seasonal_indicators,
+            seasonality_conditions,
         };
         Ok((data, scales))
     }
@@ -682,7 +682,7 @@ impl Prophet {
         // Handle conditions by setting feature values to zero where the condition is false.
         if let Some(condition_name) = &seasonality.condition_name {
             let col = history
-                .seasonal_indicators
+                .seasonality_conditions
                 .get(condition_name)
                 .ok_or_else(|| Error::MissingSeasonalityCondition(condition_name.clone()))?;
             let false_indices = col
@@ -976,7 +976,7 @@ struct ProcessedData {
     cap_scaled: Option<Vec<f64>>,
     floor: Vec<f64>,
     extra_regressors: HashMap<String, Vec<f64>>,
-    seasonal_indicators: HashMap<String, Vec<bool>>,
+    seasonality_conditions: HashMap<String, Vec<bool>>,
 }
 
 /// Processed data used for fitting.
