@@ -13,6 +13,8 @@ mod features;
 pub mod optimizer;
 mod positive_float;
 mod prophet;
+#[cfg(test)]
+mod testdata;
 
 /// A timestamp represented as seconds since the epoch.
 pub type TimestampSeconds = u64;

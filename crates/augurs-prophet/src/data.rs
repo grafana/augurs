@@ -58,6 +58,25 @@ impl TrainingData {
         self.x = x;
         self
     }
+
+    #[cfg(test)]
+    pub(crate) fn head(mut self, n: usize) -> Self {
+        self.ds.truncate(n);
+        self.y.truncate(n);
+        if let Some(cap) = self.cap.as_mut() {
+            cap.truncate(n);
+        }
+        if let Some(floor) = self.floor.as_mut() {
+            floor.truncate(n);
+        }
+        for (_, v) in self.x.iter_mut() {
+            v.truncate(n);
+        }
+        for (_, v) in self.seasonality_conditions.iter_mut() {
+            v.truncate(n);
+        }
+        self
+    }
 }
 
 /// The data needed to predict with a Prophet model.

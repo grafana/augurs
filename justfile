@@ -17,3 +17,6 @@ doctest:
 
 doc:
   cargo doc --all-features --workspace --exclude augurs-js --exclude pyaugurs --open
+
+watch:
+  bacon

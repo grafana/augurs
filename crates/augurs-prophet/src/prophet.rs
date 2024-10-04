@@ -482,7 +482,7 @@ impl Prophet {
                         scales.y_scale = y_scale;
                     }
                     (Scaling::MinMax, Some(cap)) => {
-                        scales.y_min = *y
+                        scales.y_min = *floor
                             .iter()
                             .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                             .ok_or(Error::Scaling)?;
@@ -503,7 +503,7 @@ impl Prophet {
                     scales.y_scale = y
                         .iter()
                         .map(|y| y.abs())
-                        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                         .ok_or(Error::Scaling)?;
                 }
                 Scaling::MinMax => {
@@ -1092,10 +1092,43 @@ impl Preprocessed {
 
 #[cfg(test)]
 mod tests {
-    use crate::{optimizer::dummy_optimizer::DummyOptimizer, Standardize};
+    use crate::{
+        optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts, Standardize,
+    };
 
     use super::*;
+    use augurs_testing::assert_approx_eq;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_growth_init() {
+        let mut data = daily_univariate_ts().head(468);
+        let max = *data
+            .y
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        data = data.with_cap(vec![max; 468]);
+
+        let mut opts = ProphetOptions::default();
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data.clone()).unwrap();
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 0.3055671);
+        assert_approx_eq!(init.m, 0.5307511);
+
+        opts.growth = GrowthType::Logistic;
+        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data).unwrap();
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 1.507925);
+        assert_approx_eq!(init.m, -0.08167497);
+
+        opts.growth = GrowthType::Flat;
+        let init = preprocessed.calculate_initial_params(&opts).unwrap();
+        assert_approx_eq!(init.k, 0.0);
+        assert_approx_eq!(init.m, 0.49335657);
+    }
 
     #[test]
     fn regressor_column_matrix() {

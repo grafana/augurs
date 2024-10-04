@@ -34,6 +34,7 @@ augurs-outlier = { version = "0.3.1", path = "crates/augurs-outlier" }
 augurs-seasons = { version = "0.3.1", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
+chrono = "0.4.38"
 distrs = "0.2.1"
 itertools = "0.13.0"
 roots = "0.0.8"

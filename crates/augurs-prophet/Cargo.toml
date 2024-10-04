@@ -14,4 +14,6 @@ thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+augurs-testing.workspace = true
+chrono.workspace = true
 pretty_assertions.workspace = true
