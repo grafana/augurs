@@ -57,6 +57,15 @@ command = [
 need_stdout = true
 analyzer = "nextest"
 
+[jobs.doc-test]
+command = [
+  "cargo", "test", "--doc", "--color", "always",
+  "--all-features", "--workspace",
+  "--exclude", "augurs-js",
+  "--exclude", "pyaugurs",
+]
+need_stdout = true
+
 [jobs.doc]
 command = ["cargo", "doc", "--color", "always", "--no-deps"]
 need_stdout = false
@@ -101,3 +110,4 @@ allow_warnings = true
 [keybindings]
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
+d = "job:doc-test"

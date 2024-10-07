@@ -185,21 +185,6 @@ pub struct Predictions {
 }
 
 /// The Prophet time series forecasting model.
-///
-/// # Example
-///
-/// ```
-/// use augurs_prophet::{Prophet, TrainingData};
-///
-/// let data = TrainingData::new(
-///    vec![0, 1, 2, 3, 4],
-///    vec![0.5, 1.4, 2.6, 3.5, 4.4],
-/// );
-/// let optimizer = DummyOptimizer;
-///
-/// let model = Prophet::new(Default::default(), &opt)?;
-/// model.fit(&data);
-/// ```
 #[derive(Debug)]
 pub struct Prophet {
     /// Options to be used for fitting.
@@ -251,15 +236,6 @@ pub struct Prophet {
 
 impl Prophet {
     /// Create a new Prophet model with the given options and optimizer.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use augurs_prophet::Prophet;
-    ///
-    /// let optimizer = DummyOptimizer;
-    /// let model = Prophet::new(Default::default(), &opt)?;
-    /// ```
     pub fn new<T: Optimizer + 'static>(opts: ProphetOptions, optimizer: T) -> Self {
         Self {
             opts,
