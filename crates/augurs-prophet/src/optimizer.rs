@@ -129,9 +129,6 @@ pub struct OptimizeOpts {
 /// The optimized parameters.
 #[derive(Debug, Clone)]
 pub struct OptimizedParams {
-    /// Mapping from parameter name to its maximum likelihood estimation.
-    // params: HashMap<String, f64>,
-
     /// Base trend growth rate.
     pub k: f64,
     /// Trend offset.
@@ -196,6 +193,10 @@ pub trait Optimizer: std::fmt::Debug {
         opts: OptimizeOpts,
     ) -> Result<OptimizedParams, Error>;
 
+    /// Cast the optimizer to an `Any` type.
+    ///
+    /// This is useful in tests to then downcast the optimizer
+    /// to a mock optimizer so we can inspect the optimization call.
     #[cfg(test)]
     fn as_any(&self) -> &dyn std::any::Any;
 }
@@ -210,19 +211,32 @@ pub mod mock_optimizer {
     pub(crate) struct OptimizeCall {
         pub init: InitialParams,
         pub data: Data,
-        pub opts: OptimizeOpts,
+        pub _opts: OptimizeOpts,
     }
 
+    /// A mock optimizer that records the optimization call.
     #[derive(Clone, Debug)]
     pub(crate) struct MockOptimizer {
+        /// The optimization call.
+        ///
+        /// This will be updated by the mock optimizer when
+        /// [`Optimizer::optimize`] is called.
+        // [`Optimizer::optimize`] takes self by reference,
+        // so we need to store the call in a RefCell.
         pub call: RefCell<Option<OptimizeCall>>,
     }
 
     impl MockOptimizer {
+        /// Create a new mock optimizer.
         pub(crate) fn new() -> Self {
             Self {
                 call: RefCell::new(None),
             }
+        }
+
+        /// Take the optimization call out of the mock.
+        pub(crate) fn take_call(&self) -> Option<OptimizeCall> {
+            self.call.borrow_mut().take()
         }
     }
 
@@ -236,7 +250,7 @@ pub mod mock_optimizer {
             *self.call.borrow_mut() = Some(OptimizeCall {
                 init: init.clone(),
                 data,
-                opts,
+                _opts: opts,
             });
             Ok(OptimizedParams {
                 k: init.k,

@@ -59,8 +59,15 @@ pub enum Error {
     /// The feature has not yet been implemented.
     #[error("Not implemented")]
     Notimplemented,
+    /// The Prophet model has not yet been fit.
+    ///
+    /// Fit the model first using [`Prophet::fit`].
     #[error("Model has not been fit")]
     ModelNotFit,
+    /// It was not possible to infer the frequency of the dates.
+    ///
+    /// This can happen if the dates are not evenly spaced, and
+    /// there is no frequency that appears more often than others.
     #[error("Unable to infer frequency from dates: {0:?}")]
     UnableToInferFrequency(Vec<u64>),
 }

@@ -47,7 +47,7 @@ fn load_csv(path: &str) -> (Vec<TimestampSeconds>, Vec<f64>) {
 
 pub(crate) fn daily_univariate_ts() -> TrainingData {
     let (ds, y) = load_csv("daily_univariate_ts.csv");
-    TrainingData::new(ds, y)
+    TrainingData::new(ds, y).unwrap()
 }
 
 pub(crate) fn train_test_split(data: TrainingData, ratio: f64) -> (TrainingData, TrainingData) {

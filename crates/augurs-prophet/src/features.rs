@@ -16,7 +16,7 @@ pub enum FeatureMode {
 /// A holiday to be considered by the Prophet model.
 #[derive(Debug, Clone)]
 pub struct Holiday {
-    pub(crate) ds: Vec<TimestampSeconds>,
+    pub(crate) _ds: Vec<TimestampSeconds>,
     pub(crate) lower_window: Option<Vec<i32>>,
     pub(crate) upper_window: Option<Vec<i32>>,
     pub(crate) prior_scale: Option<PositiveFloat>,
@@ -26,7 +26,7 @@ impl Holiday {
     /// Create a new holiday.
     pub fn new(ds: Vec<TimestampSeconds>) -> Self {
         Self {
-            ds,
+            _ds: ds,
             lower_window: None,
             upper_window: None,
             prior_scale: None,

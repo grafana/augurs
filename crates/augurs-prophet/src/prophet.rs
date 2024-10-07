@@ -99,7 +99,14 @@ impl ComponentColumns {
 #[derive(Debug, Clone)]
 enum FeatureName {
     /// A seasonality feature.
-    Seasonality(String, usize),
+    Seasonality {
+        /// The name of the seasonality.
+        name: String,
+        /// The ID of the seasonality feature. Each seasonality
+        /// has a number of features, and this is used to
+        /// distinguish between them.
+        _id: usize,
+    },
     /// A regressor feature.
     Regressor(String),
     Dummy,
@@ -156,9 +163,9 @@ struct Features {
 
 #[derive(Debug, Default, Clone)]
 pub struct FeaturePrediction {
-    point: Vec<f64>,
-    lower: Option<Vec<f64>>,
-    upper: Option<Vec<f64>>,
+    pub point: Vec<f64>,
+    pub lower: Option<Vec<f64>>,
+    pub upper: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Default)]
@@ -172,16 +179,15 @@ struct FeaturePredictions {
 
 #[derive(Debug, Clone)]
 pub struct Predictions {
-    yhat: FeaturePrediction,
-    trend: FeaturePrediction,
-    cap: Option<Vec<f64>>,
-    floor: Option<Vec<f64>>,
-    // TODO: include all the features.
-    additive: FeaturePrediction,
-    multiplicative: FeaturePrediction,
-    holidays: HashMap<String, FeaturePrediction>,
-    seasonalities: HashMap<String, FeaturePrediction>,
-    extra_regressors: HashMap<String, FeaturePrediction>,
+    pub yhat: FeaturePrediction,
+    pub trend: FeaturePrediction,
+    pub cap: Option<Vec<f64>>,
+    pub floor: Option<Vec<f64>>,
+    pub additive: FeaturePrediction,
+    pub multiplicative: FeaturePrediction,
+    pub holidays: HashMap<String, FeaturePrediction>,
+    pub seasonalities: HashMap<String, FeaturePrediction>,
+    pub extra_regressors: HashMap<String, FeaturePrediction>,
 }
 
 /// The Prophet time series forecasting model.
@@ -345,6 +351,7 @@ impl Prophet {
     fn setup_dataframe(
         &self,
         TrainingData {
+            n,
             mut ds,
             mut y,
             mut seasonality_conditions,
@@ -360,45 +367,25 @@ impl Prophet {
             });
         }
         for name in self.extra_regressors.keys() {
-            let col = x
-                .get(name)
-                .ok_or_else(|| Error::MissingRegressor(name.clone()))?;
-            if col.len() != ds.len() {
-                return Err(Error::MismatchedLengths {
-                    a: y.len(),
-                    a_name: "y".to_string(),
-                    b: col.len(),
-                    b_name: name.clone(),
-                });
+            if !x.contains_key(name) {
+                return Err(Error::MissingRegressor(name.clone()));
             }
-            if col.iter().any(|x| x.is_nan()) {
-                return Err(Error::InfiniteValue {
-                    column: name.clone(),
-                });
-            }
+            // No need to check lengths or inf, we do that in [`TrainingData::with_regressors`].
         }
         for Seasonality { condition_name, .. } in self.seasonalities.values() {
             if let Some(condition_name) = condition_name {
-                let col = seasonality_conditions
-                    .get(condition_name)
-                    .ok_or_else(|| Error::MissingSeasonalityCondition(condition_name.clone()))?;
-                let column_length = col.len();
-                if column_length != ds.len() {
-                    return Err(Error::MismatchedLengths {
-                        a: ds.len(),
-                        a_name: "ds".to_string(),
-                        b: column_length,
-                        b_name: condition_name.clone(),
-                    });
+                if !x.contains_key(condition_name) {
+                    return Err(Error::MissingSeasonalityCondition(condition_name.clone()));
                 }
+                // No need to check lengths or inf, we do that in [`TrainingData::with_regressors`].
             }
         }
 
         // Sort everything by date.
-        let mut sort_indices = (0..ds.len()).collect_vec();
-        sort_indices.sort_unstable_by_key(|i| ds[*i]);
-        ds.sort_unstable();
-        // y isn't be provided for predictions.
+        let mut sort_indices = (0..n).collect_vec();
+        sort_indices.sort_by_key(|i| ds[*i]);
+        ds.sort();
+        // y isn't provided for predictions.
         if !y.is_empty() {
             y = sort_indices.iter().map(|i| y[*i]).collect();
         }
@@ -458,7 +445,6 @@ impl Prophet {
         let data = ProcessedData {
             ds,
             t,
-            y,
             y_scaled,
             cap,
             cap_scaled,
@@ -700,12 +686,15 @@ impl Prophet {
             }
         }
         let n = new_features.len();
-        let names = (0..n).map(|i| FeatureName::Seasonality(prefix.to_string(), i + 1));
+        let names = (0..n).map(|i| FeatureName::Seasonality {
+            name: prefix.to_string(),
+            _id: i + 1,
+        });
         features.extend(names, new_features.into_iter());
         Ok(n)
     }
 
-    fn construct_holidays(&self, ds: &[u64]) -> Result<HashMap<String, Holiday>, Error> {
+    fn construct_holidays(&self, _ds: &[u64]) -> Result<HashMap<String, Holiday>, Error> {
         let mut all_holidays = self.opts.holidays.clone();
         // TODO: handle country holidays.
 
@@ -718,17 +707,11 @@ impl Prophet {
                 .iter()
                 .filter(|name| !all_holidays.contains_key(name.as_str()))
                 .collect_vec();
-            all_holidays.extend(holidays_to_add.into_iter().map(|name| {
-                (
-                    name.clone(),
-                    Holiday {
-                        ds: Vec::new(),
-                        lower_window: None,
-                        upper_window: None,
-                        prior_scale: None,
-                    },
-                )
-            }));
+            all_holidays.extend(
+                holidays_to_add
+                    .into_iter()
+                    .map(|name| (name.clone(), Holiday::new(vec![]))),
+            );
         }
         Ok(all_holidays)
     }
@@ -736,11 +719,11 @@ impl Prophet {
     /// Construct a frame of features representing holidays.
     fn make_holiday_features(
         &self,
-        ds: &[TimestampSeconds],
-        holidays: HashMap<String, Holiday>,
-        features: &mut FeaturesFrame,
-        prior_scales: &mut Vec<PositiveFloat>,
-        modes: &mut Modes,
+        _ds: &[TimestampSeconds],
+        _holidays: HashMap<String, Holiday>,
+        _features: &mut FeaturesFrame,
+        _prior_scales: &mut [PositiveFloat],
+        _modes: &mut Modes,
     ) {
         todo!()
     }
@@ -828,7 +811,7 @@ impl Prophet {
         let mut components = feature_names
             .iter()
             .filter_map(|x| match x {
-                FeatureName::Seasonality(name, _) => Some(name.clone()),
+                FeatureName::Seasonality { name, _id: _ } => Some(name.clone()),
                 FeatureName::Regressor(name) => Some(name.clone()),
                 _ => None,
             })
@@ -976,25 +959,26 @@ impl Prophet {
 
     /// Predict using the Prophet model.
     ///
-    /// That will fail if the model has not been fit.
+    /// # Errors
+    ///
+    /// Returns an error if the model has not been fit.
     #[instrument(level = "debug", skip(self, data))]
     pub fn predict(&self, data: impl Into<Option<PredictionData>>) -> Result<Predictions, Error> {
-        let Some(processed) = &self.processed else {
-            return Err(Error::ModelNotFit);
-        };
-        let Some(params) = &self.optimized else {
-            return Err(Error::ModelNotFit);
-        };
-        let Some(changepoints_t) = &self.changepoints_t else {
-            return Err(Error::ModelNotFit);
-        };
-        let Some(scales) = &self.scales else {
+        let Self {
+            processed: Some(processed),
+            optimized: Some(params),
+            changepoints_t: Some(changepoints_t),
+            scales: Some(scales),
+            ..
+        } = self
+        else {
             return Err(Error::ModelNotFit);
         };
         let df = data
             .into()
             .map(|data| {
                 let training_data = TrainingData {
+                    n: data.n,
                     ds: data.ds.clone(),
                     y: vec![],
                     cap: data.cap.clone(),
@@ -1238,7 +1222,17 @@ impl Prophet {
         }
     }
 
-    /// Create a of dates to use for predictions.
+    /// Create dates to use for predictions.
+    ///
+    /// # Parameters
+    ///
+    /// - `horizon`: The number of days to predict forward.
+    /// - `include_history`: Whether to include the historical dates in the
+    ///   future dataframe.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model has not been fit.
     pub fn make_future_dataframe(
         &self,
         horizon: NonZeroU32,
@@ -1312,7 +1306,6 @@ pub enum IncludeHistory {
 struct ProcessedData {
     ds: Vec<TimestampSeconds>,
     t: Vec<f64>,
-    y: Vec<f64>,
     y_scaled: Vec<f64>,
     cap: Option<Vec<f64>>,
     cap_scaled: Option<Vec<f64>>,
@@ -1448,7 +1441,7 @@ mod test_trend_component {
     fn growth_init() {
         let mut data = daily_univariate_ts().head(468);
         let max = data.y.iter().copied().nanmax(true);
-        data = data.with_cap(vec![max; 468]);
+        data = data.with_cap(vec![max; 468]).unwrap();
 
         let mut opts = ProphetOptions::default();
         let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
@@ -1474,7 +1467,7 @@ mod test_trend_component {
     fn growth_init_minmax() {
         let mut data = daily_univariate_ts().head(468);
         let max = data.y.iter().copied().nanmax(true);
-        data = data.with_cap(vec![max; 468]);
+        data = data.with_cap(vec![max; 468]).unwrap();
 
         let mut opts = ProphetOptions {
             scaling: Scaling::MinMax,
@@ -1518,7 +1511,7 @@ mod test_trend_component {
                     .timestamp() as TimestampSeconds
             })
             .collect_vec();
-        let data = TrainingData::new(ds, y);
+        let data = TrainingData::new(ds, y).unwrap();
         prophet.fit(data, Default::default()).unwrap();
         let future = prophet
             .make_future_dataframe(10.try_into().unwrap(), IncludeHistory::Yes)
@@ -1746,8 +1739,11 @@ mod test_data_prep {
     fn logistic_floor() {
         let (mut data, _) = train_test_split(daily_univariate_ts(), 0.5);
         let n = data.len();
-        data = data.with_floor(vec![10.0; n]);
-        data = data.with_cap(vec![80.0; n]);
+        data = data
+            .with_floor(vec![10.0; n])
+            .unwrap()
+            .with_cap(vec![80.0; n])
+            .unwrap();
         let opts = ProphetOptions {
             growth: GrowthType::Logistic,
             ..ProphetOptions::default()
@@ -1773,8 +1769,11 @@ mod test_data_prep {
     fn logistic_floor_minmax() {
         let (mut data, _) = train_test_split(daily_univariate_ts(), 0.5);
         let n = data.len();
-        data = data.with_floor(vec![10.0; n]);
-        data = data.with_cap(vec![80.0; n]);
+        data = data
+            .with_floor(vec![10.0; n])
+            .unwrap()
+            .with_cap(vec![80.0; n])
+            .unwrap();
         let opts = ProphetOptions {
             growth: GrowthType::Logistic,
             scaling: Scaling::MinMax,
@@ -1873,12 +1872,30 @@ mod test_data_prep {
         };
         let cols = prophet.regressor_column_matrix(
             &[
-                FeatureName::Seasonality("weekly".to_string(), 1),
-                FeatureName::Seasonality("weekly".to_string(), 2),
-                FeatureName::Seasonality("weekly".to_string(), 3),
-                FeatureName::Seasonality("weekly".to_string(), 4),
-                FeatureName::Seasonality("weekly".to_string(), 5),
-                FeatureName::Seasonality("weekly".to_string(), 6),
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 1,
+                },
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 2,
+                },
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 3,
+                },
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 4,
+                },
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 5,
+                },
+                FeatureName::Seasonality {
+                    name: "weekly".to_string(),
+                    _id: 6,
+                },
                 FeatureName::Regressor("binary_feature".to_string()),
                 FeatureName::Regressor("numeric_feature".to_string()),
                 FeatureName::Regressor("numeric_feature2".to_string()),
@@ -2055,7 +2072,7 @@ mod test_predict {
     };
 
     #[test]
-    fn fit_predict() {
+    fn fit_predict_absmax() {
         let test_days = 30;
         let (train, test) = train_test_splitn(daily_univariate_ts(), test_days);
         let opts = ProphetOptions {
@@ -2067,7 +2084,7 @@ mod test_predict {
         prophet.fit(train.clone(), Default::default()).unwrap();
         // Make sure our optimizer was called correctly.
         let opt: &MockOptimizer = prophet.optimizer.as_any().downcast_ref().unwrap();
-        let call = opt.call.take().unwrap();
+        let call = opt.take_call().unwrap();
         assert_eq!(
             call.init,
             InitialParams {
@@ -2111,6 +2128,7 @@ mod test_predict {
         );
 
         // Override optimized params since we don't have a real optimizer.
+        // These were obtained from the Python version.
         prophet.optimized = Some(OptimizedParams {
             k: -1.01136,
             m: 0.460947,

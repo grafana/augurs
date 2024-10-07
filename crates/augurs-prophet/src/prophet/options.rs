@@ -1,4 +1,9 @@
-//! Options to configure Prophet.
+//! Options to configure a Prophet model.
+//!
+//! These correspond very closely to the options in the Python
+//! implementation, but are not identical; some have been updated
+//! to be more idiomatic Rust.
+
 use std::{collections::HashMap, num::NonZeroU32};
 
 use crate::{FeatureMode, Holiday, PositiveFloat, TrendIndicator};
