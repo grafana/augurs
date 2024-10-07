@@ -93,7 +93,7 @@ pub struct OptProphetOptions {
     /// The proportion of the history to consider for potential changepoints.
     ///
     /// Not used if `changepoints` is provided.
-    pub changepoint_range: Option<f64>,
+    pub changepoint_range: Option<PositiveFloat>,
 
     /// How to fit yearly seasonality.
     pub yearly_seasonality: Option<SeasonalityOption>,
@@ -229,7 +229,7 @@ pub struct ProphetOptions {
     /// Not used if `changepoints` is provided.
     ///
     /// Defaults to `0.8` for the first 80% of the data.
-    pub changepoint_range: f64,
+    pub changepoint_range: PositiveFloat,
 
     /// How to fit yearly seasonality.
     ///
@@ -286,6 +286,7 @@ pub struct ProphetOptions {
     /// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
     ///
     /// Defaults to `0.8` for 80% intervals.
+    // TODO: add newtype wrapper for `f64` with range `0.0..=1.0`.
     pub interval_width: f64,
 
     /// The number of simulated draws used to estimate uncertainty intervals.
@@ -324,7 +325,7 @@ impl Default for ProphetOptions {
             growth: GrowthType::Linear,
             changepoints: None,
             n_changepoints: 25,
-            changepoint_range: 0.8,
+            changepoint_range: 0.8.try_into().unwrap(),
             yearly_seasonality: SeasonalityOption::default(),
             weekly_seasonality: SeasonalityOption::default(),
             daily_seasonality: SeasonalityOption::default(),

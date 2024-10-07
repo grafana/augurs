@@ -31,7 +31,7 @@ impl FromStr for Ds {
 }
 
 fn load_csv(path: &str) -> (Vec<TimestampSeconds>, Vec<f64>) {
-    let path = dbg!(Path::new(DATA_DIR).join(path));
+    let path = Path::new(DATA_DIR).join(path);
     fs::read_to_string(path)
         .unwrap()
         .lines()
@@ -48,4 +48,10 @@ fn load_csv(path: &str) -> (Vec<TimestampSeconds>, Vec<f64>) {
 pub(crate) fn daily_univariate_ts() -> TrainingData {
     let (ds, y) = load_csv("daily_univariate_ts.csv");
     TrainingData::new(ds, y)
+}
+
+pub(crate) fn train_test_split(data: TrainingData, ratio: f64) -> (TrainingData, TrainingData) {
+    let n = data.len();
+    let split = (n as f64 * ratio).round() as usize;
+    (data.clone().head(split), data.tail(n - split))
 }

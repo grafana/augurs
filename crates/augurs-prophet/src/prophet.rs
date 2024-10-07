@@ -5,7 +5,7 @@ use std::{
     num::NonZeroU32,
 };
 
-use itertools::{Either, Itertools, MinMaxResult};
+use itertools::{izip, Either, Itertools, MinMaxResult};
 use options::{GrowthType, ProphetOptions, Scaling, SeasonalityOption};
 use tracing::instrument;
 
@@ -902,15 +902,21 @@ impl Prophet {
             }
             changepoints.clone()
         } else {
-            let hist_size = (ds.len() as f64 * self.opts.changepoint_range).floor() as usize;
+            let hist_size = (ds.len() as f64 * *self.opts.changepoint_range).floor() as usize;
             let mut n_changepoints = self.opts.n_changepoints as usize;
             if n_changepoints + 1 > hist_size {
                 n_changepoints = hist_size - 1;
             }
             if n_changepoints > 0 {
                 // Place changepoints evenly through the first `changepoint_range` percent of the history.
-                let cp_indices = (0..(hist_size - 1)).step_by(n_changepoints + 1);
-                cp_indices.map(|i| ds[i]).collect()
+                // let step = ((hist_size - 1) as f64 / (n_changepoints + 1) as f64).round();
+                // let cp_indices = (0..(hist_size - 1)).step_by(step as usize);
+                let cp_indices = (0..(n_changepoints + 1)).map(|i| {
+                    let num_steps = n_changepoints as f64; // note: don't add one since we don't include
+                                                           // the last point.
+                    (i as f64 / num_steps * (hist_size - 1) as f64).round() as usize
+                });
+                cp_indices.map(|i| ds[i]).skip(1).collect()
             } else {
                 vec![]
             }
@@ -958,6 +964,93 @@ impl Prophet {
     pub fn predict(&self, data: Option<PredictionData>) -> Result<Vec<f64>, Error> {
         // TODO!
         Err(Error::Notimplemented)
+    }
+
+    fn piecewise_linear(
+        t: &[f64],
+        deltas: &[f64],
+        k: f64,
+        m: f64,
+        changepoint_ts: &[f64],
+    ) -> Vec<f64> {
+        // `deltas_t` is a contiguous array with the changepoint delta to apply
+        // delta at each time point; it has a stride of `changepoint_ts.len()`,
+        // since it's a 2D array in the numpy version.
+        let cp_zipped = deltas.iter().zip(changepoint_ts);
+        let deltas_t = cp_zipped
+            .cartesian_product(t)
+            .map(|((delta, cp_t), t)| if cp_t <= t { *delta } else { 0.0 })
+            .collect_vec();
+        // `k_t` is a contiguous array with the rate to apply at each time point.
+        let k_t = deltas_t
+            .iter()
+            .enumerate()
+            .fold(vec![k; t.len()], |mut acc, (i, delta)| {
+                // Add the changepoint rate to the initial rate.
+                acc[i % t.len()] += *delta;
+                acc
+            });
+        // `m_t` is a contiguous array with the offset to apply at each time point.
+        let m_t = deltas_t
+            .iter()
+            .zip(
+                // Repeat each changepoint effect `n` times so we can zip it up.
+                changepoint_ts
+                    .iter()
+                    .flat_map(|x| std::iter::repeat(*x).take(t.len())),
+            )
+            .enumerate()
+            .fold(vec![m; t.len()], |mut acc, (i, (delta, cp_t))| {
+                // Add the changepoint offset to the initial offset where applicable.
+                acc[i % t.len()] += -cp_t * delta;
+                acc
+            });
+
+        izip!(t, k_t, m_t).map(|(t, k, m)| t * k + m).collect_vec()
+    }
+
+    fn piecewise_logistic(
+        t: &[f64],
+        cap: &[f64],
+        deltas: &[f64],
+        k: f64,
+        m: f64,
+        changepoint_ts: &[f64],
+    ) -> Vec<f64> {
+        // Compute offset changes.
+        let k_cum = std::iter::once(k)
+            .chain(deltas.iter().scan(k, |state, delta| {
+                *state += delta;
+                Some(*state)
+            }))
+            .collect_vec();
+        let mut gammas = vec![0.0; changepoint_ts.len()];
+        let mut gammas_sum = 0.0;
+        for (i, t_s) in changepoint_ts.iter().enumerate() {
+            gammas[i] = (t_s - m - gammas_sum) * (1.0 - k_cum[i] / k_cum[i + 1]);
+            gammas_sum += gammas[i];
+        }
+
+        // Get cumulative rate and offset at each time point.
+        let mut k_t = vec![k; t.len()];
+        let mut m_t = vec![m; t.len()];
+        for (s, t_s) in changepoint_ts.iter().enumerate() {
+            for (i, t_i) in t.iter().enumerate() {
+                if t_i >= t_s {
+                    k_t[i] += deltas[s];
+                    m_t[i] += gammas[s];
+                }
+            }
+        }
+
+        izip!(cap, t, k_t, m_t)
+            .map(|(cap, t, k, m)| cap / (1.0 + (-k * (t - m)).exp()))
+            .collect_vec()
+    }
+
+    /// Evaluate the flat trend function.
+    fn flat_trend(t: &[f64], m: f64) -> Vec<f64> {
+        vec![m; t.len()]
     }
 }
 
@@ -1087,10 +1180,16 @@ impl Preprocessed {
 
 #[cfg(test)]
 mod test_trend_component {
-    use crate::{optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts};
+    use std::f64::consts::PI;
+
+    use crate::{
+        optimizer::dummy_optimizer::DummyOptimizer,
+        testdata::{daily_univariate_ts, train_test_split},
+    };
 
     use super::*;
-    use augurs_testing::assert_approx_eq;
+    use augurs_testing::{assert_all_close, assert_approx_eq};
+    use chrono::{NaiveDate, TimeDelta};
 
     #[test]
     fn growth_init() {
@@ -1146,24 +1245,198 @@ mod test_trend_component {
         assert_approx_eq!(init.k, 0.0);
         assert_approx_eq!(init.m, 0.32792770);
     }
+
+    #[test]
+    #[should_panic = "need to add predictions"]
+    fn flat_growth_absmax() {
+        let opts = ProphetOptions {
+            growth: GrowthType::Flat,
+            scaling: Scaling::AbsMax,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let x = (0..50).map(|x| x as f64 * PI * 2.0 / 50.0);
+        let y = x.map(|x| 30.0 + (x * 8.0).sin()).collect_vec();
+        let ds = (0..50)
+            .map(|x| {
+                (NaiveDate::from_ymd_opt(2020, 1, 1).unwrap() + TimeDelta::days(x))
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc()
+                    .timestamp() as TimestampSeconds
+            })
+            .collect_vec();
+        let data = TrainingData::new(ds, y);
+        prophet.fit(data, Default::default()).unwrap();
+        // let future = prophet.make_future_dataframe(10, true);
+        let _predictions = prophet.predict(None).expect("need to add predictions");
+    }
+
+    #[test]
+    fn piecewise_linear() {
+        let t = (0..11).map(f64::from).collect_vec();
+        let m = 0.0;
+        let k = 1.0;
+        let deltas = vec![0.5];
+        let changepoint_ts = vec![5.0];
+        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoint_ts);
+        let y_true = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5];
+        assert_eq!(y, y_true);
+
+        let y = Prophet::piecewise_linear(&t[8..], &deltas, k, m, &changepoint_ts);
+        assert_eq!(y, y_true[8..]);
+
+        // This test isn't in the Python version but it's worth having one with multiple
+        // changepoints.
+        let deltas = vec![0.4, 0.5];
+        let changepoint_ts = vec![4.0, 8.0];
+        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoint_ts);
+        let y_true = &[0.0, 1.0, 2.0, 3.0, 4.0, 5.4, 6.8, 8.2, 9.6, 11.5, 13.4];
+        for (a, b) in y.iter().zip(y_true) {
+            assert_approx_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn piecewise_logistic() {
+        let t = (0..11).map(f64::from).collect_vec();
+        let cap = vec![10.0; 11];
+        let m = 0.0;
+        let k = 1.0;
+        let deltas = vec![0.5];
+        let changepoint_ts = vec![5.0];
+        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoint_ts);
+        let y_true = &[
+            5.000000, 7.310586, 8.807971, 9.525741, 9.820138, 9.933071, 9.984988, 9.996646,
+            9.999252, 9.999833, 9.999963,
+        ];
+        for (a, b) in y.iter().zip(y_true) {
+            assert_approx_eq!(a, b);
+        }
+
+        let y = Prophet::piecewise_logistic(&t[8..], &cap[8..], &deltas, k, m, &changepoint_ts);
+        for (a, b) in y.iter().zip(&y_true[8..]) {
+            assert_approx_eq!(a, b);
+        }
+
+        // This test isn't in the Python version but it's worth having one with multiple
+        // changepoints.
+        let deltas = vec![0.4, 0.5];
+        let changepoint_ts = vec![4.0, 8.0];
+        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoint_ts);
+        let y_true = &[
+            5., 7.31058579, 8.80797078, 9.52574127, 9.8201379, 9.95503727, 9.98887464, 9.99725422,
+            9.99932276, 9.9998987, 9.99998485,
+        ];
+        for (a, b) in y.iter().zip(y_true) {
+            assert_approx_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn flat_trend() {
+        let t = (0..11).map(f64::from).collect_vec();
+        let m = 0.5;
+        let y = Prophet::flat_trend(&t, m);
+        assert_all_close(&y, &[0.5; 11]);
+
+        let y = Prophet::flat_trend(&t[8..], m);
+        assert_all_close(&y, &[0.5; 3]);
+    }
+
+    #[test]
+    fn get_changepoints() {
+        let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let mut prophet = Prophet::new(ProphetOptions::default(), &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data).unwrap();
+        let history = preprocessed.history;
+        let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
+        assert_eq!(changepoints_t.len() as u32, prophet.opts.n_changepoints,);
+        // Assert that the earliest changepoint is after the first point.
+        assert!(changepoints_t.iter().copied().nanmin(true) > 0.0);
+        // Assert that the changepoints are less than the 80th percentile of `t`.
+        let cp_idx = (history.ds.len() as f64 * 0.8).ceil() as usize;
+        assert!(changepoints_t.iter().copied().nanmax(true) <= history.t[cp_idx]);
+        let expected = &[
+            0.03504043, 0.06738544, 0.09433962, 0.12938005, 0.16442049, 0.1967655, 0.22371968,
+            0.25606469, 0.28301887, 0.3180593, 0.35040431, 0.37735849, 0.41239892, 0.45013477,
+            0.48247978, 0.51752022, 0.54447439, 0.57681941, 0.61185984, 0.64150943, 0.67924528,
+            0.7115903, 0.74663073, 0.77358491, 0.80592992,
+        ];
+        for (a, b) in changepoints_t.iter().zip(expected) {
+            assert_approx_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn get_changepoints_range() {
+        let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let opts = ProphetOptions {
+            changepoint_range: 0.4.try_into().unwrap(),
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let preprocessed = prophet.preprocess(data).unwrap();
+        let history = preprocessed.history;
+        let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
+        assert_eq!(changepoints_t.len() as u32, prophet.opts.n_changepoints,);
+        // Assert that the earliest changepoint is after the first point.
+        assert!(changepoints_t.iter().copied().nanmin(true) > 0.0);
+        // Assert that the changepoints are less than the 80th percentile of `t`.
+        let cp_idx = (history.ds.len() as f64 * 0.4).ceil() as usize;
+        assert!(changepoints_t.iter().copied().nanmax(true) <= history.t[cp_idx]);
+        let expected = &[
+            0.01617251, 0.03504043, 0.05121294, 0.06738544, 0.08355795, 0.09433962, 0.11051213,
+            0.12938005, 0.14555256, 0.16172507, 0.17789757, 0.18867925, 0.20754717, 0.22371968,
+            0.23989218, 0.25606469, 0.2722372, 0.28301887, 0.30188679, 0.3180593, 0.33423181,
+            0.35040431, 0.36657682, 0.37735849, 0.393531,
+        ];
+        for (a, b) in changepoints_t.iter().zip(expected) {
+            assert_approx_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn get_zero_changepoints() {
+        let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
+        let opts = ProphetOptions {
+            n_changepoints: 0,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        prophet.preprocess(data).unwrap();
+        let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
+        assert_eq!(changepoints_t.len() as u32, 1);
+        assert_eq!(changepoints_t[0], 0.0);
+    }
+
+    #[test]
+    fn get_n_changepoints() {
+        let data = daily_univariate_ts().head(20);
+        let opts = ProphetOptions {
+            n_changepoints: 15,
+            ..ProphetOptions::default()
+        };
+        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        prophet.preprocess(data).unwrap();
+        let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
+        assert_eq!(prophet.opts.n_changepoints, 15);
+        assert_eq!(changepoints_t.len() as u32, 15);
+    }
 }
 
 #[cfg(test)]
 mod test_data_prep {
     use crate::{
-        optimizer::dummy_optimizer::DummyOptimizer, testdata::daily_univariate_ts,
-        util::FloatIterExt, Standardize,
+        optimizer::dummy_optimizer::DummyOptimizer,
+        testdata::{daily_univariate_ts, train_test_split},
+        util::FloatIterExt,
+        Standardize,
     };
 
     use super::*;
     use augurs_testing::assert_approx_eq;
     use pretty_assertions::assert_eq;
-
-    fn train_test_split(data: TrainingData, ratio: f64) -> (TrainingData, TrainingData) {
-        let n = data.len();
-        let split = (n as f64 * ratio).round() as usize;
-        (data.clone().head(split), data.tail(n - split))
-    }
 
     #[test]
     fn setup_dataframe() {
