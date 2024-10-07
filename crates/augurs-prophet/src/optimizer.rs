@@ -50,7 +50,7 @@ pub enum TrendIndicator {
 }
 
 /// Data for the Prophet model.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(non_snake_case)]
 pub struct Data {
     /// Number of time periods.
@@ -195,21 +195,49 @@ pub trait Optimizer: std::fmt::Debug {
         data: Data,
         opts: OptimizeOpts,
     ) -> Result<OptimizedParams, Error>;
+
+    #[cfg(test)]
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 #[cfg(test)]
-pub mod dummy_optimizer {
-    use super::*;
-    #[derive(Debug)]
-    pub struct DummyOptimizer;
+pub mod mock_optimizer {
+    use std::cell::RefCell;
 
-    impl Optimizer for DummyOptimizer {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    pub(crate) struct OptimizeCall {
+        pub init: InitialParams,
+        pub data: Data,
+        pub opts: OptimizeOpts,
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct MockOptimizer {
+        pub call: RefCell<Option<OptimizeCall>>,
+    }
+
+    impl MockOptimizer {
+        pub(crate) fn new() -> Self {
+            Self {
+                call: RefCell::new(None),
+            }
+        }
+    }
+
+    impl Optimizer for MockOptimizer {
         fn optimize(
             &self,
             init: InitialParams,
-            _: Data,
-            _: OptimizeOpts,
+            data: Data,
+            opts: OptimizeOpts,
         ) -> Result<OptimizedParams, Error> {
+            *self.call.borrow_mut() = Some(OptimizeCall {
+                init: init.clone(),
+                data,
+                opts,
+            });
             Ok(OptimizedParams {
                 k: init.k,
                 m: init.m,
@@ -218,6 +246,11 @@ pub mod dummy_optimizer {
                 beta: init.beta.clone(),
                 trend: init.beta,
             })
+        }
+
+        #[cfg(test)]
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
         }
     }
 }

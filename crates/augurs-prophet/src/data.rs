@@ -80,19 +80,20 @@ impl TrainingData {
 
     #[cfg(test)]
     pub(crate) fn tail(mut self, n: usize) -> Self {
-        self.ds = self.ds.split_off(n);
-        self.y = self.y.split_off(n);
+        let split = self.ds.len() - n;
+        self.ds = self.ds.split_off(split);
+        self.y = self.y.split_off(split);
         if let Some(cap) = self.cap.as_mut() {
-            *cap = cap.split_off(n);
+            *cap = cap.split_off(split);
         }
         if let Some(floor) = self.floor.as_mut() {
-            *floor = floor.split_off(n);
+            *floor = floor.split_off(split);
         }
         for (_, v) in self.x.iter_mut() {
-            *v = v.split_off(n);
+            *v = v.split_off(split);
         }
         for (_, v) in self.seasonality_conditions.iter_mut() {
-            *v = v.split_off(n);
+            *v = v.split_off(split);
         }
         self
     }

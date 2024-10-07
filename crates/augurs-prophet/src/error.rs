@@ -54,9 +54,13 @@ pub enum Error {
     CapNotGreaterThanFloor,
     /// One or more of the provided changepoints were out
     /// of the range of the training data.
-    #[error("Changepoints must fall within training data.")]
+    #[error("Changepoints must fall within training data")]
     ChangepointsOutOfRange,
     /// The feature has not yet been implemented.
     #[error("Not implemented")]
     Notimplemented,
+    #[error("Model has not been fit")]
+    ModelNotFit,
+    #[error("Unable to infer frequency from dates: {0:?}")]
+    UnableToInferFrequency(Vec<u64>),
 }

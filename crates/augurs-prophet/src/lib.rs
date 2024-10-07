@@ -31,6 +31,6 @@ pub use prophet::{
     options::{
         EstimationMode, GrowthType, OptProphetOptions, ProphetOptions, Scaling, SeasonalityOption,
     },
-    Prophet,
+    IncludeHistory, Prophet,
 };
 use util::FloatIterExt;

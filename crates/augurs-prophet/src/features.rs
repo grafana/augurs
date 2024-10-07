@@ -77,6 +77,24 @@ impl From<bool> for Standardize {
     }
 }
 
+/// Scales for a regressor.
+///
+/// This will be inserted into [`Scales::extra_regressors`]
+/// if the regressor is standardized.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct RegressorScale {
+    /// Whether to standardize this regressor.
+    ///
+    /// This is a `bool` rather than a `Standardize`
+    /// because we'll have decided whether to automatically
+    /// standardize by the time this is constructed.
+    pub(crate) standardize: bool,
+    /// The mean of the regressor.
+    pub(crate) mu: f64,
+    /// The standard deviation of the regressor.
+    pub(crate) std: f64,
+}
+
 /// An exogynous regressor.
 ///
 /// By default, regressors inherit the `seasonality_prior_scale`
@@ -86,8 +104,6 @@ pub struct Regressor {
     pub(crate) mode: FeatureMode,
     pub(crate) prior_scale: Option<PositiveFloat>,
     pub(crate) standardize: Standardize,
-    pub(crate) mu: f64,
-    pub(crate) std: f64,
 }
 
 impl Regressor {

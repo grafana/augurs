@@ -53,5 +53,15 @@ pub(crate) fn daily_univariate_ts() -> TrainingData {
 pub(crate) fn train_test_split(data: TrainingData, ratio: f64) -> (TrainingData, TrainingData) {
     let n = data.len();
     let split = (n as f64 * ratio).round() as usize;
-    (data.clone().head(split), data.tail(n - split))
+    let test_size = n - split;
+    train_test_splitn(data, test_size)
+}
+
+pub(crate) fn train_test_splitn(
+    data: TrainingData,
+    test_size: usize,
+) -> (TrainingData, TrainingData) {
+    let n = data.len();
+    let train_size = n - test_size;
+    (data.clone().head(train_size), data.tail(test_size))
 }

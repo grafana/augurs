@@ -10,6 +10,7 @@ use options::{GrowthType, ProphetOptions, Scaling, SeasonalityOption};
 use tracing::instrument;
 
 use crate::{
+    features::RegressorScale,
     optimizer::{Data, InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
     Error, FeatureMode, FloatIterExt, Holiday, PositiveFloat, PredictionData, Regressor,
     Seasonality, Standardize, TimestampSeconds, TrainingData,
@@ -17,13 +18,14 @@ use crate::{
 
 const NO_REGRESSORS_PLACEHOLDER: &str = "__no_regressors_zeros__";
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 struct Scales {
     logistic_floor: bool,
     y_min: f64,
     y_scale: f64,
     start: TimestampSeconds,
     t_scale: f64,
+    extra_regressors: HashMap<String, RegressorScale>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -152,6 +154,36 @@ struct Features {
     modes: Modes,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct FeaturePrediction {
+    point: Vec<f64>,
+    lower: Option<Vec<f64>>,
+    upper: Option<Vec<f64>>,
+}
+
+#[derive(Debug, Default)]
+struct FeaturePredictions {
+    additive: FeaturePrediction,
+    multiplicative: FeaturePrediction,
+    holidays: HashMap<String, FeaturePrediction>,
+    extra_regressors: HashMap<String, FeaturePrediction>,
+    seasonalities: HashMap<String, FeaturePrediction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Predictions {
+    yhat: FeaturePrediction,
+    trend: FeaturePrediction,
+    cap: Option<Vec<f64>>,
+    floor: Option<Vec<f64>>,
+    // TODO: include all the features.
+    additive: FeaturePrediction,
+    multiplicative: FeaturePrediction,
+    holidays: HashMap<String, FeaturePrediction>,
+    seasonalities: HashMap<String, FeaturePrediction>,
+    extra_regressors: HashMap<String, FeaturePrediction>,
+}
+
 /// The Prophet time series forecasting model.
 ///
 /// # Example
@@ -205,7 +237,7 @@ pub struct Prophet {
     train_holiday_names: Option<HashSet<String>>,
 
     /// The optimizer to use.
-    optimizer: &'static dyn Optimizer,
+    optimizer: Box<dyn Optimizer>,
 
     /// The processed data used for fitting.
     processed: Option<Preprocessed>,
@@ -228,7 +260,7 @@ impl Prophet {
     /// let optimizer = DummyOptimizer;
     /// let model = Prophet::new(Default::default(), &opt)?;
     /// ```
-    pub fn new(opts: ProphetOptions, optimizer: &'static dyn Optimizer) -> Self {
+    pub fn new<T: Optimizer + 'static>(opts: ProphetOptions, optimizer: T) -> Self {
         Self {
             opts,
             extra_regressors: HashMap::new(),
@@ -239,7 +271,7 @@ impl Prophet {
             component_modes: None,
             train_component_columns: None,
             train_holiday_names: None,
-            optimizer,
+            optimizer: Box::new(optimizer),
             processed: None,
             init: None,
             optimized: None,
@@ -313,7 +345,7 @@ impl Prophet {
                 .try_into()
                 .map_err(|_| Error::TooManyDataPoints(n))?,
             S: changepoints_t.len() as i32,
-            K: features.data.len() as i32,
+            K: features.names.len() as i32,
             tau: self.opts.changepoint_prior_scale,
             trend_indicator: self.opts.growth.into(),
             y: history.y_scaled.clone(),
@@ -335,7 +367,7 @@ impl Prophet {
 
     /// Prepare dataframe for fitting or predicting.
     fn setup_dataframe(
-        &mut self,
+        &self,
         TrainingData {
             mut ds,
             mut y,
@@ -390,7 +422,10 @@ impl Prophet {
         let mut sort_indices = (0..ds.len()).collect_vec();
         sort_indices.sort_unstable_by_key(|i| ds[*i]);
         ds.sort_unstable();
-        y = sort_indices.iter().map(|i| y[*i]).collect();
+        // y isn't be provided for predictions.
+        if !y.is_empty() {
+            y = sort_indices.iter().map(|i| y[*i]).collect();
+        }
         for condition in seasonality_conditions.values_mut() {
             *condition = sort_indices.iter().map(|i| condition[*i]).collect();
         }
@@ -435,7 +470,7 @@ impl Prophet {
             .map(|(y, floor)| (y - floor) / scales.y_scale)
             .collect();
 
-        for (name, regressor) in &self.extra_regressors {
+        for (name, regressor) in &scales.extra_regressors {
             let col = x
                 .get_mut(name)
                 .ok_or_else(|| Error::MissingRegressor(name.clone()))?;
@@ -459,7 +494,7 @@ impl Prophet {
     }
 
     fn initialize_scales(
-        &mut self,
+        &self,
         ds: &[TimestampSeconds],
         y: &[f64],
         extra_regressors: &HashMap<String, Vec<f64>>,
@@ -512,12 +547,11 @@ impl Prophet {
         scales.start = *ds.first().ok_or(Error::NotEnoughData)?;
         scales.t_scale = (*ds.last().ok_or(Error::NotEnoughData)? - scales.start) as f64;
 
-        for (name, regressor) in self.extra_regressors.iter_mut() {
+        for (name, regressor) in self.extra_regressors.iter() {
             // Standardize if requested.
             let col = extra_regressors
                 .get(name)
                 .ok_or(Error::MissingRegressor(name.clone()))?;
-            let mut standardize = regressor.standardize;
             // If there are 2 or fewer unique values, don't standardize.
             let mut vals = col.to_vec();
             vals.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
@@ -525,19 +559,21 @@ impl Prophet {
             if vals.len() < 2 {
                 continue;
             }
-            if standardize == Standardize::Auto {
-                if vals.len() == 2 && vals[0] == 0.0 && vals[1] == 1.0 {
-                    standardize = Standardize::No;
-                } else {
-                    standardize = Standardize::Yes;
-                }
+
+            let mut regressor_scale = RegressorScale::default();
+            if regressor.standardize == Standardize::Auto {
+                regressor_scale.standardize =
+                    !(vals.len() == 2 && vals[0] == 0.0 && vals[1] == 1.0);
             }
-            if standardize == Standardize::Yes {
+            if regressor_scale.standardize {
                 let mean = vals.iter().sum::<f64>() / vals.len() as f64;
                 let std = vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>().sqrt();
-                regressor.mu = mean;
-                regressor.std = std;
+                regressor_scale.mu = mean;
+                regressor_scale.std = std;
             }
+            scales
+                .extra_regressors
+                .insert(name.clone(), regressor_scale);
         }
         Ok(scales)
     }
@@ -630,28 +666,33 @@ impl Prophet {
         Ok(())
     }
 
+    /// Compute fourier series components with the specified period
+    /// and order.
+    ///
+    /// Note: this computes the transpose of the function in the Python
+    /// code for simplicity, since we need it in a columnar format anyway.
     fn fourier_series(
         dates: &[TimestampSeconds],
         period: PositiveFloat,
         order: NonZeroU32,
     ) -> Vec<Vec<f64>> {
         let order = order.get() as usize;
-        let n = dates.len();
         // Convert seconds to days.
         let t = dates.iter().copied().map(|ds| ds as f64 / 3600.0 / 24.0);
         // Convert to radians.
         let x_t = t.map(|x| x * std::f64::consts::PI * 2.0).collect_vec();
         // Preallocate space for the fourier components.
-        // let mut fourier_components = Vec::with_capacity(2 * order as usize);
-        let mut fourier_components = std::iter::repeat_with(|| Vec::with_capacity(2 * order))
-            .take(n)
-            .collect_vec();
-        for (x, f) in x_t.iter().zip(fourier_components.iter_mut()) {
-            for j in 0..order {
-                let angle = x * (j as f64 + 1.0) / *period;
-                f.push(angle.sin());
-                f.push(angle.cos());
-            }
+        let mut fourier_components = Vec::with_capacity(2 * order);
+        for i in 0..order {
+            let (f1, f2) = x_t
+                .iter()
+                .map(|x| {
+                    let angle = x * (i as f64 + 1.0) / *period;
+                    (angle.sin(), angle.cos())
+                })
+                .unzip();
+            fourier_components.push(f1);
+            fourier_components.push(f2);
         }
         fourier_components
     }
@@ -961,22 +1002,85 @@ impl Prophet {
     ///
     /// That will fail if the model has not been fit.
     #[instrument(level = "debug", skip(self, data))]
-    pub fn predict(&self, data: Option<PredictionData>) -> Result<Vec<f64>, Error> {
-        // TODO!
-        Err(Error::Notimplemented)
+    pub fn predict(&self, data: impl Into<Option<PredictionData>>) -> Result<Predictions, Error> {
+        let Some(processed) = &self.processed else {
+            return Err(Error::ModelNotFit);
+        };
+        let Some(params) = &self.optimized else {
+            return Err(Error::ModelNotFit);
+        };
+        let Some(changepoints_t) = &self.changepoints_t else {
+            return Err(Error::ModelNotFit);
+        };
+        let Some(scales) = &self.scales else {
+            return Err(Error::ModelNotFit);
+        };
+        let df = data
+            .into()
+            .map(|data| {
+                let training_data = TrainingData {
+                    ds: data.ds.clone(),
+                    y: vec![],
+                    cap: data.cap.clone(),
+                    floor: data.floor.clone(),
+                    seasonality_conditions: data.seasonality_conditions.clone(),
+                    x: data.x.clone(),
+                };
+                self.setup_dataframe(training_data, Some(scales.clone()))
+                    .map(|(df, _)| df)
+            })
+            .transpose()?
+            .unwrap_or_else(|| processed.history.clone());
+
+        let trend = self.predict_trend(
+            &df.t,
+            &df.cap,
+            &df.floor,
+            changepoints_t,
+            params,
+            scales.y_scale,
+        )?;
+        let seasonal_components = self.predict_features(&df, params, scales.y_scale)?;
+
+        let yhat_point = izip!(
+            &trend.point,
+            &seasonal_components.additive.point,
+            &seasonal_components.multiplicative.point
+        )
+        .map(|(t, a, m)| t * (1.0 + m) + a)
+        .collect();
+        let yhat = FeaturePrediction {
+            point: yhat_point,
+            lower: None,
+            upper: None,
+        };
+
+        // TODO: uncertainty.
+
+        Ok(Predictions {
+            yhat,
+            trend,
+            cap: df.cap,
+            floor: scales.logistic_floor.then_some(df.floor),
+            additive: seasonal_components.additive,
+            multiplicative: seasonal_components.multiplicative,
+            holidays: seasonal_components.holidays,
+            seasonalities: seasonal_components.seasonalities,
+            extra_regressors: seasonal_components.extra_regressors,
+        })
     }
 
-    fn piecewise_linear(
-        t: &[f64],
-        deltas: &[f64],
+    fn piecewise_linear<'a>(
+        t: &'a [f64],
+        deltas: &'a [f64],
         k: f64,
         m: f64,
-        changepoint_ts: &[f64],
-    ) -> Vec<f64> {
+        changepoints_t: &'a [f64],
+    ) -> impl Iterator<Item = f64> + 'a {
         // `deltas_t` is a contiguous array with the changepoint delta to apply
-        // delta at each time point; it has a stride of `changepoint_ts.len()`,
+        // delta at each time point; it has a stride of `changepoints_t.len()`,
         // since it's a 2D array in the numpy version.
-        let cp_zipped = deltas.iter().zip(changepoint_ts);
+        let cp_zipped = deltas.iter().zip(changepoints_t);
         let deltas_t = cp_zipped
             .cartesian_product(t)
             .map(|((delta, cp_t), t)| if cp_t <= t { *delta } else { 0.0 })
@@ -995,7 +1099,7 @@ impl Prophet {
             .iter()
             .zip(
                 // Repeat each changepoint effect `n` times so we can zip it up.
-                changepoint_ts
+                changepoints_t
                     .iter()
                     .flat_map(|x| std::iter::repeat(*x).take(t.len())),
             )
@@ -1006,17 +1110,17 @@ impl Prophet {
                 acc
             });
 
-        izip!(t, k_t, m_t).map(|(t, k, m)| t * k + m).collect_vec()
+        izip!(t, k_t, m_t).map(|(t, k, m)| t * k + m)
     }
 
-    fn piecewise_logistic(
-        t: &[f64],
-        cap: &[f64],
-        deltas: &[f64],
+    fn piecewise_logistic<'a>(
+        t: &'a [f64],
+        cap: &'a [f64],
+        deltas: &'a [f64],
         k: f64,
         m: f64,
-        changepoint_ts: &[f64],
-    ) -> Vec<f64> {
+        changepoints_t: &'a [f64],
+    ) -> impl Iterator<Item = f64> + 'a {
         // Compute offset changes.
         let k_cum = std::iter::once(k)
             .chain(deltas.iter().scan(k, |state, delta| {
@@ -1024,9 +1128,9 @@ impl Prophet {
                 Some(*state)
             }))
             .collect_vec();
-        let mut gammas = vec![0.0; changepoint_ts.len()];
+        let mut gammas = vec![0.0; changepoints_t.len()];
         let mut gammas_sum = 0.0;
-        for (i, t_s) in changepoint_ts.iter().enumerate() {
+        for (i, t_s) in changepoints_t.iter().enumerate() {
             gammas[i] = (t_s - m - gammas_sum) * (1.0 - k_cum[i] / k_cum[i + 1]);
             gammas_sum += gammas[i];
         }
@@ -1034,7 +1138,7 @@ impl Prophet {
         // Get cumulative rate and offset at each time point.
         let mut k_t = vec![k; t.len()];
         let mut m_t = vec![m; t.len()];
-        for (s, t_s) in changepoint_ts.iter().enumerate() {
+        for (s, t_s) in changepoints_t.iter().enumerate() {
             for (i, t_i) in t.iter().enumerate() {
                 if t_i >= t_s {
                     k_t[i] += deltas[s];
@@ -1043,19 +1147,192 @@ impl Prophet {
             }
         }
 
-        izip!(cap, t, k_t, m_t)
-            .map(|(cap, t, k, m)| cap / (1.0 + (-k * (t - m)).exp()))
-            .collect_vec()
+        izip!(cap, t, k_t, m_t).map(|(cap, t, k, m)| cap / (1.0 + (-k * (t - m)).exp()))
     }
 
     /// Evaluate the flat trend function.
-    fn flat_trend(t: &[f64], m: f64) -> Vec<f64> {
-        vec![m; t.len()]
+    fn flat_trend(t: &[f64], m: f64) -> impl Iterator<Item = f64> {
+        std::iter::repeat(m).take(t.len())
+    }
+
+    fn predict_trend(
+        &self,
+        t: &[f64],
+        cap: &Option<Vec<f64>>,
+        floor: &[f64],
+        changepoints_t: &[f64],
+        params: &OptimizedParams,
+        y_scale: f64,
+    ) -> Result<FeaturePrediction, Error> {
+        let point = match (self.opts.growth, cap) {
+            (GrowthType::Linear, _) => {
+                Prophet::piecewise_linear(t, &params.delta, params.k, params.m, changepoints_t)
+                    .zip(floor)
+                    .map(|(trend, flr)| trend * y_scale + flr)
+                    .collect_vec()
+            }
+            (GrowthType::Logistic, Some(cap)) => Prophet::piecewise_logistic(
+                t,
+                cap,
+                &params.delta,
+                params.k,
+                params.m,
+                changepoints_t,
+            )
+            .zip(floor)
+            .map(|(trend, flr)| trend * y_scale + flr)
+            .collect_vec(),
+            (GrowthType::Logistic, None) => return Err(Error::MissingCap),
+            (GrowthType::Flat, _) => Prophet::flat_trend(t, params.m)
+                .zip(floor)
+                .map(|(trend, flr)| trend * y_scale + flr)
+                .collect_vec(),
+        };
+        Ok(FeaturePrediction {
+            point,
+            lower: None,
+            upper: None,
+        })
+    }
+
+    /// Predict seasonality, holidays and added regressors.
+    fn predict_features(
+        &self,
+        data: &ProcessedData,
+        params: &OptimizedParams,
+        y_scale: f64,
+    ) -> Result<FeaturePredictions, Error> {
+        let Features {
+            features,
+            component_columns,
+            ..
+            // prior_scales,
+            // modes,
+        } = self.make_all_features(data)?;
+
+        let x = features.data;
+
+        // TODO: do the rest of the terms
+        Ok(FeaturePredictions {
+            additive: Self::predict_feature(
+                &component_columns.additive,
+                &x,
+                &params.beta,
+                y_scale,
+                true,
+            ),
+            multiplicative: Self::predict_feature(
+                &component_columns.multiplicative,
+                &x,
+                &params.beta,
+                y_scale,
+                false,
+            ),
+            ..Default::default()
+        })
+    }
+
+    fn predict_feature(
+        component_col: &[i32],
+        #[allow(non_snake_case)] X: &[Vec<f64>],
+        beta: &[f64],
+        y_scale: f64,
+        is_additive: bool,
+    ) -> FeaturePrediction {
+        let beta_c = component_col
+            .iter()
+            .copied()
+            .zip(beta)
+            .map(|(x, b)| x as f64 * b)
+            .collect_vec();
+        // Matrix multiply `beta_c` and `x`.
+        let mut point = vec![0.0; X[0].len()];
+        for (p, feature, b) in izip!(point.iter_mut(), X, beta_c) {
+            for x in feature {
+                *p += b * x;
+            }
+        }
+        if is_additive {
+            point.iter_mut().for_each(|x| *x *= y_scale);
+        }
+        FeaturePrediction {
+            point,
+            lower: None,
+            upper: None,
+        }
+    }
+
+    /// Create a of dates to use for predictions.
+    pub fn make_future_dataframe(
+        &self,
+        horizon: NonZeroU32,
+        include_history: IncludeHistory,
+    ) -> Result<PredictionData, Error> {
+        let Some(Preprocessed { history_dates, .. }) = &self.processed else {
+            return Err(Error::ModelNotFit);
+        };
+        let freq = Self::infer_freq(history_dates)?;
+        let last_date = *history_dates.last().ok_or(Error::NotEnoughData)?;
+        let n = horizon.get() as u64 + 1;
+        let dates = (last_date..last_date + n * freq)
+            .step_by(freq as usize)
+            .filter(|ds| *ds > last_date)
+            .take(horizon.get() as usize);
+
+        let ds = if include_history == IncludeHistory::Yes {
+            history_dates.iter().copied().chain(dates).collect()
+        } else {
+            dates.collect()
+        };
+        Ok(PredictionData::new(ds))
+    }
+
+    fn infer_freq(history_dates: &[TimestampSeconds]) -> Result<TimestampSeconds, Error> {
+        const INFER_N: usize = 5;
+        let get_tried = || {
+            history_dates
+                .iter()
+                .rev()
+                .take(INFER_N)
+                .copied()
+                .collect_vec()
+        };
+        // Calculate diffs between the last 5 dates in the history, and
+        // create a map from diffs to counts.
+        let diff_counts = history_dates
+            .iter()
+            .rev()
+            .take(INFER_N)
+            .tuple_windows()
+            .map(|(a, b)| a - b)
+            .counts();
+        // Find the max count, and return the corresponding diff, provided there
+        // is exactly one diff with that count.
+        let max = diff_counts
+            .values()
+            .copied()
+            .max()
+            .ok_or_else(|| Error::UnableToInferFrequency(get_tried()))?;
+        diff_counts
+            .into_iter()
+            .filter(|(_, v)| *v == max)
+            .map(|(k, _)| k)
+            .exactly_one()
+            .map_err(|_| Error::UnableToInferFrequency(get_tried()))
     }
 }
 
+/// Whether to include the historical dates in the future dataframe for predictions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncludeHistory {
+    /// Include the historical dates in the future dataframe.
+    Yes,
+    /// Do not include the historical dates in the future data frame.
+    No,
+}
+
 /// Historical data after preprocessing.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ProcessedData {
     ds: Vec<TimestampSeconds>,
     t: Vec<f64>,
@@ -1069,7 +1346,7 @@ struct ProcessedData {
 }
 
 /// Processed data used for fitting.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Preprocessed {
     data: Data,
     history: ProcessedData,
@@ -1096,7 +1373,7 @@ impl Preprocessed {
             k,
             m,
             delta: vec![0.0; self.data.t_change.len()],
-            beta: vec![0.0; self.data.X.len()],
+            beta: vec![0.0; self.data.K as usize],
             sigma_obs: 1.0,
         })
     }
@@ -1187,7 +1464,7 @@ mod test_trend_component {
 
     use super::*;
     use crate::{
-        optimizer::dummy_optimizer::DummyOptimizer,
+        optimizer::mock_optimizer::MockOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
     };
 
@@ -1198,14 +1475,14 @@ mod test_trend_component {
         data = data.with_cap(vec![max; 468]);
 
         let mut opts = ProphetOptions::default();
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         let preprocessed = prophet.preprocess(data.clone()).unwrap();
         let init = preprocessed.calculate_initial_params(&opts).unwrap();
         assert_approx_eq!(init.k, 0.3055671);
         assert_approx_eq!(init.m, 0.5307511);
 
         opts.growth = GrowthType::Logistic;
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         let preprocessed = prophet.preprocess(data).unwrap();
         let init = preprocessed.calculate_initial_params(&opts).unwrap();
         assert_approx_eq!(init.k, 1.507925);
@@ -1227,14 +1504,14 @@ mod test_trend_component {
             scaling: Scaling::MinMax,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         let preprocessed = prophet.preprocess(data.clone()).unwrap();
         let init = preprocessed.calculate_initial_params(&opts).unwrap();
         assert_approx_eq!(init.k, 0.4053406);
         assert_approx_eq!(init.m, 0.3775322);
 
         opts.growth = GrowthType::Logistic;
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         let preprocessed = prophet.preprocess(data).unwrap();
         let init = preprocessed.calculate_initial_params(&opts).unwrap();
         assert_approx_eq!(init.k, 1.782523);
@@ -1247,14 +1524,13 @@ mod test_trend_component {
     }
 
     #[test]
-    #[should_panic = "need to add predictions"]
     fn flat_growth_absmax() {
         let opts = ProphetOptions {
             growth: GrowthType::Flat,
             scaling: Scaling::AbsMax,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
         let x = (0..50).map(|x| x as f64 * PI * 2.0 / 50.0);
         let y = x.map(|x| 30.0 + (x * 8.0).sin()).collect_vec();
         let ds = (0..50)
@@ -1268,8 +1544,10 @@ mod test_trend_component {
             .collect_vec();
         let data = TrainingData::new(ds, y);
         prophet.fit(data, Default::default()).unwrap();
-        // let future = prophet.make_future_dataframe(10, true);
-        let _predictions = prophet.predict(None).expect("need to add predictions");
+        let future = prophet
+            .make_future_dataframe(10.try_into().unwrap(), IncludeHistory::Yes)
+            .unwrap();
+        let _predictions = prophet.predict(future).unwrap();
     }
 
     #[test]
@@ -1278,19 +1556,19 @@ mod test_trend_component {
         let m = 0.0;
         let k = 1.0;
         let deltas = vec![0.5];
-        let changepoint_ts = vec![5.0];
-        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoint_ts);
+        let changepoints_t = vec![5.0];
+        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5];
         assert_eq!(y, y_true);
 
-        let y = Prophet::piecewise_linear(&t[8..], &deltas, k, m, &changepoint_ts);
+        let y = Prophet::piecewise_linear(&t[8..], &deltas, k, m, &changepoints_t).collect_vec();
         assert_eq!(y, y_true[8..]);
 
         // This test isn't in the Python version but it's worth having one with multiple
         // changepoints.
         let deltas = vec![0.4, 0.5];
-        let changepoint_ts = vec![4.0, 8.0];
-        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoint_ts);
+        let changepoints_t = vec![4.0, 8.0];
+        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = &[0.0, 1.0, 2.0, 3.0, 4.0, 5.4, 6.8, 8.2, 9.6, 11.5, 13.4];
         for (a, b) in y.iter().zip(y_true) {
             assert_approx_eq!(a, b);
@@ -1304,8 +1582,8 @@ mod test_trend_component {
         let m = 0.0;
         let k = 1.0;
         let deltas = vec![0.5];
-        let changepoint_ts = vec![5.0];
-        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoint_ts);
+        let changepoints_t = vec![5.0];
+        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = &[
             5.000000, 7.310586, 8.807971, 9.525741, 9.820138, 9.933071, 9.984988, 9.996646,
             9.999252, 9.999833, 9.999963,
@@ -1314,7 +1592,8 @@ mod test_trend_component {
             assert_approx_eq!(a, b);
         }
 
-        let y = Prophet::piecewise_logistic(&t[8..], &cap[8..], &deltas, k, m, &changepoint_ts);
+        let y = Prophet::piecewise_logistic(&t[8..], &cap[8..], &deltas, k, m, &changepoints_t)
+            .collect_vec();
         for (a, b) in y.iter().zip(&y_true[8..]) {
             assert_approx_eq!(a, b);
         }
@@ -1322,8 +1601,8 @@ mod test_trend_component {
         // This test isn't in the Python version but it's worth having one with multiple
         // changepoints.
         let deltas = vec![0.4, 0.5];
-        let changepoint_ts = vec![4.0, 8.0];
-        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoint_ts);
+        let changepoints_t = vec![4.0, 8.0];
+        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = &[
             5., 7.31058579, 8.80797078, 9.52574127, 9.8201379, 9.95503727, 9.98887464, 9.99725422,
             9.99932276, 9.9998987, 9.99998485,
@@ -1337,17 +1616,18 @@ mod test_trend_component {
     fn flat_trend() {
         let t = (0..11).map(f64::from).collect_vec();
         let m = 0.5;
-        let y = Prophet::flat_trend(&t, m);
+        let y = Prophet::flat_trend(&t, m).collect_vec();
         assert_all_close(&y, &[0.5; 11]);
 
-        let y = Prophet::flat_trend(&t[8..], m);
+        let y = Prophet::flat_trend(&t[8..], m).collect_vec();
         assert_all_close(&y, &[0.5; 3]);
     }
 
     #[test]
     fn get_changepoints() {
         let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
-        let mut prophet = Prophet::new(ProphetOptions::default(), &DummyOptimizer);
+        let optimizer = MockOptimizer::new();
+        let mut prophet = Prophet::new(ProphetOptions::default(), optimizer);
         let preprocessed = prophet.preprocess(data).unwrap();
         let history = preprocessed.history;
         let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
@@ -1375,7 +1655,7 @@ mod test_trend_component {
             changepoint_range: 0.4.try_into().unwrap(),
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
         let preprocessed = prophet.preprocess(data).unwrap();
         let history = preprocessed.history;
         let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
@@ -1403,7 +1683,7 @@ mod test_trend_component {
             n_changepoints: 0,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
         prophet.preprocess(data).unwrap();
         let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
         assert_eq!(changepoints_t.len() as u32, 1);
@@ -1417,7 +1697,7 @@ mod test_trend_component {
             n_changepoints: 15,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
         prophet.preprocess(data).unwrap();
         let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
         assert_eq!(prophet.opts.n_changepoints, 15);
@@ -1439,7 +1719,9 @@ mod test_seasonal {
         let expected = &[
             0.7818315, 0.6234898, 0.9749279, -0.2225209, 0.4338837, -0.9009689,
         ];
-        for (a, b) in mat[0].iter().zip(expected) {
+        assert_eq!(mat.len(), expected.len());
+        let first = mat.iter().map(|row| row[0]);
+        for (a, b) in first.zip(expected) {
             assert_approx_eq!(a, b);
         }
     }
@@ -1452,7 +1734,9 @@ mod test_seasonal {
         let expected = &[
             0.7006152, -0.7135393, -0.9998330, 0.01827656, 0.7262249, 0.6874572,
         ];
-        for (a, b) in mat[0].iter().zip(expected) {
+        assert_eq!(mat.len(), expected.len());
+        let first = mat.iter().map(|row| row[0]);
+        for (a, b) in first.zip(expected) {
             assert_approx_eq!(a, b);
         }
     }
@@ -1461,7 +1745,7 @@ mod test_seasonal {
 #[cfg(test)]
 mod test_data_prep {
     use crate::{
-        optimizer::dummy_optimizer::DummyOptimizer,
+        optimizer::mock_optimizer::MockOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
         util::FloatIterExt,
         Standardize,
@@ -1474,7 +1758,7 @@ mod test_data_prep {
     #[test]
     fn setup_dataframe() {
         let (data, _) = train_test_split(daily_univariate_ts(), 0.5);
-        let mut prophet = Prophet::new(ProphetOptions::default(), &DummyOptimizer);
+        let prophet = Prophet::new(ProphetOptions::default(), MockOptimizer::new());
         let (history, _) = prophet.setup_dataframe(data, None).unwrap();
 
         assert_approx_eq!(history.t.iter().copied().nanmin(true), 0.0);
@@ -1492,7 +1776,7 @@ mod test_data_prep {
             growth: GrowthType::Logistic,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         prophet.fit(data.clone(), Default::default()).unwrap();
         assert!(prophet.scales.unwrap().logistic_floor);
         assert_approx_eq!(prophet.processed.unwrap().history.y_scaled[0], 1.0);
@@ -1504,7 +1788,7 @@ mod test_data_prep {
         for c in data.cap.as_mut().unwrap() {
             *c += 10.0;
         }
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         prophet.fit(data, Default::default()).unwrap();
         assert_eq!(prophet.processed.unwrap().history.y_scaled[0], 1.0);
     }
@@ -1520,7 +1804,7 @@ mod test_data_prep {
             scaling: Scaling::MinMax,
             ..ProphetOptions::default()
         };
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         prophet.fit(data.clone(), Default::default()).unwrap();
         assert!(prophet.scales.unwrap().logistic_floor);
         assert!(
@@ -1554,7 +1838,7 @@ mod test_data_prep {
         for c in data.cap.as_mut().unwrap() {
             *c += 10.0;
         }
-        let mut prophet = Prophet::new(opts.clone(), &DummyOptimizer);
+        let mut prophet = Prophet::new(opts.clone(), MockOptimizer::new());
         prophet.fit(data, Default::default()).unwrap();
         assert!(
             prophet
@@ -1585,7 +1869,7 @@ mod test_data_prep {
     fn regressor_column_matrix() {
         // TODO: add holidays back in and update assertions.
         let opts = ProphetOptions::default();
-        let mut prophet = Prophet::new(opts, &DummyOptimizer);
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
         prophet.add_regressor(
             "binary_feature".to_string(),
             Regressor::additive().with_prior_scale(0.2.try_into().unwrap()),
@@ -1779,5 +2063,194 @@ mod test_data_prep {
             cols.custom["binary_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
+    }
+}
+
+#[cfg(test)]
+mod test_predict {
+    use augurs_testing::{assert_all_close, assert_approx_eq};
+    use itertools::Itertools;
+
+    use crate::{
+        optimizer::{mock_optimizer::MockOptimizer, InitialParams, OptimizedParams},
+        testdata::{daily_univariate_ts, train_test_splitn},
+        util::FloatIterExt,
+        IncludeHistory, Prophet, ProphetOptions, TrendIndicator,
+    };
+
+    #[test]
+    fn fit_predict() {
+        let test_days = 30;
+        let (train, test) = train_test_splitn(daily_univariate_ts(), test_days);
+        let opts = ProphetOptions {
+            scaling: crate::Scaling::AbsMax,
+            ..Default::default()
+        };
+        let opt = MockOptimizer::new();
+        let mut prophet = Prophet::new(opts, opt);
+        prophet.fit(train.clone(), Default::default()).unwrap();
+        // Make sure our optimizer was called correctly.
+        let opt: &MockOptimizer = prophet.optimizer.as_any().downcast_ref().unwrap();
+        let call = opt.call.take().unwrap();
+        assert_eq!(
+            call.init,
+            InitialParams {
+                beta: vec![0.0; 6],
+                delta: vec![0.0; 25],
+                k: 0.29834791059280863,
+                m: 0.5307510759405802,
+                sigma_obs: 1.0
+            }
+        );
+        assert_eq!(call.data.T, 480);
+        assert_eq!(call.data.S, 25);
+        assert_eq!(call.data.K, 6);
+        assert_eq!(*call.data.tau, 0.05);
+        assert_eq!(call.data.trend_indicator, TrendIndicator::Linear);
+        assert_eq!(call.data.y.iter().copied().nanmax(true), 1.0);
+        assert_all_close(
+            &call.data.y[0..5],
+            &[0.530751, 0.472442, 0.430376, 0.444259, 0.458559],
+        );
+        assert_eq!(call.data.t.len(), train.y.len());
+        assert_all_close(
+            &call.data.t[0..5],
+            &[0.0, 0.004298, 0.005731, 0.007163, 0.008596],
+        );
+
+        assert_eq!(call.data.cap.len(), train.y.len());
+        assert_eq!(&call.data.cap, &[0.0; 480]);
+
+        assert_eq!(
+            &call.data.sigmas.iter().map(|x| **x).collect_vec(),
+            &[10.0; 6]
+        );
+        assert_eq!(&call.data.s_a, &[1; 6]);
+        assert_eq!(&call.data.s_m, &[0; 6]);
+        assert_eq!(call.data.X.len(), 6);
+        let first = call.data.X.iter().map(|row| row[0]).collect_vec();
+        assert_all_close(
+            &first,
+            &[0.781831, 0.623490, 0.974928, -0.222521, 0.433884, -0.900969],
+        );
+
+        // Override optimized params since we don't have a real optimizer.
+        prophet.optimized = Some(OptimizedParams {
+            k: -1.01136,
+            m: 0.460947,
+            sigma_obs: 0.0451108,
+            beta: vec![
+                0.0205064,
+                -0.0129451,
+                -0.0164735,
+                -0.00275837,
+                0.00333371,
+                0.00599414,
+            ],
+            delta: vec![
+                3.51708e-08,
+                1.17925e-09,
+                -2.91421e-09,
+                2.06189e-01,
+                9.06870e-01,
+                4.49113e-01,
+                1.94664e-03,
+                -1.16088e-09,
+                -5.75394e-08,
+                -7.90284e-06,
+                -6.74530e-01,
+                -5.70814e-02,
+                -4.91360e-08,
+                -3.53111e-09,
+                1.42645e-08,
+                4.50809e-05,
+                8.86286e-01,
+                1.14535e+00,
+                4.40539e-02,
+                8.17306e-09,
+                -1.57715e-07,
+                -5.15430e-01,
+                -3.15001e-01,
+                1.14429e-08,
+                -2.56863e-09,
+            ],
+            trend: vec![
+                0.460947, 0.4566, 0.455151, 0.453703, 0.452254, 0.450805, 0.445009, 0.44356,
+                0.442111, 0.440662, 0.436315, 0.434866, 0.433417, 0.431968, 0.430519, 0.426173,
+                0.424724, 0.423275, 0.421826, 0.420377, 0.41603, 0.414581, 0.413132, 0.411683,
+                0.410234, 0.405887, 0.404438, 0.402989, 0.40154, 0.400092, 0.395745, 0.394296,
+                0.391398, 0.389949, 0.385602, 0.384153, 0.382704, 0.381255, 0.379806, 0.375459,
+                0.374011, 0.372562, 0.371113, 0.369664, 0.365317, 0.363868, 0.362419, 0.36097,
+                0.359521, 0.355174, 0.353725, 0.352276, 0.350827, 0.349378, 0.345032, 0.343583,
+                0.342134, 0.340685, 0.339236, 0.334889, 0.33344, 0.331991, 0.330838, 0.329684,
+                0.326223, 0.32507, 0.323916, 0.322763, 0.321609, 0.318149, 0.316995, 0.315841,
+                0.314688, 0.313534, 0.30892, 0.307767, 0.306613, 0.30546, 0.305897, 0.306042,
+                0.306188, 0.306334, 0.306479, 0.306916, 0.307062, 0.307208, 0.307354, 0.307499,
+                0.307936, 0.308082, 0.308228, 0.308373, 0.308519, 0.310886, 0.311676, 0.312465,
+                0.313254, 0.314043, 0.31641, 0.317199, 0.317989, 0.318778, 0.319567, 0.321934,
+                0.322723, 0.323512, 0.324302, 0.325091, 0.327466, 0.328258, 0.32905, 0.329842,
+                0.330634, 0.334594, 0.335386, 0.336177, 0.338553, 0.339345, 0.340137, 0.340929,
+                0.341721, 0.344097, 0.344888, 0.34568, 0.346472, 0.347264, 0.34964, 0.350432,
+                0.351224, 0.352808, 0.355183, 0.355975, 0.356767, 0.357559, 0.358351, 0.360727,
+                0.361519, 0.362311, 0.363102, 0.363894, 0.36627, 0.367062, 0.367854, 0.368646,
+                0.369438, 0.371813, 0.372605, 0.373397, 0.374189, 0.374981, 0.377357, 0.378941,
+                0.379733, 0.380524, 0.3829, 0.384484, 0.385276, 0.386068, 0.388443, 0.389235,
+                0.390027, 0.390819, 0.391611, 0.393987, 0.394779, 0.395571, 0.396362, 0.397154,
+                0.400322, 0.401114, 0.400939, 0.400765, 0.400242, 0.400067, 0.399893, 0.399718,
+                0.399544, 0.39902, 0.398846, 0.398671, 0.398497, 0.398322, 0.397799, 0.397624,
+                0.39745, 0.397194, 0.396937, 0.395912, 0.395656, 0.3954, 0.395144, 0.394375,
+                0.394119, 0.393862, 0.393606, 0.39335, 0.392581, 0.392325, 0.392069, 0.391812,
+                0.391556, 0.390787, 0.390531, 0.390275, 0.390019, 0.389762, 0.388994, 0.388737,
+                0.388481, 0.388225, 0.387968, 0.3872, 0.386943, 0.386687, 0.386431, 0.385406,
+                0.38515, 0.384893, 0.384637, 0.384381, 0.383612, 0.383356, 0.3831, 0.382843,
+                0.382587, 0.381818, 0.381562, 0.381306, 0.38105, 0.380793, 0.380025, 0.379768,
+                0.379512, 0.379256, 0.379, 0.378231, 0.377975, 0.377718, 0.377462, 0.377206,
+                0.376437, 0.376181, 0.375925, 0.375668, 0.375412, 0.374643, 0.374387, 0.374131,
+                0.373875, 0.373619, 0.37285, 0.372594, 0.372338, 0.372081, 0.371825, 0.3708,
+                0.370544, 0.370288, 0.370032, 0.369263, 0.369007, 0.370021, 0.371034, 0.372048,
+                0.375088, 0.376102, 0.377116, 0.378129, 0.379143, 0.382183, 0.383197, 0.384211,
+                0.385224, 0.386238, 0.389278, 0.390292, 0.391305, 0.39396, 0.396614, 0.404578,
+                0.407232, 0.409887, 0.415196, 0.423159, 0.425813, 0.428468, 0.431122, 0.433777,
+                0.44174, 0.444395, 0.447049, 0.449704, 0.452421, 0.460574, 0.463291, 0.466009,
+                0.468727, 0.471444, 0.479597, 0.482314, 0.485032, 0.48775, 0.490467, 0.49862,
+                0.501337, 0.504055, 0.506773, 0.50949, 0.517643, 0.520361, 0.523078, 0.525796,
+                0.528513, 0.536666, 0.539384, 0.542101, 0.544819, 0.547536, 0.555689, 0.558407,
+                0.561124, 0.563842, 0.566559, 0.57743, 0.580147, 0.582865, 0.585582, 0.593735,
+                0.596453, 0.59917, 0.601888, 0.604605, 0.612758, 0.615476, 0.618193, 0.620911,
+                0.623628, 0.631781, 0.63376, 0.635739, 0.637719, 0.639698, 0.645635, 0.647614,
+                0.649593, 0.651572, 0.653552, 0.659489, 0.661468, 0.663447, 0.665426, 0.667406,
+                0.673343, 0.674871, 0.676399, 0.677926, 0.679454, 0.684038, 0.685566, 0.687094,
+                0.688621, 0.690149, 0.694733, 0.696261, 0.697788, 0.699316, 0.700844, 0.705428,
+                0.706956, 0.708483, 0.710011, 0.711539, 0.716123, 0.71765, 0.719178, 0.720706,
+                0.722234, 0.726818, 0.728345, 0.729873, 0.731401, 0.732929, 0.737512, 0.73904,
+                0.740568, 0.743624, 0.748207, 0.749735, 0.751263, 0.752791, 0.754319, 0.758902,
+                0.76043, 0.761958, 0.763486, 0.765014, 0.769597, 0.771125, 0.772653, 0.774181,
+                0.775709, 0.780292, 0.78182, 0.784876, 0.786404, 0.790987, 0.792515, 0.795571,
+                0.797098, 0.801682, 0.80321, 0.804738, 0.806265, 0.807793, 0.812377, 0.813905,
+                0.815433, 0.81696, 0.818488, 0.8246, 0.826127, 0.827655, 0.829183, 0.833767,
+                0.835295, 0.836822, 0.83835, 0.839878, 0.844462, 0.845989, 0.847517, 0.849045,
+                0.850573, 0.855157, 0.856684, 0.858212, 0.85974, 0.861268, 0.867379, 0.868907,
+                0.870435, 0.871963, 0.876546, 0.878074, 0.879602, 0.88113, 0.882658, 0.887241,
+                0.888769, 0.890297, 0.891825, 0.893353, 0.897936, 0.899464, 0.900992, 0.90252,
+                0.904048, 0.908631, 0.910159, 0.911687, 0.913215, 0.914743, 0.919326, 0.920854,
+                0.922382, 0.92391, 0.925437, 0.930021, 0.931549, 0.933077, 0.934604, 0.936132,
+                0.940716, 0.942244, 0.943772, 0.945299, 0.946827, 0.951411, 0.952939, 0.954466,
+            ],
+        });
+        let future = prophet
+            .make_future_dataframe((test_days as u32).try_into().unwrap(), IncludeHistory::No)
+            .unwrap();
+        let predictions = prophet.predict(future).unwrap();
+        assert_eq!(predictions.yhat.point.len(), test_days);
+        let rmse = (predictions
+            .yhat
+            .point
+            .iter()
+            .zip(&test.y)
+            .map(|(a, b)| (a - b).powi(2))
+            .sum::<f64>()
+            / test.y.len() as f64)
+            .sqrt();
+        assert_approx_eq!(rmse, 10.64, 1e-1);
     }
 }
