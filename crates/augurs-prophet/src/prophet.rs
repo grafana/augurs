@@ -635,23 +635,23 @@ impl Prophet {
         period: PositiveFloat,
         order: NonZeroU32,
     ) -> Vec<Vec<f64>> {
+        let order = order.get() as usize;
+        let n = dates.len();
         // Convert seconds to days.
         let t = dates.iter().copied().map(|ds| ds as f64 / 3600.0 / 24.0);
         // Convert to radians.
         let x_t = t.map(|x| x * std::f64::consts::PI * 2.0).collect_vec();
         // Preallocate space for the fourier components.
-        let mut fourier_components = Vec::with_capacity(2 * order.get() as usize);
-        // Calculate the fourier components.
-        for i in 0..order.get() {
-            let (f1, f2) = x_t
-                .iter()
-                .map(|x| {
-                    let angle = x * (i as f64 + 1.0) / *period;
-                    (angle.sin(), angle.cos())
-                })
-                .unzip();
-            fourier_components.push(f1);
-            fourier_components.push(f2);
+        // let mut fourier_components = Vec::with_capacity(2 * order as usize);
+        let mut fourier_components = std::iter::repeat_with(|| Vec::with_capacity(2 * order))
+            .take(n)
+            .collect_vec();
+        for (x, f) in x_t.iter().zip(fourier_components.iter_mut()) {
+            for j in 0..order {
+                let angle = x * (j as f64 + 1.0) / *period;
+                f.push(angle.sin());
+                f.push(angle.cos());
+            }
         }
         fourier_components
     }
@@ -1182,14 +1182,14 @@ impl Preprocessed {
 mod test_trend_component {
     use std::f64::consts::PI;
 
+    use augurs_testing::{assert_all_close, assert_approx_eq};
+    use chrono::{NaiveDate, TimeDelta};
+
+    use super::*;
     use crate::{
         optimizer::dummy_optimizer::DummyOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
     };
-
-    use super::*;
-    use augurs_testing::{assert_all_close, assert_approx_eq};
-    use chrono::{NaiveDate, TimeDelta};
 
     #[test]
     fn growth_init() {
@@ -1422,6 +1422,39 @@ mod test_trend_component {
         let changepoints_t = prophet.changepoints_t.as_ref().unwrap();
         assert_eq!(prophet.opts.n_changepoints, 15);
         assert_eq!(changepoints_t.len() as u32, 15);
+    }
+}
+
+#[cfg(test)]
+mod test_seasonal {
+    use augurs_testing::assert_approx_eq;
+
+    use super::*;
+    use crate::testdata::daily_univariate_ts;
+
+    #[test]
+    fn fourier_series_weekly() {
+        let data = daily_univariate_ts();
+        let mat = Prophet::fourier_series(&data.ds, 7.0.try_into().unwrap(), 3.try_into().unwrap());
+        let expected = &[
+            0.7818315, 0.6234898, 0.9749279, -0.2225209, 0.4338837, -0.9009689,
+        ];
+        for (a, b) in mat[0].iter().zip(expected) {
+            assert_approx_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn fourier_series_yearly() {
+        let data = daily_univariate_ts();
+        let mat =
+            Prophet::fourier_series(&data.ds, 365.25.try_into().unwrap(), 3.try_into().unwrap());
+        let expected = &[
+            0.7006152, -0.7135393, -0.9998330, 0.01827656, 0.7262249, 0.6874572,
+        ];
+        for (a, b) in mat[0].iter().zip(expected) {
+            assert_approx_eq!(a, b);
+        }
     }
 }
 
