@@ -28,7 +28,10 @@ impl Laplace {
 
 impl ::rand::distributions::Distribution<f64> for Laplace {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
-        let x: f64 = rng.gen_range(-0.5..0.5);
+        let mut x = rng.gen_range(-0.5_f64..0.5);
+        if x == -0.5 {
+            x += f64::EPSILON;
+        }
         self.location - self.scale * x.signum() * (1. - 2. * x.abs()).ln()
     }
 }
