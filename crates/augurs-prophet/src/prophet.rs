@@ -92,7 +92,9 @@ impl<O> Prophet<O> {
 
     /// Add a custom seasonality to the model.
     pub fn add_seasonality(&mut self, name: String, seasonality: Seasonality) -> Result<(), Error> {
-        // TODO: validate name
+        if self.seasonalities.contains_key(&name) {
+            return Err(Error::DuplicateSeasonality(name));
+        }
         self.seasonalities.insert(name, seasonality);
         Ok(())
     }

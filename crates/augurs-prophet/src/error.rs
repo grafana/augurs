@@ -27,6 +27,9 @@ pub enum Error {
     /// The timestamps provided are constant.
     #[error("Timestamps are constant: {0}")]
     TimestampsAreConstant(TimestampSeconds),
+    /// The same seasonality was added to the model twice.
+    #[error("Attempted to add a seasonality with the same name: {0}")]
+    DuplicateSeasonality(String),
     /// A column contained an infinite value.
     #[error("Found infinite value in column {column}")]
     InfiniteValue {
