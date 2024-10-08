@@ -81,6 +81,7 @@ Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/
 [`augurs-mstl`]: https://crates.io/crates/augurs-mstl
 [`augurs-js`]: https://crates.io/crates/augurs-js
 [`augurs-outlier`]: https://crates.io/crates/augurs-outlier
+[`augurs-prophet`]: https://crates.io/crates/augurs-prophet
 [`augurs-seasons`]: https://crates.io/crates/augurs-seasons
 [`augurs-testing`]: https://crates.io/crates/augurs-testing
 [`pyaugurs`]: https://crates.io/crates/pyaugurs
