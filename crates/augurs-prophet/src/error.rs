@@ -21,6 +21,11 @@ pub enum Error {
     /// Optimization failed for some reason.
     #[error("Optimization failed: {0}")]
     OptimizationFailed(String),
+    /// An invalid interval width was passed.
+    ///
+    /// The interval width must be between 0.0 and 1.0.
+    #[error("Invalid interval width: {0}; must be between 0.0 and 1.0")]
+    InvalidIntervalWidth(f64),
     /// Too many data points were provided, overflowing an `i32`.
     #[error("Too many data points: {0}, max is {}", i32::MAX)]
     TooManyDataPoints(usize),

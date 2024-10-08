@@ -6,7 +6,7 @@
 
 use std::{collections::HashMap, num::NonZeroU32};
 
-use crate::{FeatureMode, Holiday, PositiveFloat, TimestampSeconds, TrendIndicator};
+use crate::{Error, FeatureMode, Holiday, PositiveFloat, TimestampSeconds, TrendIndicator};
 
 /// The type of growth to use.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -70,6 +70,55 @@ pub enum EstimationMode {
     Map,
     /// Do full Bayesian inference with the specified number of MCMC samples.
     Mcmc(u32),
+}
+
+/// The width of the uncertainty intervals.
+///
+/// Must be between `0.0` and `1.0`. Common values are
+/// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
+///
+/// Defaults to `0.8` for 80% intervals.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct IntervalWidth(f64);
+
+impl Default for IntervalWidth {
+    fn default() -> Self {
+        Self(0.8)
+    }
+}
+
+impl IntervalWidth {
+    /// Attempt to create a new `IntervalWidth `.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the provided float is less than 0.0.
+    pub fn try_new(f: f64) -> Result<Self, Error> {
+        if !f.is_finite() || f <= 0.0 {
+            return Err(Error::InvalidIntervalWidth(f));
+        }
+        Ok(Self(f))
+    }
+}
+
+impl TryFrom<f64> for IntervalWidth {
+    type Error = Error;
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::try_new(value)
+    }
+}
+
+impl std::ops::Deref for IntervalWidth {
+    type Target = f64;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<IntervalWidth> for f64 {
+    fn from(value: IntervalWidth) -> Self {
+        value.0
+    }
 }
 
 // TODO: consider getting rid of this? It's a bit weird, but it might
@@ -139,7 +188,7 @@ pub struct OptProphetOptions {
     ///
     /// Must be between `0.0` and `1.0`. Common values are
     /// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
-    pub interval_width: Option<f64>,
+    pub interval_width: Option<IntervalWidth>,
 
     /// The number of simulated draws used to estimate uncertainty intervals.
     ///
@@ -291,8 +340,7 @@ pub struct ProphetOptions {
     /// `0.8` (80%), `0.9` (90%) and `0.95` (95%).
     ///
     /// Defaults to `0.8` for 80% intervals.
-    // TODO: add newtype wrapper for `f64` with range `0.0..=1.0`.
-    pub interval_width: f64,
+    pub interval_width: IntervalWidth,
 
     /// The number of simulated draws used to estimate uncertainty intervals.
     ///
@@ -338,7 +386,7 @@ impl Default for ProphetOptions {
             seasonality_prior_scale: 10.0.try_into().unwrap(),
             changepoint_prior_scale: 0.05.try_into().unwrap(),
             estimation: EstimationMode::Mle,
-            interval_width: 0.8,
+            interval_width: IntervalWidth::default(),
             uncertainty_samples: 1000,
             scaling: Scaling::AbsMax,
             holidays: HashMap::new(),

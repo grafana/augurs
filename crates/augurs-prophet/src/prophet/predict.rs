@@ -316,8 +316,8 @@ impl<O> Prophet<O> {
     ) -> Result<(), Error> {
         let mut sim_values =
             self.sample_posterior_predictive(df, features, params, changepoints_t, y_scale)?;
-        let lower_p = 100.0 * (1.0 - self.opts.interval_width) / 2.0;
-        let upper_p = 100.0 * (1.0 + self.opts.interval_width) / 2.0;
+        let lower_p = 100.0 * (1.0 - *self.opts.interval_width) / 2.0;
+        let upper_p = 100.0 * (1.0 + *self.opts.interval_width) / 2.0;
 
         let mut yhat_lower = Vec::with_capacity(df.ds.len());
         let mut yhat_upper = Vec::with_capacity(df.ds.len());

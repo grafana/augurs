@@ -30,7 +30,8 @@ pub use optimizer::{Algorithm, Optimizer, TrendIndicator};
 pub use positive_float::{PositiveFloat, TryFromFloatError};
 pub use prophet::{
     options::{
-        EstimationMode, GrowthType, OptProphetOptions, ProphetOptions, Scaling, SeasonalityOption,
+        EstimationMode, GrowthType, IntervalWidth, OptProphetOptions, ProphetOptions, Scaling,
+        SeasonalityOption,
     },
     predict::{FeaturePrediction, IncludeHistory, Predictions},
     Prophet,
