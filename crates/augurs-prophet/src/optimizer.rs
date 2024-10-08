@@ -193,13 +193,6 @@ pub trait Optimizer: std::fmt::Debug {
         data: Data,
         opts: OptimizeOpts,
     ) -> Result<OptimizedParams, Error>;
-
-    /// Cast the optimizer to an `Any` type.
-    ///
-    /// This is useful in tests to then downcast the optimizer
-    /// to a mock optimizer so we can inspect the optimization call.
-    #[cfg(test)]
-    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 #[cfg(test)]
@@ -261,11 +254,6 @@ pub mod mock_optimizer {
                 beta: init.beta.clone(),
                 trend: init.beta,
             })
-        }
-
-        #[cfg(test)]
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
         }
     }
 }
