@@ -772,6 +772,19 @@ mod test {
         assert_approx_eq!(rmse, 10.64, 1e-1);
 
         let lower = predictions.yhat.lower.as_ref().unwrap();
+        let upper = predictions.yhat.upper.as_ref().unwrap();
         assert_eq!(lower.len(), predictions.yhat.point.len());
+        for (lower_bound, point_estimate) in lower.iter().zip(&predictions.yhat.point) {
+            assert!(
+                lower_bound <= point_estimate,
+                "Lower bound should be less than the point estimate"
+            );
+        }
+        for (upper_bound, point_estimate) in upper.iter().zip(&predictions.yhat.point) {
+            assert!(
+                upper_bound >= point_estimate,
+                "Upper bound should be greater than the point estimate"
+            );
+        }
     }
 }
