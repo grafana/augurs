@@ -5,7 +5,7 @@ pub struct PositiveFloat(f64);
 
 /// An invalid float was provided when trying to create a [`PositiveFloat`].
 #[derive(Debug, thiserror::Error)]
-#[error("negative float provided: {0}")]
+#[error("invalid float provided: {0}")]
 pub struct TryFromFloatError(f64);
 
 impl PositiveFloat {
@@ -15,7 +15,7 @@ impl PositiveFloat {
     ///
     /// Returns an error if the provided float is less than 0.0.
     pub fn try_new(f: f64) -> Result<Self, TryFromFloatError> {
-        if f <= 0.0 {
+        if !f.is_finite() || f <= 0.0 {
             return Err(TryFromFloatError(f));
         }
         Ok(Self(f))
