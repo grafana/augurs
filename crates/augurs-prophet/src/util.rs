@@ -42,6 +42,33 @@ pub(crate) trait FloatIterExt<T: Float>: Iterator<Item = T> {
         })
         .unwrap_or_else(T::nan)
     }
+
+    /// Returns the mean of all elements in the iterator, handling NaN values.
+    ///
+    /// If `ignore_nans` is true, NaN values will be ignored and
+    /// not included in the mean.
+    /// Otherwise, the mean will be NaN if any element is NaN.
+    fn nanmean(self, ignore_nans: bool) -> T
+    where
+        Self: Sized,
+    {
+        let (n, sum) = self.fold((0, T::zero()), |(n, sum), x| {
+            if ignore_nans && x.is_nan() {
+                (n, sum)
+            } else if x.is_nan() || sum.is_nan() {
+                (n, T::nan())
+            } else {
+                (n + 1, sum + x)
+            }
+        });
+        if n == 0 {
+            T::nan()
+        } else if sum.is_nan() {
+            sum
+        } else {
+            sum / T::from(n).unwrap()
+        }
+    }
 }
 
 impl<T: Float, I: Iterator<Item = T>> FloatIterExt<T> for I {}

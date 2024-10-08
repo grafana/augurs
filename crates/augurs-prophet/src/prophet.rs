@@ -7,9 +7,11 @@ use std::{
 
 use itertools::{izip, Either, Itertools, MinMaxResult};
 use options::{GrowthType, ProphetOptions, Scaling, SeasonalityOption};
+use rand::{distributions::Uniform, thread_rng, Rng};
 use tracing::instrument;
 
 use crate::{
+    distributions::{Laplace, Normal, Poisson},
     features::RegressorScale,
     optimizer::{Data, InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
     Error, FeatureMode, FloatIterExt, Holiday, PositiveFloat, PredictionData, Regressor,
@@ -263,8 +265,6 @@ impl Prophet {
     /// Add a custom seasonality to the model.
     pub fn add_seasonality(&mut self, name: String, seasonality: Seasonality) -> Result<(), Error> {
         // TODO: validate name
-        // let prior_scale = prior_scale.unwrap_or(self.opts.seasonality_prior_scale);
-        // let mode = mode.unwrap_or(self.opts.seasonality_mode);
         self.seasonalities.insert(name, seasonality);
         Ok(())
     }
@@ -974,8 +974,8 @@ impl Prophet {
         else {
             return Err(Error::ModelNotFit);
         };
+        let data = data.into();
         let df = data
-            .into()
             .map(|data| {
                 let training_data = TrainingData {
                     n: data.n,
@@ -992,7 +992,7 @@ impl Prophet {
             .transpose()?
             .unwrap_or_else(|| processed.history.clone());
 
-        let trend = self.predict_trend(
+        let mut trend = self.predict_trend(
             &df.t,
             &df.cap,
             &df.floor,
@@ -1000,7 +1000,8 @@ impl Prophet {
             params,
             scales.y_scale,
         )?;
-        let seasonal_components = self.predict_features(&df, params, scales.y_scale)?;
+        let features = self.make_all_features(&df)?;
+        let seasonal_components = self.predict_features(&features, params, scales.y_scale)?;
 
         let yhat_point = izip!(
             &trend.point,
@@ -1009,13 +1010,23 @@ impl Prophet {
         )
         .map(|(t, a, m)| t * (1.0 + m) + a)
         .collect();
-        let yhat = FeaturePrediction {
+        let mut yhat = FeaturePrediction {
             point: yhat_point,
             lower: None,
             upper: None,
         };
 
-        // TODO: uncertainty.
+        if self.opts.uncertainty_samples > 0 {
+            self.predict_uncertainty(
+                &df,
+                &features,
+                params,
+                changepoints_t,
+                &mut yhat,
+                &mut trend,
+                scales.y_scale,
+            )?;
+        }
 
         Ok(Predictions {
             yhat,
@@ -1115,6 +1126,7 @@ impl Prophet {
         std::iter::repeat(m).take(t.len())
     }
 
+    /// Predict trend.
     fn predict_trend(
         &self,
         t: &[f64],
@@ -1158,7 +1170,7 @@ impl Prophet {
     /// Predict seasonality, holidays and added regressors.
     fn predict_features(
         &self,
-        data: &ProcessedData,
+        features: &Features,
         params: &OptimizedParams,
         y_scale: f64,
     ) -> Result<FeaturePredictions, Error> {
@@ -1166,24 +1178,19 @@ impl Prophet {
             features,
             component_columns,
             ..
-            // prior_scales,
-            // modes,
-        } = self.make_all_features(data)?;
-
-        let x = features.data;
-
+        } = features;
         // TODO: do the rest of the terms
         Ok(FeaturePredictions {
             additive: Self::predict_feature(
                 &component_columns.additive,
-                &x,
+                &features.data,
                 &params.beta,
                 y_scale,
                 true,
             ),
             multiplicative: Self::predict_feature(
                 &component_columns.multiplicative,
-                &x,
+                &features.data,
                 &params.beta,
                 y_scale,
                 false,
@@ -1220,6 +1227,222 @@ impl Prophet {
             lower: None,
             upper: None,
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn predict_uncertainty(
+        &self,
+        df: &ProcessedData,
+        features: &Features,
+        params: &OptimizedParams,
+        changepoints_t: &[f64],
+        yhat: &mut FeaturePrediction,
+        trend: &mut FeaturePrediction,
+        y_scale: f64,
+    ) -> Result<(), Error> {
+        let mut sim_values =
+            self.sample_posterior_predictive(df, features, params, changepoints_t, y_scale)?;
+        let lower_p = 100.0 * (1.0 - self.opts.interval_width) / 2.0;
+        let upper_p = 100.0 * (1.0 + self.opts.interval_width) / 2.0;
+
+        let mut yhat_lower = Vec::with_capacity(df.ds.len());
+        let mut yhat_upper = Vec::with_capacity(df.ds.len());
+        let mut trend_lower = Vec::with_capacity(df.ds.len());
+        let mut trend_upper = Vec::with_capacity(df.ds.len());
+
+        for (yhat_samples, trend_samples) in
+            sim_values.yhat.iter_mut().zip(sim_values.trend.iter_mut())
+        {
+            // Sort, since we need to find multiple percentiles.
+            yhat_samples
+                .sort_unstable_by(|a, b| a.partial_cmp(b).expect("found NaN in yhat sample"));
+            trend_samples
+                .sort_unstable_by(|a, b| a.partial_cmp(b).expect("found NaN in yhat sample"));
+            yhat_lower.push(percentile_of_sorted(yhat_samples, lower_p));
+            yhat_upper.push(percentile_of_sorted(yhat_samples, upper_p));
+            trend_lower.push(percentile_of_sorted(trend_samples, lower_p));
+            trend_upper.push(percentile_of_sorted(trend_samples, upper_p));
+        }
+        yhat.lower = Some(yhat_lower);
+        yhat.upper = Some(yhat_upper);
+        trend.lower = Some(trend_lower);
+        trend.upper = Some(trend_upper);
+        Ok(())
+    }
+
+    /// Sample posterior predictive values from the model.
+    fn sample_posterior_predictive(
+        &self,
+        df: &ProcessedData,
+        features: &Features,
+        params: &OptimizedParams,
+        changepoints_t: &[f64],
+        y_scale: f64,
+    ) -> Result<PosteriorPredictiveSamples, Error> {
+        // TODO: handle multiple chains.
+        let n_iterations = 1;
+        let samples_per_iter = usize::max(
+            1,
+            (self.opts.uncertainty_samples as f64 / n_iterations as f64).ceil() as usize,
+        );
+        let Features {
+            features,
+            component_columns,
+            ..
+        } = features;
+        // We're going to generate `samples_per_iter * n_iterations` samples
+        // for each of the `n` timestamps we want to predict.
+        // We'll store these in a nested `Vec<Vec<f64>>`, where the outer
+        // vector is indexed by the timestamps and the inner vector is
+        // indexed by the samples, since we need to calculate the `p` percentile
+        // of the samples for each timestamp.
+        let n_timestamps = df.ds.len();
+        let n_samples = samples_per_iter * n_iterations;
+        let mut sim_values = PosteriorPredictiveSamples {
+            yhat: std::iter::repeat_with(|| Vec::with_capacity(n_samples))
+                .take(n_timestamps)
+                .collect_vec(),
+            trend: std::iter::repeat_with(|| Vec::with_capacity(n_samples))
+                .take(n_timestamps)
+                .collect_vec(),
+        };
+        for i in 0..n_iterations {
+            for _ in 0..samples_per_iter {
+                let (yhat, trend) = self.sample_model(
+                    df,
+                    features,
+                    params,
+                    changepoints_t,
+                    &component_columns.additive,
+                    &component_columns.multiplicative,
+                    y_scale,
+                    i,
+                )?;
+                // We have to transpose things, unfortunately.
+                for ((i, yhat), trend) in yhat.into_iter().enumerate().zip(trend) {
+                    sim_values.yhat[i].push(yhat);
+                    sim_values.trend[i].push(trend);
+                }
+            }
+        }
+        debug_assert_eq!(sim_values.yhat.len(), n_timestamps);
+        debug_assert_eq!(sim_values.trend.len(), n_timestamps);
+        Ok(sim_values)
+    }
+
+    /// Simulate observations from the extrapolated model.
+    #[allow(clippy::too_many_arguments)]
+    fn sample_model(
+        &self,
+        df: &ProcessedData,
+        features: &FeaturesFrame,
+        params: &OptimizedParams,
+        changepoints_t: &[f64],
+        additive: &[i32],
+        multiplicative: &[i32],
+        y_scale: f64,
+        iteration: usize,
+    ) -> Result<(Vec<f64>, Vec<f64>), Error> {
+        let n = df.ds.len();
+        let trend = self.sample_predictive_trend(df, params, changepoints_t, y_scale, iteration)?;
+        let beta = &params.beta;
+        let mut xb_a = vec![0.0; n];
+        for (feature, b, a) in izip!(&features.data, beta, additive) {
+            for (p, x) in izip!(&mut xb_a, feature) {
+                *p += x * b * *a as f64;
+            }
+        }
+        xb_a.iter_mut().for_each(|x| *x *= y_scale);
+        let mut xb_m = vec![0.0; n];
+        for (feature, b, m) in izip!(&features.data, beta, multiplicative) {
+            for (p, x) in izip!(&mut xb_m, feature) {
+                *p += x * b * *m as f64;
+            }
+        }
+
+        let sigma = params.sigma_obs;
+        let dist = Normal::new(0.0, sigma).expect("sigma should be non-negative");
+        let mut rng = thread_rng();
+        let noise = (&mut rng).sample_iter(dist).take(n).map(|x| x * y_scale);
+
+        let yhat = izip!(&trend, &xb_a, &xb_m, noise)
+            .map(|(t, a, m, n)| t * (1.0 + m) + a + n)
+            .collect();
+
+        Ok((yhat, trend))
+    }
+
+    fn sample_predictive_trend(
+        &self,
+        df: &ProcessedData,
+        params: &OptimizedParams,
+        changepoints_t: &[f64],
+        y_scale: f64,
+        _iteration: usize, // This will be used when we implement MCMC predictions.
+    ) -> Result<Vec<f64>, Error> {
+        let deltas = &params.delta;
+
+        let t_max = df.t.iter().copied().nanmax(true);
+
+        let mut rng = thread_rng();
+
+        let n_changes = if t_max > 1.0 {
+            // Sample new changepoints from a Poisson process with rate n_cp on [1, T].
+            let n_cp = changepoints_t.len() as i32;
+            let lambda = n_cp as f64 * (t_max - 1.0);
+            // Lambda should always be positive, so this should never fail.
+            let dist = Poisson::new(lambda).expect("Valid Poisson distribution");
+            rng.sample(dist).round() as usize
+        } else {
+            0
+        };
+        let changepoints_t_new = if n_changes > 0 {
+            let mut cp_t_new = (&mut rng)
+                .sample_iter(Uniform::new(0.0, t_max - 1.0))
+                .take(n_changes)
+                .map(|x| x + 1.0)
+                .collect_vec();
+            cp_t_new.sort_unstable_by(|a, b| {
+                a.partial_cmp(b)
+                    .expect("uniform distribution should not sample NaNs")
+            });
+            cp_t_new
+        } else {
+            vec![]
+        };
+
+        // Get the empirical scale of the deltas, plus epsilon to avoid NaNs.
+        let mut lambda = deltas.iter().map(|x| x.abs()).nanmean(false) + 1e-8;
+        if lambda.is_nan() {
+            lambda = 1e-8;
+        }
+        // Sample deltas from a Laplace distribution with location 0 and scale lambda.
+        // Lambda should always be positive and non-NaN, checked above.
+        let dist = Laplace::new(0.0, lambda).expect("Valid Laplace distribution");
+        let deltas_new = rng.sample_iter(dist).take(n_changes);
+
+        // Prepend the times and deltas from the history.
+        let all_changepoints_t = changepoints_t
+            .iter()
+            .copied()
+            .chain(changepoints_t_new)
+            .collect_vec();
+        let all_deltas = deltas.iter().copied().chain(deltas_new).collect_vec();
+
+        // Predict the trend.
+        let new_params = OptimizedParams {
+            delta: all_deltas,
+            ..params.clone()
+        };
+        let trend = self.predict_trend(
+            &df.t,
+            &df.cap_scaled,
+            &df.floor,
+            &all_changepoints_t,
+            &new_params,
+            y_scale,
+        )?;
+        Ok(trend.point)
     }
 
     /// Create dates to use for predictions.
@@ -1290,6 +1513,12 @@ impl Prophet {
             .exactly_one()
             .map_err(|_| Error::UnableToInferFrequency(get_tried()))
     }
+}
+
+#[derive(Debug)]
+struct PosteriorPredictiveSamples {
+    yhat: Vec<Vec<f64>>,
+    trend: Vec<Vec<f64>>,
 }
 
 /// Whether to include the historical dates in the future dataframe for predictions.
@@ -1422,6 +1651,30 @@ impl Preprocessed {
         let k = (l0 - l1) / t_diff;
         Ok((k, m))
     }
+}
+
+// Taken from the Rust compiler's test suite:
+// https://github.com/rust-lang/rust/blob/917b0b6c70f078cb08bbb0080c9379e4487353c3/library/test/src/stats.rs#L258-L280.
+fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
+    assert!(!sorted_samples.is_empty());
+    if sorted_samples.len() == 1 {
+        return sorted_samples[0];
+    }
+    let zero: f64 = 0.0;
+    assert!(zero <= pct);
+    let hundred = 100_f64;
+    assert!(pct <= hundred);
+    if pct == hundred {
+        return sorted_samples[sorted_samples.len() - 1];
+    }
+    let length = (sorted_samples.len() - 1) as f64;
+    let rank = (pct / hundred) * length;
+    let lrank = rank.floor();
+    let d = rank - lrank;
+    let n = lrank as usize;
+    let lo = sorted_samples[n];
+    let hi = sorted_samples[n + 1];
+    lo + (hi - lo) * d
 }
 
 #[cfg(test)]
@@ -2246,5 +2499,8 @@ mod test_predict {
             / test.y.len() as f64)
             .sqrt();
         assert_approx_eq!(rmse, 10.64, 1e-1);
+
+        let lower = predictions.yhat.lower.as_ref().unwrap();
+        assert_eq!(lower.len(), predictions.yhat.point.len());
     }
 }
