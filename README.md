@@ -40,7 +40,7 @@ APIs are subject to change, and functionality may not be fully implemented.
 This project uses [`just`] as a command runner; this will need to be installed separately.
 See the [`justfile`](./justfile) for more information.
 
-Some of the tasks require `bacon`, which will also need to be installed separately.
+Some of the tasks require [`bacon`], which will also need to be installed separately.
 
 ## Releasing
 
