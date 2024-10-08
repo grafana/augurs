@@ -102,4 +102,17 @@ mod test {
         assert!(x.iter().copied().nanmin(false).is_nan());
         assert!(x.iter().copied().nanmax(false).is_nan());
     }
+
+    #[test]
+    fn nanmean() {
+        let x: &[f64] = &[-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        assert_eq!(x.iter().copied().nanmean(true), 0.0);
+
+        let y: &[f64] = &[-3.0, -2.0, -1.0, f64::NAN, 1.0, 2.0, 3.0];
+        assert_eq!(y.iter().copied().nanmean(true), 0.0);
+        assert!(y.iter().copied().nanmean(false).is_nan());
+
+        let z: &[f64] = &[f64::NAN, f64::NAN];
+        assert!(z.iter().copied().nanmean(true).is_nan());
+    }
 }
