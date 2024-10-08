@@ -27,7 +27,7 @@ struct Scales {
     y_scale: f64,
     start: TimestampSeconds,
     t_scale: f64,
-    extra_regressors: HashMap<String, RegressorScale>,
+    regressors: HashMap<String, RegressorScale>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -52,8 +52,8 @@ struct ComponentColumns {
     additive: Vec<i32>,
     multiplicative: Vec<i32>,
     holidays: Vec<i32>,
-    extra_regressors_additive: Vec<i32>,
-    extra_regressors_multiplicative: Vec<i32>,
+    regressors_additive: Vec<i32>,
+    regressors_multiplicative: Vec<i32>,
     custom: HashMap<String, Vec<i32>>,
 }
 
@@ -68,8 +68,8 @@ impl ComponentColumns {
             additive: vec![0; n_columns],
             multiplicative: vec![0; n_columns],
             holidays: vec![0; n_columns],
-            extra_regressors_additive: vec![0; n_columns],
-            extra_regressors_multiplicative: vec![0; n_columns],
+            regressors_additive: vec![0; n_columns],
+            regressors_multiplicative: vec![0; n_columns],
             custom: HashMap::new(),
         };
         for (i, name) in components {
@@ -82,10 +82,10 @@ impl ComponentColumns {
                 cols.multiplicative[i] = 1;
             } else if name == "holidays" {
                 cols.holidays[i] = 1;
-            } else if name == "extra_regressors_additive" {
-                cols.extra_regressors_additive[i] = 1;
-            } else if name == "extra_regressors_multiplicative" {
-                cols.extra_regressors_multiplicative[i] = 1;
+            } else if name == "regressors_additive" {
+                cols.regressors_additive[i] = 1;
+            } else if name == "regressors_multiplicative" {
+                cols.regressors_multiplicative[i] = 1;
             } else if name != NO_REGRESSORS_PLACEHOLDER {
                 // Don't add the placeholder column.
                 cols.custom
@@ -163,33 +163,93 @@ struct Features {
     modes: Modes,
 }
 
+/// The prediction for a feature.
+///
+/// 'Feature' could refer to the forecasts themselves (`yhat`)
+/// or any of the other component features which contribute to
+/// the final estimate, such as trend, seasonality, seasonalities,
+/// regressors or holidays.
 #[derive(Debug, Default, Clone)]
 pub struct FeaturePrediction {
+    /// The point estimate for this feature.
     pub point: Vec<f64>,
+    /// The lower estimate for this feature.
+    ///
+    /// Only present if `uncertainty_samples` was greater than zero
+    /// when the model was created.
     pub lower: Option<Vec<f64>>,
+    /// The upper estimate for this feature.
+    ///
+    /// Only present if `uncertainty_samples` was greater than zero
+    /// when the model was created.
     pub upper: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Default)]
 struct FeaturePredictions {
+    /// Contribution of the additive terms in the model.
+    ///
+    /// This includes additive seasonalities, holidays and regressors.
     additive: FeaturePrediction,
+    /// Contribution of the multiplicative terms in the model.
+    ///
+    /// This includes multiplicative seasonalities, holidays and regressors.
     multiplicative: FeaturePrediction,
+    /// Mapping from holiday name to the contribution of that holiday.
     holidays: HashMap<String, FeaturePrediction>,
-    extra_regressors: HashMap<String, FeaturePrediction>,
+    /// Mapping from regressor name to the contribution of that regressor.
+    regressors: HashMap<String, FeaturePrediction>,
+    /// Mapping from seasonality name to the contribution of that seasonality.
     seasonalities: HashMap<String, FeaturePrediction>,
 }
 
+/// Predictions from a Prophet model.
+///
+/// The `yhat` field contains the forecasts for the input time series.
+/// All other fields contain individual components of the model which
+/// contribute towards the final `yhat` estimate.
+///
+/// Certain fields (such as `cap` and `floor`) may be `None` if the
+/// model did not use them (e.g. the model was not configured to use
+/// logistic trend).
 #[derive(Debug, Clone)]
 pub struct Predictions {
+    /// Forecasts of the input time series `y`.
     pub yhat: FeaturePrediction,
+
+    /// The trend contribution at each time point.
     pub trend: FeaturePrediction,
+
+    /// The cap for the logistic growth.
+    ///
+    /// Will only be `Some` if the model used [`GrowthType::Logistic`].
     pub cap: Option<Vec<f64>>,
+    /// The floor for the logistic growth.
+    ///
+    /// Will only be `Some` if the model used [`GrowthType::Logistic`]
+    /// and the floor was provided in the input data.
     pub floor: Option<Vec<f64>>,
+
+    /// The combined combination of all _additive_ components.
+    ///
+    /// This includes seasonalities, holidays and regressors if their mode
+    /// was configured to be [`FeatureMode::Additive`].
     pub additive: FeaturePrediction,
+
+    /// The combined combination of all _multiplicative_ components.
+    ///
+    /// This includes seasonalities, holidays and regressors if their mode
+    /// was configured to be [`FeatureMode::Multiplicative`].
     pub multiplicative: FeaturePrediction,
+
+    /// Mapping from holiday name to that holiday's contribution.
     pub holidays: HashMap<String, FeaturePrediction>,
+
+    /// Mapping from seasonality name to that seasonality's contribution.
     pub seasonalities: HashMap<String, FeaturePrediction>,
-    pub extra_regressors: HashMap<String, FeaturePrediction>,
+
+    /// Mapping from regressor name to that regressor's contribution.
+    pub regressors: HashMap<String, FeaturePrediction>,
 }
 
 /// The Prophet time series forecasting model.
@@ -199,7 +259,7 @@ pub struct Prophet {
     opts: ProphetOptions,
 
     /// Extra regressors.
-    extra_regressors: HashMap<String, Regressor>,
+    regressors: HashMap<String, Regressor>,
 
     /// Custom seasonalities.
     seasonalities: HashMap<String, Seasonality>,
@@ -247,7 +307,7 @@ impl Prophet {
     pub fn new<T: Optimizer + 'static>(opts: ProphetOptions, optimizer: T) -> Self {
         Self {
             opts,
-            extra_regressors: HashMap::new(),
+            regressors: HashMap::new(),
             seasonalities: HashMap::new(),
             scales: None,
             changepoints: None,
@@ -271,7 +331,7 @@ impl Prophet {
 
     /// Add a regressor to the model.
     pub fn add_regressor(&mut self, name: String, regressor: Regressor) {
-        self.extra_regressors.insert(name, regressor);
+        self.regressors.insert(name, regressor);
     }
 
     fn preprocess(&mut self, mut data: TrainingData) -> Result<Preprocessed, Error> {
@@ -366,7 +426,7 @@ impl Prophet {
                 column: "y".to_string(),
             });
         }
-        for name in self.extra_regressors.keys() {
+        for name in self.regressors.keys() {
             if !x.contains_key(name) {
                 return Err(Error::MissingRegressor(name.clone()));
             }
@@ -433,7 +493,7 @@ impl Prophet {
             .map(|(y, floor)| (y - floor) / scales.y_scale)
             .collect();
 
-        for (name, regressor) in &scales.extra_regressors {
+        for (name, regressor) in &scales.regressors {
             let col = x
                 .get_mut(name)
                 .ok_or_else(|| Error::MissingRegressor(name.clone()))?;
@@ -449,7 +509,7 @@ impl Prophet {
             cap,
             cap_scaled,
             floor,
-            extra_regressors: x,
+            regressors: x,
             seasonality_conditions,
         };
         Ok((data, scales))
@@ -459,7 +519,7 @@ impl Prophet {
         &self,
         ds: &[TimestampSeconds],
         y: &[f64],
-        extra_regressors: &HashMap<String, Vec<f64>>,
+        regressors: &HashMap<String, Vec<f64>>,
         floor: &Option<Vec<f64>>,
         cap: &Option<Vec<f64>>,
     ) -> Result<Scales, Error> {
@@ -509,9 +569,9 @@ impl Prophet {
         scales.start = *ds.first().ok_or(Error::NotEnoughData)?;
         scales.t_scale = (*ds.last().ok_or(Error::NotEnoughData)? - scales.start) as f64;
 
-        for (name, regressor) in self.extra_regressors.iter() {
+        for (name, regressor) in self.regressors.iter() {
             // Standardize if requested.
-            let col = extra_regressors
+            let col = regressors
                 .get(name)
                 .ok_or(Error::MissingRegressor(name.clone()))?;
             // If there are 2 or fewer unique values, don't standardize.
@@ -533,9 +593,7 @@ impl Prophet {
                 regressor_scale.mu = mean;
                 regressor_scale.std = std;
             }
-            scales
-                .extra_regressors
-                .insert(name.clone(), regressor_scale);
+            scales.regressors.insert(name.clone(), regressor_scale);
         }
         Ok(scales)
     }
@@ -769,9 +827,9 @@ impl Prophet {
         }
 
         // Add regressors.
-        for (name, regressor) in &self.extra_regressors {
+        for (name, regressor) in &self.regressors {
             let col = history
-                .extra_regressors
+                .regressors
                 .get(name)
                 .ok_or_else(|| Error::MissingRegressor(name.clone()))?;
             features.push(FeatureName::Regressor(name.clone()), col.clone());
@@ -825,7 +883,7 @@ impl Prophet {
 
         // Add additive and multiplicative components, and regressors.
         let (additive_regressors, multiplicative_regressors) =
-            self.extra_regressors.iter().partition_map(|(name, reg)| {
+            self.regressors.iter().partition_map(|(name, reg)| {
                 if reg.mode == FeatureMode::Additive {
                     Either::Left(name.clone())
                 } else {
@@ -833,11 +891,7 @@ impl Prophet {
                 }
             });
         Self::add_group_component(&mut components, "additive_terms", &modes.additive);
-        Self::add_group_component(
-            &mut components,
-            "extra_regressors_additive",
-            &additive_regressors,
-        );
+        Self::add_group_component(&mut components, "regressors_additive", &additive_regressors);
         Self::add_group_component(
             &mut components,
             "multiplicative_terms",
@@ -845,20 +899,18 @@ impl Prophet {
         );
         Self::add_group_component(
             &mut components,
-            "extra_regressors_multiplicative",
+            "regressors_multiplicative",
             &multiplicative_regressors,
         );
         // Add the names of the group components to the modes.
         modes.additive.insert("additive_terms".to_string());
-        modes
-            .additive
-            .insert("extra_regressors_additive".to_string());
+        modes.additive.insert("regressors_additive".to_string());
         modes
             .multiplicative
             .insert("multiplicative_terms".to_string());
         modes
             .multiplicative
-            .insert("extra_regressors_multiplicative".to_string());
+            .insert("regressors_multiplicative".to_string());
 
         // Add holidays.
         modes.insert(self.opts.holidays_mode, "holidays".to_string());
@@ -1037,7 +1089,7 @@ impl Prophet {
             multiplicative: seasonal_components.multiplicative,
             holidays: seasonal_components.holidays,
             seasonalities: seasonal_components.seasonalities,
-            extra_regressors: seasonal_components.extra_regressors,
+            regressors: seasonal_components.regressors,
         })
     }
 
@@ -1539,7 +1591,7 @@ struct ProcessedData {
     cap: Option<Vec<f64>>,
     cap_scaled: Option<Vec<f64>>,
     floor: Vec<f64>,
-    extra_regressors: HashMap<String, Vec<f64>>,
+    regressors: HashMap<String, Vec<f64>>,
     seasonality_conditions: HashMap<String, Vec<bool>>,
 }
 
@@ -2159,12 +2211,9 @@ mod test_data_prep {
         assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 1, 1, 0, 1]);
         assert_eq!(cols.multiplicative, vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 0]);
         assert_eq!(cols.holidays, vec![0; 10]);
+        assert_eq!(cols.regressors_additive, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 1]);
         assert_eq!(
-            cols.extra_regressors_additive,
-            vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
-        );
-        assert_eq!(
-            cols.extra_regressors_multiplicative,
+            cols.regressors_multiplicative,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(cols.custom.len(), 5);
@@ -2194,12 +2243,12 @@ mod test_data_prep {
                     "numeric_feature".to_string(),
                     "binary_feature2".to_string(),
                     "holidays".to_string(),
-                    "extra_regressors_additive".to_string(),
+                    "regressors_additive".to_string(),
                     "additive_terms".to_string(),
                 ]),
                 multiplicative: HashSet::from([
                     "numeric_feature2".to_string(),
-                    "extra_regressors_multiplicative".to_string(),
+                    "regressors_multiplicative".to_string(),
                     "multiplicative_terms".to_string(),
                 ]),
             }
@@ -2263,13 +2312,13 @@ mod test_data_prep {
             (8, "additive_terms"),
             (9, "additive_terms"),
             (11, "additive_terms"),
-            (8, "extra_regressors_additive"),
-            (9, "extra_regressors_additive"),
-            (11, "extra_regressors_additive"),
+            (8, "regressors_additive"),
+            (9, "regressors_additive"),
+            (11, "regressors_additive"),
             (6, "multiplicative_terms"),
             (7, "multiplicative_terms"),
             (10, "multiplicative_terms"),
-            (10, "extra_regressors_multiplicative"),
+            (10, "regressors_multiplicative"),
         ]
         .map(|(i, name)| (i, name.to_string()));
         let cols = ComponentColumns::new(&components);
@@ -2280,11 +2329,11 @@ mod test_data_prep {
         );
         assert_eq!(cols.holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
         assert_eq!(
-            cols.extra_regressors_additive,
+            cols.regressors_additive,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
         );
         assert_eq!(
-            cols.extra_regressors_multiplicative,
+            cols.regressors_multiplicative,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(cols.custom.len(), 6);
