@@ -251,8 +251,8 @@ pub mod mock_optimizer {
                 m: init.m,
                 sigma_obs: init.sigma_obs,
                 delta: init.delta,
-                beta: init.beta.clone(),
-                trend: init.beta,
+                beta: init.beta,
+                trend: Vec::new(),
             })
         }
     }
