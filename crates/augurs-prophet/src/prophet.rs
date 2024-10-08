@@ -19,7 +19,7 @@ use crate::{
 
 /// The Prophet time series forecasting model.
 #[derive(Debug)]
-pub struct Prophet {
+pub struct Prophet<O> {
     /// Options to be used for fitting.
     opts: ProphetOptions,
 
@@ -55,7 +55,7 @@ pub struct Prophet {
     train_holiday_names: Option<HashSet<String>>,
 
     /// The optimizer to use.
-    optimizer: Box<dyn Optimizer>,
+    optimizer: O,
 
     /// The processed data used for fitting.
     processed: Option<Preprocessed>,
@@ -70,9 +70,9 @@ pub struct Prophet {
 // All public methods should live in this `impl` even if they call
 // lots of functions in private modules, so that Rustdoc shows them
 // all in a single block.
-impl Prophet {
+impl<O> Prophet<O> {
     /// Create a new Prophet model with the given options and optimizer.
-    pub fn new<T: Optimizer + 'static>(opts: ProphetOptions, optimizer: T) -> Self {
+    pub fn new(opts: ProphetOptions, optimizer: O) -> Self {
         Self {
             opts,
             regressors: HashMap::new(),
@@ -83,7 +83,7 @@ impl Prophet {
             component_modes: None,
             train_component_columns: None,
             train_holiday_names: None,
-            optimizer: Box::new(optimizer),
+            optimizer,
             processed: None,
             init: None,
             optimized: None,
@@ -100,20 +100,6 @@ impl Prophet {
     /// Add a regressor to the model.
     pub fn add_regressor(&mut self, name: String, regressor: Regressor) {
         self.regressors.insert(name, regressor);
-    }
-
-    /// Fit the Prophet model to some training data.
-    pub fn fit(&mut self, data: TrainingData, opts: OptimizeOpts) -> Result<(), Error> {
-        let preprocessed = self.preprocess(data)?;
-        let init = preprocessed.calculate_initial_params(&self.opts)?;
-        self.optimized = Some(
-            self.optimizer
-                .optimize(init.clone(), preprocessed.data.clone(), opts)
-                .map_err(|e| Error::OptimizationFailed(e.to_string()))?,
-        );
-        self.processed = Some(preprocessed);
-        self.init = Some(init);
-        Ok(())
     }
 
     /// Return `true` if the model has been fit, or `false` if not.
@@ -272,6 +258,22 @@ impl Prophet {
             .map(|(k, _)| k)
             .exactly_one()
             .map_err(|_| Error::UnableToInferFrequency(get_tried()))
+    }
+}
+
+impl<O: Optimizer> Prophet<O> {
+    /// Fit the Prophet model to some training data.
+    pub fn fit(&mut self, data: TrainingData, opts: OptimizeOpts) -> Result<(), Error> {
+        let preprocessed = self.preprocess(data)?;
+        let init = preprocessed.calculate_initial_params(&self.opts)?;
+        self.optimized = Some(
+            self.optimizer
+                .optimize(init.clone(), preprocessed.data.clone(), opts)
+                .map_err(|e| Error::OptimizationFailed(e.to_string()))?,
+        );
+        self.processed = Some(preprocessed);
+        self.init = Some(init);
+        Ok(())
     }
 }
 
@@ -465,7 +467,8 @@ mod test_seasonal {
     #[test]
     fn fourier_series_weekly() {
         let data = daily_univariate_ts();
-        let mat = Prophet::fourier_series(&data.ds, 7.0.try_into().unwrap(), 3.try_into().unwrap());
+        let mat =
+            Prophet::<()>::fourier_series(&data.ds, 7.0.try_into().unwrap(), 3.try_into().unwrap());
         let expected = &[
             0.7818315, 0.6234898, 0.9749279, -0.2225209, 0.4338837, -0.9009689,
         ];
@@ -479,8 +482,11 @@ mod test_seasonal {
     #[test]
     fn fourier_series_yearly() {
         let data = daily_univariate_ts();
-        let mat =
-            Prophet::fourier_series(&data.ds, 365.25.try_into().unwrap(), 3.try_into().unwrap());
+        let mat = Prophet::<()>::fourier_series(
+            &data.ds,
+            365.25.try_into().unwrap(),
+            3.try_into().unwrap(),
+        );
         let expected = &[
             0.7006152, -0.7135393, -0.9998330, 0.01827656, 0.7262249, 0.6874572,
         ];
@@ -523,7 +529,7 @@ mod test_fit {
         let mut prophet = Prophet::new(opts, opt);
         prophet.fit(train.clone(), Default::default()).unwrap();
         // Make sure our optimizer was called correctly.
-        let opt: &MockOptimizer = prophet.optimizer.as_any().downcast_ref().unwrap();
+        let opt: &MockOptimizer = &prophet.optimizer;
         let call = opt.take_call().unwrap();
         assert_eq!(
             call.init,

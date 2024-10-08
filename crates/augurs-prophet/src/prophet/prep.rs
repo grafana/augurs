@@ -158,7 +158,7 @@ pub(super) struct Features {
     pub(super) modes: Modes,
 }
 
-impl Prophet {
+impl<O> Prophet<O> {
     pub(super) fn preprocess(&mut self, mut data: TrainingData) -> Result<Preprocessed, Error> {
         let n = data.ds.len();
         if n != data.y.len() {
@@ -1196,7 +1196,7 @@ mod test {
             (7, "birthday".to_string()),
         ];
         let names = HashSet::from(["birthday".to_string()]);
-        Prophet::add_group_component(&mut components, "holidays", &names);
+        Prophet::<()>::add_group_component(&mut components, "holidays", &names);
         assert_eq!(
             components,
             vec![

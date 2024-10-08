@@ -119,7 +119,7 @@ pub(super) struct PosteriorPredictiveSamples {
     pub(super) trend: Vec<Vec<f64>>,
 }
 
-impl Prophet {
+impl<O> Prophet<O> {
     /// Predict trend.
     pub(super) fn predict_trend(
         &self,
@@ -132,24 +132,19 @@ impl Prophet {
     ) -> Result<FeaturePrediction, Error> {
         let point = match (self.opts.growth, cap) {
             (GrowthType::Linear, _) => {
-                Prophet::piecewise_linear(t, &params.delta, params.k, params.m, changepoints_t)
+                Self::piecewise_linear(t, &params.delta, params.k, params.m, changepoints_t)
                     .zip(floor)
                     .map(|(trend, flr)| trend * y_scale + flr)
                     .collect_vec()
             }
-            (GrowthType::Logistic, Some(cap)) => Prophet::piecewise_logistic(
-                t,
-                cap,
-                &params.delta,
-                params.k,
-                params.m,
-                changepoints_t,
-            )
-            .zip(floor)
-            .map(|(trend, flr)| trend * y_scale + flr)
-            .collect_vec(),
+            (GrowthType::Logistic, Some(cap)) => {
+                Self::piecewise_logistic(t, cap, &params.delta, params.k, params.m, changepoints_t)
+                    .zip(floor)
+                    .map(|(trend, flr)| trend * y_scale + flr)
+                    .collect_vec()
+            }
             (GrowthType::Logistic, None) => return Err(Error::MissingCap),
-            (GrowthType::Flat, _) => Prophet::flat_trend(t, params.m)
+            (GrowthType::Flat, _) => Self::flat_trend(t, params.m)
                 .zip(floor)
                 .map(|(trend, flr)| trend * y_scale + flr)
                 .collect_vec(),
@@ -567,18 +562,19 @@ mod test {
         let k = 1.0;
         let deltas = vec![0.5];
         let changepoints_t = vec![5.0];
-        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
+        let y = Prophet::<()>::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5];
         assert_eq!(y, y_true);
 
-        let y = Prophet::piecewise_linear(&t[8..], &deltas, k, m, &changepoints_t).collect_vec();
+        let y =
+            Prophet::<()>::piecewise_linear(&t[8..], &deltas, k, m, &changepoints_t).collect_vec();
         assert_eq!(y, y_true[8..]);
 
         // This test isn't in the Python version but it's worth having one with multiple
         // changepoints.
         let deltas = vec![0.4, 0.5];
         let changepoints_t = vec![4.0, 8.0];
-        let y = Prophet::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
+        let y = Prophet::<()>::piecewise_linear(&t, &deltas, k, m, &changepoints_t).collect_vec();
         let y_true = &[0.0, 1.0, 2.0, 3.0, 4.0, 5.4, 6.8, 8.2, 9.6, 11.5, 13.4];
         for (a, b) in y.iter().zip(y_true) {
             assert_approx_eq!(a, b);
@@ -593,7 +589,8 @@ mod test {
         let k = 1.0;
         let deltas = vec![0.5];
         let changepoints_t = vec![5.0];
-        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t).collect_vec();
+        let y = Prophet::<()>::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t)
+            .collect_vec();
         let y_true = &[
             5.000000, 7.310586, 8.807971, 9.525741, 9.820138, 9.933071, 9.984988, 9.996646,
             9.999252, 9.999833, 9.999963,
@@ -602,8 +599,9 @@ mod test {
             assert_approx_eq!(a, b);
         }
 
-        let y = Prophet::piecewise_logistic(&t[8..], &cap[8..], &deltas, k, m, &changepoints_t)
-            .collect_vec();
+        let y =
+            Prophet::<()>::piecewise_logistic(&t[8..], &cap[8..], &deltas, k, m, &changepoints_t)
+                .collect_vec();
         for (a, b) in y.iter().zip(&y_true[8..]) {
             assert_approx_eq!(a, b);
         }
@@ -612,7 +610,8 @@ mod test {
         // changepoints.
         let deltas = vec![0.4, 0.5];
         let changepoints_t = vec![4.0, 8.0];
-        let y = Prophet::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t).collect_vec();
+        let y = Prophet::<()>::piecewise_logistic(&t, &cap, &deltas, k, m, &changepoints_t)
+            .collect_vec();
         let y_true = &[
             5., 7.31058579, 8.80797078, 9.52574127, 9.8201379, 9.95503727, 9.98887464, 9.99725422,
             9.99932276, 9.9998987, 9.99998485,
@@ -626,10 +625,10 @@ mod test {
     fn flat_trend() {
         let t = (0..11).map(f64::from).collect_vec();
         let m = 0.5;
-        let y = Prophet::flat_trend(&t, m).collect_vec();
+        let y = Prophet::<()>::flat_trend(&t, m).collect_vec();
         assert_all_close(&y, &[0.5; 11]);
 
-        let y = Prophet::flat_trend(&t[8..], m).collect_vec();
+        let y = Prophet::<()>::flat_trend(&t[8..], m).collect_vec();
         assert_all_close(&y, &[0.5; 3]);
     }
 
