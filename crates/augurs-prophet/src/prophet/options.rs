@@ -118,7 +118,7 @@ pub struct OptProphetOptions {
     /// dampening the seasonality.
     ///
     /// Can be specified for individual seasonalities
-    /// using [`Prophet::add_seasonality`].
+    /// using [`Prophet::add_seasonality`](crate::Prophet::add_seasonality).
     pub seasonality_prior_scale: Option<PositiveFloat>,
 
     /// The prior scale for changepoints.
@@ -262,7 +262,7 @@ pub struct ProphetOptions {
     /// dampening the seasonality.
     ///
     /// Can be specified for individual seasonalities
-    /// using [`Prophet::add_seasonality`].
+    /// using [`Prophet::add_seasonality`](crate::Prophet::add_seasonality).
     ///
     /// Defaults to `10.0`.
     pub seasonality_prior_scale: PositiveFloat,

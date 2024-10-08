@@ -61,7 +61,7 @@ pub enum Error {
     Notimplemented,
     /// The Prophet model has not yet been fit.
     ///
-    /// Fit the model first using [`Prophet::fit`].
+    /// Fit the model first using [`Prophet::fit`](crate::Prophet::fit).
     #[error("Model has not been fit")]
     ModelNotFit,
     /// It was not possible to infer the frequency of the dates.

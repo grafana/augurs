@@ -190,7 +190,7 @@ impl Seasonality {
     /// A column with the provided condition name must be
     /// present in the data passed to Prophet otherwise
     /// training will fail. This can be added with
-    /// [`TrainingData::with_seasonality_indicators`].
+    /// [`TrainingData::with_seasonality_conditions`](crate::TrainingData::with_seasonality_conditions).
     pub fn with_condition(mut self, condition_name: String) -> Self {
         self.condition_name = Some(condition_name);
         self

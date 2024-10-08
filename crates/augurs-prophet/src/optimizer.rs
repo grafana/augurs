@@ -182,7 +182,8 @@ enum ErrorKind {
     Custom(#[from] Box<dyn std::error::Error>),
 }
 
-/// A type that can run maximum likelihood estimation optimization.
+/// A type that can run maximum likelihood estimation optimization
+/// for the Prophet model.
 pub trait Optimizer: std::fmt::Debug {
     /// Find the maximum likelihood estimate of the parameters given the
     /// data, initial parameters and optimization options.
