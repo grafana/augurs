@@ -1,6 +1,6 @@
-use num_traits::Float;
+use num_traits::{Float, FromPrimitive};
 
-pub(crate) trait FloatIterExt<T: Float>: Iterator<Item = T> {
+pub(crate) trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     /// Returns the minimum of all elements in the iterator, handling NaN values.
     ///
     /// If `ignore_nans` is true, NaN values will be ignored and
@@ -66,12 +66,12 @@ pub(crate) trait FloatIterExt<T: Float>: Iterator<Item = T> {
         } else if sum.is_nan() {
             sum
         } else {
-            sum / T::from(n).unwrap()
+            sum / T::from_usize(n).unwrap_or_else(|| T::nan())
         }
     }
 }
 
-impl<T: Float, I: Iterator<Item = T>> FloatIterExt<T> for I {}
+impl<T: Float + FromPrimitive, I: Iterator<Item = T>> FloatIterExt<T> for I {}
 
 #[cfg(test)]
 mod test {
