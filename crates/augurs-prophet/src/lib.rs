@@ -19,7 +19,7 @@ mod testdata;
 mod util;
 
 /// A timestamp represented as seconds since the epoch.
-pub type TimestampSeconds = u64;
+pub type TimestampSeconds = i64;
 
 // Re-export everything at the root so that users don't have to
 // navigate the module hierarchy.

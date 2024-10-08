@@ -11,11 +11,11 @@ enum Ds {
     DateTime(DateTime<Utc>),
 }
 impl Ds {
-    fn timestamp(&self) -> u64 {
-        (match self {
+    fn timestamp(&self) -> TimestampSeconds {
+        match self {
             Ds::Date(d) => d.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp(),
             Ds::DateTime(dt) => dt.timestamp(),
-        }) as u64
+        }
     }
 }
 

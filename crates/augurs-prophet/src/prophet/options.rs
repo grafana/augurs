@@ -6,7 +6,7 @@
 
 use std::{collections::HashMap, num::NonZeroU32};
 
-use crate::{FeatureMode, Holiday, PositiveFloat, TrendIndicator};
+use crate::{FeatureMode, Holiday, PositiveFloat, TimestampSeconds, TrendIndicator};
 
 /// The type of growth to use.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -83,7 +83,7 @@ pub struct OptProphetOptions {
     /// An optional list of changepoints.
     ///
     /// If not provided, changepoints will be automatically selected.
-    pub changepoints: Option<Vec<u64>>,
+    pub changepoints: Option<Vec<TimestampSeconds>>,
 
     /// The number of potential changepoints to include.
     ///
@@ -215,7 +215,7 @@ pub struct ProphetOptions {
     /// An optional list of changepoints.
     ///
     /// If not provided, changepoints will be automatically selected.
-    pub changepoints: Option<Vec<u64>>,
+    pub changepoints: Option<Vec<TimestampSeconds>>,
 
     /// The number of potential changepoints to include.
     ///

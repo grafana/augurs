@@ -69,5 +69,5 @@ pub enum Error {
     /// This can happen if the dates are not evenly spaced, and
     /// there is no frequency that appears more often than others.
     #[error("Unable to infer frequency from dates: {0:?}")]
-    UnableToInferFrequency(Vec<u64>),
+    UnableToInferFrequency(Vec<TimestampSeconds>),
 }

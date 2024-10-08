@@ -577,7 +577,10 @@ impl Prophet {
         Ok(n)
     }
 
-    fn construct_holidays(&self, _ds: &[u64]) -> Result<HashMap<String, Holiday>, Error> {
+    fn construct_holidays(
+        &self,
+        _ds: &[TimestampSeconds],
+    ) -> Result<HashMap<String, Holiday>, Error> {
         let mut all_holidays = self.opts.holidays.clone();
         // TODO: handle country holidays.
 

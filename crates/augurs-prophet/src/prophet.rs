@@ -226,7 +226,7 @@ impl Prophet {
         };
         let freq = Self::infer_freq(history_dates)?;
         let last_date = *history_dates.last().ok_or(Error::NotEnoughData)?;
-        let n = horizon.get() as u64 + 1;
+        let n = (horizon.get() as u64 + 1) as TimestampSeconds;
         let dates = (last_date..last_date + n * freq)
             .step_by(freq as usize)
             .filter(|ds| *ds > last_date)
