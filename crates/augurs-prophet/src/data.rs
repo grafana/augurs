@@ -289,7 +289,7 @@ impl PredictionData {
                 });
             }
             if reg.iter().any(|x| x.is_nan()) {
-                return Err(Error::InfiniteValue {
+                return Err(Error::NaNValue {
                     column: name.clone(),
                 });
             }
