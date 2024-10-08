@@ -7,7 +7,7 @@ use crate::{
     distributions::{Laplace, Normal, Poisson},
     optimizer::OptimizedParams,
     util::FloatIterExt,
-    Error, GrowthType, Prophet,
+    Error, GrowthType, Prophet, TimestampSeconds,
 };
 
 use super::prep::{Features, FeaturesFrame, ProcessedData};
@@ -63,6 +63,9 @@ pub(super) struct FeaturePredictions {
 /// logistic trend).
 #[derive(Debug, Clone)]
 pub struct Predictions {
+    /// The timestamps of the forecasts.
+    pub ds: Vec<TimestampSeconds>,
+
     /// Forecasts of the input time series `y`.
     pub yhat: FeaturePrediction,
 

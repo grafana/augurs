@@ -192,6 +192,7 @@ impl Prophet {
         }
 
         Ok(Predictions {
+            ds: df.ds,
             yhat,
             trend,
             cap: df.cap,
