@@ -56,9 +56,6 @@ pub enum Error {
     /// of the range of the training data.
     #[error("Changepoints must fall within training data")]
     ChangepointsOutOfRange,
-    /// The feature has not yet been implemented.
-    #[error("Not implemented")]
-    Notimplemented,
     /// The Prophet model has not yet been fit.
     ///
     /// Fit the model first using [`Prophet::fit`](crate::Prophet::fit).
