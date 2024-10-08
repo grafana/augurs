@@ -863,7 +863,7 @@ impl Preprocessed {
             m,
             delta: vec![0.0; self.data.t_change.len()],
             beta: vec![0.0; self.data.K as usize],
-            sigma_obs: 1.0,
+            sigma_obs: 1.0.try_into().unwrap(),
         })
     }
 

@@ -440,7 +440,7 @@ impl Prophet {
         }
 
         let sigma = params.sigma_obs;
-        let dist = Normal::new(0.0, sigma).expect("sigma should be non-negative");
+        let dist = Normal::new(0.0, *sigma).expect("sigma must be non-negative");
         let mut rng = thread_rng();
         let noise = (&mut rng).sample_iter(dist).take(n).map(|x| x * y_scale);
 
@@ -657,7 +657,7 @@ mod test {
         prophet.optimized = Some(OptimizedParams {
             k: -1.01136,
             m: 0.460947,
-            sigma_obs: 0.0451108,
+            sigma_obs: 0.0451108.try_into().unwrap(),
             beta: vec![
                 0.0205064,
                 -0.0129451,

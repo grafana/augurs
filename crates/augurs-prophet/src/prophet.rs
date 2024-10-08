@@ -532,7 +532,7 @@ mod test_fit {
                 delta: vec![0.0; 25],
                 k: 0.29834791059280863,
                 m: 0.5307510759405802,
-                sigma_obs: 1.0
+                sigma_obs: 1.0.try_into().unwrap(),
             }
         );
         assert_eq!(call.data.T, 480);

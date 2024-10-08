@@ -35,7 +35,7 @@ pub struct InitialParams {
     /// Regressor coefficients, length k in data.
     pub beta: Vec<f64>,
     /// Observation noise.
-    pub sigma_obs: f64,
+    pub sigma_obs: PositiveFloat,
 }
 
 /// The type of trend to use.
@@ -134,7 +134,7 @@ pub struct OptimizedParams {
     /// Trend offset.
     pub m: f64,
     /// Observation noise.
-    pub sigma_obs: f64,
+    pub sigma_obs: PositiveFloat,
     /// Trend rate adjustments.
     pub delta: Vec<f64>,
     /// Regressor coefficients.
