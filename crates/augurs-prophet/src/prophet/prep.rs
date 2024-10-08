@@ -414,7 +414,9 @@ impl<O> Prophet<O> {
             }
             if regressor_scale.standardize {
                 let mean = vals.iter().sum::<f64>() / vals.len() as f64;
-                let std = vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>().sqrt();
+                let variance =
+                    vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / vals.len() as f64;
+                let std = variance.sqrt();
                 regressor_scale.mu = mean;
                 regressor_scale.std = std;
             }
