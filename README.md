@@ -29,10 +29,18 @@ APIs are subject to change, and functionality may not be fully implemented.
 | [`augurs-ets`][]         | Automatic exponential smoothing models                                       | alpha - non-seasonal models working and tested against statsforecast |
 | [`augurs-mstl`][]        | Multiple Seasonal Trend Decomposition using LOESS (MSTL)                     | beta - working and tested against R                                  |
 | [`augurs-outlier`][]     | Outlier detection for time series                                            | alpha                                                                |
+| [`augurs-prophet`][]     | The Prophet time series forecasting algorithm                                | alpha                                                                |
 | [`augurs-seasons`][]     | Seasonality detection using periodograms                                     | alpha - working and tested against Python in limited scenarios       |
 | [`augurs-testing`][]     | Testing data and, eventually, evaluation harness for implementations         | alpha - just data right now                                          |
 | [`augurs-js`][]          | WASM bindings to augurs                                                      | alpha                                                                |
 | [`pyaugurs`][]           | Python bindings to augurs                                                    | alpha                                                                |
+
+## Developing
+
+This project uses [`just`] as a command runner; this will need to be installed separately.
+See the [`justfile`](./justfile) for more information.
+
+Some of the tasks require `bacon`, which will also need to be installed separately.
 
 ## Releasing
 
@@ -76,3 +84,5 @@ Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/
 [`augurs-seasons`]: https://crates.io/crates/augurs-seasons
 [`augurs-testing`]: https://crates.io/crates/augurs-testing
 [`pyaugurs`]: https://crates.io/crates/pyaugurs
+[`just`]: https://just.systems/man/en/
+[`bacon`]: https://dystroy.org/bacon
