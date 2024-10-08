@@ -33,6 +33,12 @@ pub enum Error {
         /// The name of the column that contained an infinite value.
         column: String,
     },
+    /// A column contained a NaN value.
+    #[error("Found NaN value in column {column}")]
+    NaNValue {
+        /// The name of the column that contained a NaN value.
+        column: String,
+    },
     /// A regressor was added to the model but missing from the data.
     #[error("Missing regressor: {0}")]
     MissingRegressor(String),
