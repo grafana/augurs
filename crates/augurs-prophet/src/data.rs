@@ -22,6 +22,10 @@ pub struct TrainingData {
 
 impl TrainingData {
     /// Create some input data for Prophet.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lengths of `ds` and `y` differ.
     pub fn new(ds: Vec<TimestampSeconds>, y: Vec<f64>) -> Result<Self, Error> {
         if ds.len() != y.len() {
             return Err(Error::MismatchedLengths {
@@ -43,6 +47,10 @@ impl TrainingData {
     }
 
     /// Add the cap for logistic growth.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lengths of `ds` and `cap` differ.
     pub fn with_cap(mut self, cap: Vec<f64>) -> Result<Self, Error> {
         if self.n != cap.len() {
             return Err(Error::MismatchedLengths {
@@ -57,6 +65,10 @@ impl TrainingData {
     }
 
     /// Add the floor for logistic growth.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lengths of `ds` and `floor` differ.
     pub fn with_floor(mut self, floor: Vec<f64>) -> Result<Self, Error> {
         if self.n != floor.len() {
             return Err(Error::MismatchedLengths {
@@ -71,6 +83,11 @@ impl TrainingData {
     }
 
     /// Add condition columns for conditional seasonalities.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lengths of `ds` and any of the seasonality
+    /// condition columns differ.
     pub fn with_seasonality_conditions(
         mut self,
         seasonality_conditions: HashMap<String, Vec<bool>>,
@@ -90,6 +107,11 @@ impl TrainingData {
     }
 
     /// Add regressors.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lengths of `ds` and any of the regressor
+    /// columns differ.
     pub fn with_regressors(mut self, x: HashMap<String, Vec<f64>>) -> Result<Self, Error> {
         for (name, reg) in x.iter() {
             if self.n != reg.len() {
