@@ -107,7 +107,7 @@ impl From<bool> for Standardize {
 ///
 /// This will be inserted into [`Scales::extra_regressors`]
 /// if the regressor is standardized.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(crate) struct RegressorScale {
     /// Whether to standardize this regressor.
     ///
@@ -119,6 +119,16 @@ pub(crate) struct RegressorScale {
     pub(crate) mu: f64,
     /// The standard deviation of the regressor.
     pub(crate) std: f64,
+}
+
+impl Default for RegressorScale {
+    fn default() -> Self {
+        Self {
+            standardize: false,
+            mu: 0.0,
+            std: 1.0,
+        }
+    }
 }
 
 /// An exogynous regressor.

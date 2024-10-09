@@ -442,22 +442,20 @@ impl<O> Prophet<O> {
             let mut vals = col.to_vec();
             vals.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             vals.dedup();
-            if vals.len() < 2 {
-                continue;
-            }
-
             let mut regressor_scale = RegressorScale::default();
-            if regressor.standardize == Standardize::Auto {
-                regressor_scale.standardize =
-                    !(vals.len() == 2 && vals[0] == 0.0 && vals[1] == 1.0);
-            }
-            if regressor_scale.standardize {
-                let mean = vals.iter().sum::<f64>() / vals.len() as f64;
-                let variance =
-                    vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / vals.len() as f64;
-                let std = variance.sqrt();
-                regressor_scale.mu = mean;
-                regressor_scale.std = std;
+            if vals.len() >= 2 {
+                if regressor.standardize == Standardize::Auto {
+                    regressor_scale.standardize =
+                        !(vals.len() == 2 && vals[0] == 0.0 && vals[1] == 1.0);
+                }
+                if regressor_scale.standardize {
+                    let mean = vals.iter().sum::<f64>() / vals.len() as f64;
+                    let variance =
+                        vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / vals.len() as f64;
+                    let std = variance.sqrt();
+                    regressor_scale.mu = mean;
+                    regressor_scale.std = std;
+                }
             }
             scales.regressors.insert(name.clone(), regressor_scale);
         }
@@ -1447,5 +1445,24 @@ mod test {
             cols.regressors["binary_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
+    }
+
+    #[test]
+    fn constant_regressor() {
+        let data = daily_univariate_ts();
+        let n = data.len();
+        let data = data
+            .with_regressors(
+                HashMap::from([("constant_feature".to_string(), vec![0.0; n])])
+                    .into_iter()
+                    .collect(),
+            )
+            .unwrap();
+        let mut prophet = Prophet::new(ProphetOptions::default(), MockOptimizer::new());
+        prophet.add_regressor("constant_feature".to_string(), Regressor::additive());
+        prophet.fit(data, Default::default()).unwrap();
+        let reg_scales = &prophet.scales.unwrap().regressors["constant_feature"];
+        assert_approx_eq!(reg_scales.mu, 0.0);
+        assert_approx_eq!(reg_scales.std, 1.0);
     }
 }
