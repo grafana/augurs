@@ -510,13 +510,16 @@ mod test_seasonal {
 
 #[cfg(test)]
 mod test_custom_seasonal {
+    use std::collections::HashMap;
+
     use chrono::NaiveDate;
+    use itertools::Itertools;
 
     use crate::{
         optimizer::mock_optimizer::MockOptimizer,
         prophet::prep::{FeatureName, Features},
         testdata::daily_univariate_ts,
-        FeatureMode, Holiday, ProphetOptions, Seasonality,
+        FeatureMode, Holiday, ProphetOptions, Seasonality, SeasonalityOption,
     };
 
     use super::Prophet;
@@ -542,7 +545,7 @@ mod test_custom_seasonal {
             )]
             .into(),
             seasonality_mode: FeatureMode::Multiplicative,
-            yearly_seasonality: crate::SeasonalityOption::Manual(false),
+            yearly_seasonality: SeasonalityOption::Manual(false),
             ..Default::default()
         };
 
@@ -629,6 +632,64 @@ mod test_custom_seasonal {
             ]
             .map(|x| x.try_into().unwrap());
             assert_eq!(&prior_scales, &expected_prior_scales);
+        }
+    }
+
+    #[test]
+    fn conditional_custom_seasonality() {
+        // Set up data.
+        let mut data = daily_univariate_ts();
+        let condition_col = [[false; 255], [true; 255]].concat();
+        let conditions =
+            HashMap::from([("is_conditional_week".to_string(), condition_col.clone())]);
+        data = data.with_seasonality_conditions(conditions).unwrap();
+
+        // Set up Prophet model.
+        let opts = ProphetOptions {
+            yearly_seasonality: SeasonalityOption::Manual(false),
+            weekly_seasonality: SeasonalityOption::Manual(false),
+            ..Default::default()
+        };
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
+        prophet
+            .add_seasonality(
+                "conditional_weekly".to_string(),
+                Seasonality::new(7.0.try_into().unwrap(), 3.try_into().unwrap())
+                    .with_prior_scale(2.0.try_into().unwrap())
+                    .with_condition("is_conditional_week".to_string())
+                    .with_mode(FeatureMode::Additive),
+            )
+            .unwrap();
+        prophet
+            .add_seasonality(
+                "normal_monthly".to_string(),
+                Seasonality::new(30.5.try_into().unwrap(), 5.try_into().unwrap())
+                    .with_prior_scale(2.0.try_into().unwrap())
+                    .with_mode(FeatureMode::Additive),
+            )
+            .unwrap();
+
+        prophet.fit(data, Default::default()).unwrap();
+        prophet.predict(None).unwrap();
+
+        let Features { features, .. } = prophet
+            .make_all_features(&prophet.processed.as_ref().unwrap().history)
+            .unwrap();
+        let condition_features = features
+            .names
+            .iter()
+            .zip(&features.data)
+            .filter(|(name, _)| {
+                matches!(name, FeatureName::Seasonality { name, .. } if name == "conditional_weekly")
+            })
+            .collect_vec();
+        // Check that each of the condition features is zero everywhere except
+        // where the condition column is true.
+        for (_, condition_feature) in condition_features {
+            assert_eq!(condition_col.len(), condition_feature.len());
+            for (cond, f) in condition_col.iter().zip(condition_feature) {
+                assert_eq!(*f != 0.0, *cond);
+            }
         }
     }
 }

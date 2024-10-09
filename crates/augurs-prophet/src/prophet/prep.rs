@@ -298,7 +298,7 @@ impl<O> Prophet<O> {
         }
         for Seasonality { condition_name, .. } in self.seasonalities.values() {
             if let Some(condition_name) = condition_name {
-                if !x.contains_key(condition_name) {
+                if !seasonality_conditions.contains_key(condition_name) {
                     return Err(Error::MissingSeasonalityCondition(condition_name.clone()));
                 }
                 // No need to check lengths or inf, we do that in [`TrainingData::with_regressors`].
