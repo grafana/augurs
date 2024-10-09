@@ -3,7 +3,7 @@ use std::{
     num::NonZeroU32,
 };
 
-use itertools::{Either, Itertools, MinMaxResult};
+use itertools::{izip, Either, Itertools, MinMaxResult};
 
 use crate::{
     features::RegressorScale,
@@ -13,7 +13,10 @@ use crate::{
     Seasonality, SeasonalityOption, Standardize, TimestampSeconds, TrainingData,
 };
 
-const NO_REGRESSORS_PLACEHOLDER: &str = "__no_regressors_zeros__";
+const ONE_YEAR_IN_SECONDS: f64 = 365.25 * 24.0 * 60.0 * 60.0;
+const ONE_WEEK_IN_SECONDS: f64 = 7.0 * 24.0 * 60.0 * 60.0;
+const ONE_DAY_IN_SECONDS: f64 = 24.0 * 60.0 * 60.0;
+const ONE_DAY_IN_SECONDS_INT: i64 = 24 * 60 * 60;
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct Scales {
@@ -27,19 +30,31 @@ pub(super) struct Scales {
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct Modes {
-    pub(super) additive: HashSet<String>,
-    pub(super) multiplicative: HashSet<String>,
+    pub(super) additive: HashSet<ComponentName>,
+    pub(super) multiplicative: HashSet<ComponentName>,
 }
 
 impl Modes {
     /// Convenience method for inserting a name into the appropriate set.
-    fn insert(&mut self, mode: FeatureMode, name: String) {
+    fn insert(&mut self, mode: FeatureMode, name: ComponentName) {
         if mode == FeatureMode::Additive {
             self.additive.insert(name);
         } else {
             self.multiplicative.insert(name);
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) enum ComponentName {
+    Seasonality(String),
+    Regressor(String),
+    Holiday(String),
+    Holidays,
+    AdditiveTerms,
+    MultiplicativeTerms,
+    RegressorsAdditive,
+    RegressorsMultiplicative,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +71,7 @@ impl ComponentColumns {
     /// Create a new component matrix with the given components.
     ///
     /// The components are given as a list of (column index, component name) pairs.
-    fn new(components: &[(usize, String)]) -> Self {
+    fn new(components: &[(usize, ComponentName)]) -> Self {
         // How many columns are there?
         let n_columns = components.iter().map(|(i, _)| i).max().unwrap_or(&0) + 1;
         let mut cols = Self {
@@ -69,23 +84,26 @@ impl ComponentColumns {
         };
         for (i, name) in components {
             let i = *i;
-            if name == "additive_terms" {
-                cols.additive[i] = 1;
-                cols.multiplicative[i] = 0;
-            } else if name == "multiplicative_terms" {
-                cols.additive[i] = 0;
-                cols.multiplicative[i] = 1;
-            } else if name == "holidays" {
-                cols.holidays[i] = 1;
-            } else if name == "regressors_additive" {
-                cols.regressors_additive[i] = 1;
-            } else if name == "regressors_multiplicative" {
-                cols.regressors_multiplicative[i] = 1;
-            } else if name != NO_REGRESSORS_PLACEHOLDER {
-                // Don't add the placeholder column.
-                cols.custom
-                    .entry(name.to_string())
-                    .or_insert(vec![0; n_columns])[i] = 1;
+            match name {
+                ComponentName::AdditiveTerms => {
+                    cols.additive[i] = 1;
+                    cols.multiplicative[i] = 0;
+                }
+                ComponentName::MultiplicativeTerms => {
+                    cols.additive[i] = 0;
+                    cols.multiplicative[i] = 1;
+                }
+                ComponentName::Holidays => cols.holidays[i] = 1,
+                ComponentName::RegressorsAdditive => cols.regressors_additive[i] = 1,
+                ComponentName::RegressorsMultiplicative => cols.regressors_multiplicative[i] = 1,
+                ComponentName::Seasonality(name)
+                | ComponentName::Regressor(name)
+                | ComponentName::Holiday(name) => {
+                    // Don't add the placeholder column.
+                    cols.custom
+                        .entry(name.to_string())
+                        .or_insert(vec![0; n_columns])[i] = 1;
+                }
             }
         }
         cols
@@ -106,6 +124,14 @@ pub(super) enum FeatureName {
     },
     /// A regressor feature.
     Regressor(String),
+    /// A holiday feature.
+    Holiday {
+        /// The name of the holiday.
+        name: String,
+        /// The offset from the holiday date, as permitted
+        /// by the lower or upper window.
+        _offset: i32,
+    },
     Dummy,
 }
 
@@ -156,6 +182,8 @@ pub(super) struct Features {
     pub(super) prior_scales: Vec<PositiveFloat>,
     /// The modes of the features.
     pub(super) modes: Modes,
+
+    holiday_names: HashSet<String>,
 }
 
 impl<O> Prophet<O> {
@@ -190,9 +218,10 @@ impl<O> Prophet<O> {
             prior_scales,
             modes,
             component_columns,
-            ..
+            holiday_names,
         } = self.make_all_features(&history)?;
         self.component_modes = Some(modes);
+        self.train_holiday_names = Some(holiday_names);
         self.train_component_columns = Some(component_columns.clone());
 
         let (changepoints, changepoints_t) = self.get_changepoints(&history.ds)?;
@@ -466,7 +495,6 @@ impl<O> Prophet<O> {
             .min()
             .ok_or(Error::NotEnoughData)?;
         let range = (last_date - first_date) as f64;
-        const ONE_YEAR_IN_SECONDS: f64 = 365.25 * 24.0 * 60.0 * 60.0;
         let yearly_disable = range < 2.0 * ONE_YEAR_IN_SECONDS;
         if let Some(fourier_order) = self.handle_seasonality_opt(
             "yearly",
@@ -480,7 +508,6 @@ impl<O> Prophet<O> {
             )?;
         }
 
-        const ONE_WEEK_IN_SECONDS: f64 = 7.0 * 24.0 * 60.0 * 60.0;
         let weekly_disable =
             range < 2.0 * ONE_WEEK_IN_SECONDS || min_diff as f64 >= ONE_WEEK_IN_SECONDS;
         if let Some(fourier_order) = self.handle_seasonality_opt(
@@ -495,7 +522,6 @@ impl<O> Prophet<O> {
             )?;
         }
 
-        const ONE_DAY_IN_SECONDS: f64 = 24.0 * 60.0 * 60.0;
         let daily_disable =
             range < 2.0 * ONE_DAY_IN_SECONDS || min_diff as f64 >= ONE_DAY_IN_SECONDS;
         if let Some(fourier_order) = self.handle_seasonality_opt(
@@ -607,13 +633,66 @@ impl<O> Prophet<O> {
     /// Construct a frame of features representing holidays.
     fn make_holiday_features(
         &self,
-        _ds: &[TimestampSeconds],
-        _holidays: HashMap<String, Holiday>,
-        _features: &mut FeaturesFrame,
-        _prior_scales: &mut [PositiveFloat],
-        _modes: &mut Modes,
-    ) {
-        todo!()
+        ds: &[TimestampSeconds],
+        holidays: HashMap<String, Holiday>,
+        features: &mut FeaturesFrame,
+        prior_scales: &mut Vec<PositiveFloat>,
+        modes: &mut Modes,
+    ) -> HashSet<String> {
+        let mut holiday_names = HashSet::with_capacity(holidays.len());
+        for (name, holiday) in holidays {
+            // Default to a window of 0 days either side.
+            let lower = holiday
+                .lower_window
+                .as_ref()
+                .map(|x| Box::new(x.iter().copied()) as Box<dyn Iterator<Item = i32>>)
+                .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
+            let upper = holiday
+                .upper_window
+                .as_ref()
+                .map(|x| Box::new(x.iter().copied()) as Box<dyn Iterator<Item = i32>>)
+                .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
+
+            for (dt, lower, upper) in izip!(holiday.ds, lower, upper) {
+                // Round down the original timestamps to the nearest day.
+                let remainder = dt % ONE_DAY_IN_SECONDS_INT;
+                let dt_date = dt - remainder;
+
+                // Check each of the possible offsets allowed by the lower/upper windows.
+                for offset in lower..=upper {
+                    let offset_seconds = offset as i64 * ONE_DAY_IN_SECONDS as i64;
+                    let occurrence = dt_date + offset_seconds;
+                    let col_name = FeatureName::Holiday {
+                        name: name.clone(),
+                        _offset: offset,
+                    };
+                    let mut col = vec![0.0; ds.len()];
+
+                    // Get the index of the adjusted date in the original data, if it exists.
+                    // Set the value of the holiday column 1.0 for that date.
+                    if let Some(loc) = ds
+                        .iter()
+                        .position(|x| (x - (x % ONE_DAY_IN_SECONDS_INT)) == occurrence)
+                    {
+                        col[loc] = 1.0;
+                    }
+                    // Add the holiday column to the features frame, and add a corresponding
+                    // prior scale.
+                    features.push(col_name, col);
+                    prior_scales.push(
+                        holiday
+                            .prior_scale
+                            .unwrap_or(self.opts.holidays_prior_scale),
+                    );
+                }
+            }
+            holiday_names.insert(name.clone());
+            modes.insert(
+                self.opts.holidays_mode,
+                ComponentName::Holiday(name.clone()),
+            );
+        }
+        holiday_names
     }
 
     /// Make all features for the model.
@@ -640,14 +719,14 @@ impl<O> Prophet<O> {
             prior_scales.extend(std::iter::repeat(prior_scale).take(n_new));
             modes.insert(
                 seasonality.mode.unwrap_or(self.opts.seasonality_mode),
-                name.clone(),
+                ComponentName::Seasonality(name.clone()),
             )
         }
 
-        // TODO: Add holiday features.
         let holidays = self.construct_holidays(&history.ds)?;
+        let mut holiday_names = HashSet::new();
         if !holidays.is_empty() {
-            self.make_holiday_features(
+            holiday_names = self.make_holiday_features(
                 &history.ds,
                 holidays,
                 &mut features,
@@ -668,7 +747,7 @@ impl<O> Prophet<O> {
                     .prior_scale
                     .unwrap_or(self.opts.seasonality_prior_scale),
             );
-            modes.insert(regressor.mode, name.clone());
+            modes.insert(regressor.mode, ComponentName::Regressor(name.clone()));
         }
 
         // If there are no features, add a dummy column to prevent an empty features matrix.
@@ -677,12 +756,14 @@ impl<O> Prophet<O> {
             prior_scales.push(PositiveFloat::one());
         }
 
-        let component_columns = self.regressor_column_matrix(&features.names, &mut modes);
+        let component_columns =
+            self.regressor_column_matrix(&features.names, &holiday_names, &mut modes);
         Ok(Features {
             features,
             prior_scales,
             component_columns,
             modes,
+            holiday_names,
         })
     }
 
@@ -691,6 +772,7 @@ impl<O> Prophet<O> {
     pub(super) fn regressor_column_matrix(
         &self,
         feature_names: &[FeatureName],
+        train_holiday_names: &HashSet<String>,
         modes: &mut Modes,
     ) -> ComponentColumns {
         // TODO: get rid of strings below, we can use a `ComponentName` enum instead.
@@ -699,51 +781,66 @@ impl<O> Prophet<O> {
         let mut components = feature_names
             .iter()
             .filter_map(|x| match x {
-                FeatureName::Seasonality { name, _id: _ } => Some(name.clone()),
-                FeatureName::Regressor(name) => Some(name.clone()),
+                FeatureName::Seasonality { name, _id: _ } => {
+                    Some(ComponentName::Seasonality(name.clone()))
+                }
+                FeatureName::Regressor(name) => Some(ComponentName::Regressor(name.clone())),
+                FeatureName::Holiday { name, .. } => Some(ComponentName::Holiday(name.clone())),
                 _ => None,
             })
             .enumerate()
             .collect();
 
         // Add total for holidays.
-        if let Some(names) = &self.train_holiday_names {
-            Self::add_group_component(&mut components, "holidays", names);
+        if !train_holiday_names.is_empty() {
+            let component_names = train_holiday_names
+                .iter()
+                .map(|name| ComponentName::Holiday(name.clone()))
+                .collect();
+            Self::add_group_component(&mut components, ComponentName::Holidays, &component_names);
         }
 
         // Add additive and multiplicative components, and regressors.
         let (additive_regressors, multiplicative_regressors) =
             self.regressors.iter().partition_map(|(name, reg)| {
                 if reg.mode == FeatureMode::Additive {
-                    Either::Left(name.clone())
+                    Either::Left(ComponentName::Regressor(name.clone()))
                 } else {
-                    Either::Right(name.clone())
+                    Either::Right(ComponentName::Regressor(name.clone()))
                 }
             });
-        Self::add_group_component(&mut components, "additive_terms", &modes.additive);
-        Self::add_group_component(&mut components, "regressors_additive", &additive_regressors);
         Self::add_group_component(
             &mut components,
-            "multiplicative_terms",
+            ComponentName::AdditiveTerms,
+            &modes.additive,
+        );
+        Self::add_group_component(
+            &mut components,
+            ComponentName::RegressorsAdditive,
+            &additive_regressors,
+        );
+        Self::add_group_component(
+            &mut components,
+            ComponentName::MultiplicativeTerms,
             &modes.multiplicative,
         );
         Self::add_group_component(
             &mut components,
-            "regressors_multiplicative",
+            ComponentName::RegressorsMultiplicative,
             &multiplicative_regressors,
         );
         // Add the names of the group components to the modes.
-        modes.additive.insert("additive_terms".to_string());
-        modes.additive.insert("regressors_additive".to_string());
+        modes.additive.insert(ComponentName::AdditiveTerms);
+        modes.additive.insert(ComponentName::RegressorsAdditive);
         modes
             .multiplicative
-            .insert("multiplicative_terms".to_string());
+            .insert(ComponentName::MultiplicativeTerms);
         modes
             .multiplicative
-            .insert("regressors_multiplicative".to_string());
+            .insert(ComponentName::RegressorsMultiplicative);
 
         // Add holidays.
-        modes.insert(self.opts.holidays_mode, "holidays".to_string());
+        modes.insert(self.opts.holidays_mode, ComponentName::Holidays);
 
         ComponentColumns::new(&components)
     }
@@ -751,16 +848,16 @@ impl<O> Prophet<O> {
     /// Add a component with the given name that contains all of the components
     /// in `group`.
     fn add_group_component(
-        components: &mut Vec<(usize, String)>,
-        name: &str,
-        names: &HashSet<String>,
+        components: &mut Vec<(usize, ComponentName)>,
+        name: ComponentName,
+        names: &HashSet<ComponentName>,
     ) {
         let group_cols = components
             .iter()
             .filter_map(|(i, n)| names.contains(n).then_some(*i))
             .dedup()
             .collect_vec();
-        components.extend(group_cols.into_iter().map(|i| (i, name.to_string())));
+        components.extend(group_cols.into_iter().map(|i| (i, name.clone())));
     }
 
     /// Get the changepoints for the model.
@@ -957,6 +1054,7 @@ mod test {
 
     use super::*;
     use augurs_testing::assert_approx_eq;
+    use chrono::NaiveDate;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -1077,8 +1175,27 @@ mod test {
 
     #[test]
     fn regressor_column_matrix() {
-        // TODO: add holidays back in and update assertions.
-        let opts = ProphetOptions::default();
+        let holiday_dates = ["2012-10-09", "2013-10-09"]
+            .iter()
+            .map(|s| {
+                s.parse::<NaiveDate>()
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc()
+                    .timestamp()
+            })
+            .collect();
+        let opts = ProphetOptions {
+            holidays: [(
+                "bens-bday".to_string(),
+                Holiday::new(holiday_dates)
+                    .with_lower_window(vec![0, 0])
+                    .with_upper_window(vec![1, 1]),
+            )]
+            .into(),
+            ..Default::default()
+        };
         let mut prophet = Prophet::new(opts, MockOptimizer::new());
         prophet.add_regressor(
             "binary_feature".to_string(),
@@ -1098,12 +1215,15 @@ mod test {
         );
         let mut modes = Modes {
             additive: HashSet::from([
-                "weekly".to_string(),
-                "binary_feature".to_string(),
-                "numeric_feature".to_string(),
-                "binary_feature2".to_string(),
+                ComponentName::Seasonality("weekly".to_string()),
+                ComponentName::Regressor("binary_feature".to_string()),
+                ComponentName::Regressor("numeric_feature".to_string()),
+                ComponentName::Regressor("binary_feature2".to_string()),
+                ComponentName::Holiday("bens-bday".to_string()),
             ]),
-            multiplicative: HashSet::from(["numeric_feature2".to_string()]),
+            multiplicative: HashSet::from([ComponentName::Regressor(
+                "numeric_feature2".to_string(),
+            )]),
         };
         let cols = prophet.regressor_column_matrix(
             &[
@@ -1131,55 +1251,75 @@ mod test {
                     name: "weekly".to_string(),
                     _id: 6,
                 },
+                FeatureName::Holiday {
+                    name: "bens-bday".to_string(),
+                    _offset: 0,
+                },
+                FeatureName::Holiday {
+                    name: "bens-bday".to_string(),
+                    _offset: 1,
+                },
                 FeatureName::Regressor("binary_feature".to_string()),
                 FeatureName::Regressor("numeric_feature".to_string()),
                 FeatureName::Regressor("numeric_feature2".to_string()),
                 FeatureName::Regressor("binary_feature2".to_string()),
             ],
+            &["bens-bday".to_string()].into_iter().collect(),
             &mut modes,
         );
-        assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 1, 1, 0, 1]);
-        assert_eq!(cols.multiplicative, vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 0]);
-        assert_eq!(cols.holidays, vec![0; 10]);
-        assert_eq!(cols.regressors_additive, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 1]);
+        assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1]);
+        assert_eq!(
+            cols.multiplicative,
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+        );
+        assert_eq!(cols.holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
+        assert_eq!(
+            cols.regressors_additive,
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
+        );
         assert_eq!(
             cols.regressors_multiplicative,
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
-        assert_eq!(cols.custom.len(), 5);
-        assert_eq!(cols.custom["weekly"], &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0]);
+        assert_eq!(cols.custom.len(), 6);
+        assert_eq!(cols.custom["weekly"], &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(
+            cols.custom["bens-bday"],
+            &[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
+        );
         assert_eq!(
             cols.custom["binary_feature"],
-            &[0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
         );
         assert_eq!(
             cols.custom["numeric_feature"],
-            &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
         );
         assert_eq!(
             cols.custom["numeric_feature2"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(
             cols.custom["binary_feature2"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
         assert_eq!(
             modes,
             Modes {
                 additive: HashSet::from([
-                    "weekly".to_string(),
-                    "binary_feature".to_string(),
-                    "numeric_feature".to_string(),
-                    "binary_feature2".to_string(),
-                    "holidays".to_string(),
-                    "regressors_additive".to_string(),
-                    "additive_terms".to_string(),
+                    ComponentName::Seasonality("weekly".to_string()),
+                    ComponentName::Regressor("binary_feature".to_string()),
+                    ComponentName::Regressor("numeric_feature".to_string()),
+                    ComponentName::Regressor("binary_feature2".to_string()),
+                    ComponentName::Holiday("bens-bday".to_string()),
+                    ComponentName::Holidays,
+                    ComponentName::RegressorsAdditive,
+                    ComponentName::AdditiveTerms,
                 ]),
                 multiplicative: HashSet::from([
-                    "numeric_feature2".to_string(),
-                    "regressors_multiplicative".to_string(),
-                    "multiplicative_terms".to_string(),
+                    ComponentName::Regressor("numeric_feature2".to_string()),
+                    ComponentName::RegressorsMultiplicative,
+                    ComponentName::MultiplicativeTerms,
                 ]),
             }
         );
@@ -1188,30 +1328,30 @@ mod test {
     #[test]
     fn add_group_component() {
         let mut components = vec![
-            (0, "weekly".to_string()),
-            (1, "weekly".to_string()),
-            (2, "weekly".to_string()),
-            (3, "weekly".to_string()),
-            (4, "weekly".to_string()),
-            (5, "weekly".to_string()),
-            (6, "birthday".to_string()),
-            (7, "birthday".to_string()),
+            (0, ComponentName::Seasonality("weekly".to_string())),
+            (1, ComponentName::Seasonality("weekly".to_string())),
+            (2, ComponentName::Seasonality("weekly".to_string())),
+            (3, ComponentName::Seasonality("weekly".to_string())),
+            (4, ComponentName::Seasonality("weekly".to_string())),
+            (5, ComponentName::Seasonality("weekly".to_string())),
+            (6, ComponentName::Holiday("birthday".to_string())),
+            (7, ComponentName::Holiday("birthday".to_string())),
         ];
-        let names = HashSet::from(["birthday".to_string()]);
-        Prophet::<()>::add_group_component(&mut components, "holidays", &names);
+        let names = HashSet::from([ComponentName::Holiday("birthday".to_string())]);
+        Prophet::<()>::add_group_component(&mut components, ComponentName::Holidays, &names);
         assert_eq!(
             components,
             vec![
-                (0, "weekly".to_string()),
-                (1, "weekly".to_string()),
-                (2, "weekly".to_string()),
-                (3, "weekly".to_string()),
-                (4, "weekly".to_string()),
-                (5, "weekly".to_string()),
-                (6, "birthday".to_string()),
-                (7, "birthday".to_string()),
-                (6, "holidays".to_string()),
-                (7, "holidays".to_string()),
+                (0, ComponentName::Seasonality("weekly".to_string())),
+                (1, ComponentName::Seasonality("weekly".to_string())),
+                (2, ComponentName::Seasonality("weekly".to_string())),
+                (3, ComponentName::Seasonality("weekly".to_string())),
+                (4, ComponentName::Seasonality("weekly".to_string())),
+                (5, ComponentName::Seasonality("weekly".to_string())),
+                (6, ComponentName::Holiday("birthday".to_string())),
+                (7, ComponentName::Holiday("birthday".to_string())),
+                (6, ComponentName::Holidays),
+                (7, ComponentName::Holidays),
             ]
         );
     }
@@ -1219,38 +1359,37 @@ mod test {
     #[test]
     fn test_component_columns() {
         let components = [
-            (0, "weekly"),
-            (1, "weekly"),
-            (2, "weekly"),
-            (3, "weekly"),
-            (4, "weekly"),
-            (5, "weekly"),
-            (6, "birthday"),
-            (7, "birthday"),
-            (8, "binary_feature"),
-            (9, "numeric_feature"),
-            (10, "numeric_feature2"),
-            (11, "binary_feature2"),
-            (6, "holidays"),
-            (7, "holidays"),
-            (0, "additive_terms"),
-            (1, "additive_terms"),
-            (2, "additive_terms"),
-            (3, "additive_terms"),
-            (4, "additive_terms"),
-            (5, "additive_terms"),
-            (8, "additive_terms"),
-            (9, "additive_terms"),
-            (11, "additive_terms"),
-            (8, "regressors_additive"),
-            (9, "regressors_additive"),
-            (11, "regressors_additive"),
-            (6, "multiplicative_terms"),
-            (7, "multiplicative_terms"),
-            (10, "multiplicative_terms"),
-            (10, "regressors_multiplicative"),
-        ]
-        .map(|(i, name)| (i, name.to_string()));
+            (0, ComponentName::Seasonality("weekly".to_string())),
+            (1, ComponentName::Seasonality("weekly".to_string())),
+            (2, ComponentName::Seasonality("weekly".to_string())),
+            (3, ComponentName::Seasonality("weekly".to_string())),
+            (4, ComponentName::Seasonality("weekly".to_string())),
+            (5, ComponentName::Seasonality("weekly".to_string())),
+            (6, ComponentName::Holiday("birthday".to_string())),
+            (7, ComponentName::Holiday("birthday".to_string())),
+            (8, ComponentName::Regressor("binary_feature".to_string())),
+            (9, ComponentName::Regressor("numeric_feature".to_string())),
+            (10, ComponentName::Regressor("numeric_feature2".to_string())),
+            (11, ComponentName::Regressor("binary_feature2".to_string())),
+            (6, ComponentName::Holidays),
+            (7, ComponentName::Holidays),
+            (0, ComponentName::AdditiveTerms),
+            (1, ComponentName::AdditiveTerms),
+            (2, ComponentName::AdditiveTerms),
+            (3, ComponentName::AdditiveTerms),
+            (4, ComponentName::AdditiveTerms),
+            (5, ComponentName::AdditiveTerms),
+            (8, ComponentName::AdditiveTerms),
+            (9, ComponentName::AdditiveTerms),
+            (11, ComponentName::AdditiveTerms),
+            (8, ComponentName::RegressorsAdditive),
+            (9, ComponentName::RegressorsAdditive),
+            (11, ComponentName::RegressorsAdditive),
+            (6, ComponentName::MultiplicativeTerms),
+            (7, ComponentName::MultiplicativeTerms),
+            (10, ComponentName::MultiplicativeTerms),
+            (10, ComponentName::RegressorsMultiplicative),
+        ];
         let cols = ComponentColumns::new(&components);
         assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1]);
         assert_eq!(

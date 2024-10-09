@@ -16,7 +16,7 @@ pub enum FeatureMode {
 /// A holiday to be considered by the Prophet model.
 #[derive(Debug, Clone)]
 pub struct Holiday {
-    pub(crate) _ds: Vec<TimestampSeconds>,
+    pub(crate) ds: Vec<TimestampSeconds>,
     pub(crate) lower_window: Option<Vec<i32>>,
     pub(crate) upper_window: Option<Vec<i32>>,
     pub(crate) prior_scale: Option<PositiveFloat>,
@@ -26,7 +26,7 @@ impl Holiday {
     /// Create a new holiday.
     pub fn new(ds: Vec<TimestampSeconds>) -> Self {
         Self {
-            _ds: ds,
+            ds,
             lower_window: None,
             upper_window: None,
             prior_scale: None,
@@ -34,12 +34,22 @@ impl Holiday {
     }
 
     /// Set the lower window for the holiday.
+    ///
+    /// The lower window is the number of days before the holiday
+    /// that it is observed. For example, if the holiday is on
+    /// 2023-01-01 and the lower window is -1, then the holiday will
+    /// _also_ be observed on 2022-12-31.
     pub fn with_lower_window(mut self, lower_window: Vec<i32>) -> Self {
         self.lower_window = Some(lower_window);
         self
     }
 
     /// Set the upper window for the holiday.
+    ///
+    /// The upper window is the number of days after the holiday
+    /// that it is observed. For example, if the holiday is on
+    /// 2023-01-01 and the upper window is 1, then the holiday will
+    /// _also_ be observed on 2023-01-02.
     pub fn with_upper_window(mut self, upper_window: Vec<i32>) -> Self {
         self.upper_window = Some(upper_window);
         self
