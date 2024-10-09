@@ -10,7 +10,6 @@ mod error;
 mod features;
 // Export the optimizer module so that users can implement their own
 // optimizers.
-mod distributions;
 pub mod optimizer;
 mod positive_float;
 mod prophet;

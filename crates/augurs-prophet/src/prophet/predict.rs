@@ -2,12 +2,10 @@ use std::collections::HashMap;
 
 use itertools::{izip, Itertools};
 use rand::{distributions::Uniform, thread_rng, Rng};
+use statrs::distribution::{Laplace, Normal, Poisson};
 
 use crate::{
-    distributions::{Laplace, Normal, Poisson},
-    optimizer::OptimizedParams,
-    util::FloatIterExt,
-    Error, GrowthType, Prophet, TimestampSeconds,
+    optimizer::OptimizedParams, util::FloatIterExt, Error, GrowthType, Prophet, TimestampSeconds,
 };
 
 use super::prep::{ComponentName, Features, FeaturesFrame, ProcessedData};
