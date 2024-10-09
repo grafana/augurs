@@ -62,7 +62,7 @@ pub enum Scaling {
 }
 
 /// How to do parameter estimation.
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum EstimationMode {
     /// Use MLE estimation.
     Mle,

@@ -13,8 +13,8 @@ use prep::{ComponentColumns, Modes, Preprocessed, Scales};
 
 use crate::{
     optimizer::{InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
-    Error, FeaturePrediction, IncludeHistory, PredictionData, Predictions, Regressor, Seasonality,
-    TimestampSeconds, TrainingData,
+    Error, EstimationMode, FeaturePrediction, IncludeHistory, PredictionData, Predictions,
+    Regressor, Seasonality, TimestampSeconds, TrainingData,
 };
 
 /// The Prophet time series forecasting model.
@@ -265,9 +265,17 @@ impl<O> Prophet<O> {
 
 impl<O: Optimizer> Prophet<O> {
     /// Fit the Prophet model to some training data.
-    pub fn fit(&mut self, data: TrainingData, opts: OptimizeOpts) -> Result<(), Error> {
+    pub fn fit(&mut self, data: TrainingData, mut opts: OptimizeOpts) -> Result<(), Error> {
         let preprocessed = self.preprocess(data)?;
         let init = preprocessed.calculate_initial_params(&self.opts)?;
+        // TODO: call `sample` if `self.opts.estimation == EstimationMode::Mcmc`.
+        // We'll first need to add a `sample` method to the Optimizer trait, then accept
+        // a different set of options in `opts`, and also update `OptimizedParams` to
+        // include every MCMC sample.
+        if opts.jacobian.is_none() {
+            let use_jacobian = self.opts.estimation == EstimationMode::Map;
+            opts.jacobian = Some(use_jacobian);
+        }
         self.optimized = Some(
             self.optimizer
                 .optimize(init.clone(), preprocessed.data.clone(), opts)
