@@ -37,11 +37,10 @@ pub(super) struct Modes {
 impl Modes {
     /// Convenience method for inserting a name into the appropriate set.
     fn insert(&mut self, mode: FeatureMode, name: ComponentName) {
-        if mode == FeatureMode::Additive {
-            self.additive.insert(name);
-        } else {
-            self.multiplicative.insert(name);
-        }
+        match mode {
+            FeatureMode::Additive => self.additive.insert(name),
+            FeatureMode::Multiplicative => self.multiplicative.insert(name),
+        };
     }
 }
 
