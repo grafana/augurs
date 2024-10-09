@@ -775,8 +775,6 @@ impl<O> Prophet<O> {
         train_holiday_names: &HashSet<String>,
         modes: &mut Modes,
     ) -> ComponentColumns {
-        // TODO: get rid of strings below, we can use a `ComponentName` enum instead.
-
         // Start with a vec of (col idx, component name) pairs.
         let mut components = feature_names
             .iter()
