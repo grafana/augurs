@@ -21,10 +21,13 @@
 //       WASM Components?
 // TODO: write a pure Rust optimizer for the default case.
 
+use std::fmt;
+
 use crate::positive_float::PositiveFloat;
 
 /// The initial parameters for the optimization.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitialParams {
     /// Base trend growth rate.
     pub k: f64,
@@ -49,8 +52,40 @@ pub enum TrendIndicator {
     Flat,
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for TrendIndicator {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u8(match self {
+            Self::Linear => 0,
+            Self::Logistic => 1,
+            Self::Flat => 2,
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for TrendIndicator {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        D::Error: serde::de::Error,
+    {
+        let value = u8::deserialize(deserializer)?;
+        match value {
+            0 => Ok(Self::Linear),
+            1 => Ok(Self::Logistic),
+            2 => Ok(Self::Flat),
+            _ => Err(serde::de::Error::custom("invalid trend indicator")),
+        }
+    }
+}
+
 /// Data for the Prophet model.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(non_snake_case)]
 pub struct Data {
     /// Number of time periods.
@@ -92,6 +127,17 @@ pub enum Algorithm {
     Bfgs,
     /// Use the Limited-memory BFGS (L-BFGS) algorithm.
     Lbfgs,
+}
+
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Lbfgs => "lbfgs",
+            Self::Newton => "newton",
+            Self::Bfgs => "bfgs",
+        };
+        f.write_str(s)
+    }
 }
 
 /// Arguments for optimization.

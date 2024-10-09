@@ -17,6 +17,9 @@ mod prophet;
 mod testdata;
 mod util;
 
+#[cfg(feature = "cmdstan")]
+pub mod cmdstan;
+
 /// A timestamp represented as seconds since the epoch.
 pub type TimestampSeconds = i64;
 

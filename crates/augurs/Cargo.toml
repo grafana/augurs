@@ -35,5 +35,7 @@ full = ["changepoint", "clustering", "dtw", "ets", "forecaster", "mstl", "outlie
 mstl = ["augurs-mstl", "augurs-ets?/mstl"]
 parallel = ["augurs-dtw?/parallel", "augurs-outlier?/parallel"]
 prophet = ["augurs-prophet"]
+prophet-cmdstan = ["augurs-prophet/cmdstan"]
+prophet-compile-cmdstan = ["augurs-prophet/compile-cmdstan"]
 outlier = ["augurs-outlier"]
 seasons = ["augurs-seasons"]
