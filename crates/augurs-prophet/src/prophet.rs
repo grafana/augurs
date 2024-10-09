@@ -509,6 +509,47 @@ mod test_seasonal {
 }
 
 #[cfg(test)]
+mod test_holidays {
+    use chrono::NaiveDate;
+
+    use crate::{
+        optimizer::mock_optimizer::MockOptimizer, testdata::daily_univariate_ts, Holiday, Prophet,
+        ProphetOptions,
+    };
+
+    #[test]
+    fn fit_predict_holiday() {
+        let holiday_dates = ["2012-10-09", "2013-10-09"]
+            .iter()
+            .map(|s| {
+                s.parse::<NaiveDate>()
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc()
+                    .timestamp()
+            })
+            .collect();
+        let opts = ProphetOptions {
+            holidays: [(
+                "bens-bday".to_string(),
+                Holiday::new(holiday_dates)
+                    .with_lower_window(vec![0, 0])
+                    .unwrap()
+                    .with_upper_window(vec![1, 1])
+                    .unwrap(),
+            )]
+            .into(),
+            ..Default::default()
+        };
+        let data = daily_univariate_ts();
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
+        prophet.fit(data, Default::default()).unwrap();
+        prophet.predict(None).unwrap();
+    }
+}
+
+#[cfg(test)]
 mod test_fit {
     use augurs_testing::assert_all_close;
     use itertools::Itertools;
