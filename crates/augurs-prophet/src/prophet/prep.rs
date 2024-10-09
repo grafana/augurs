@@ -61,10 +61,12 @@ pub(super) enum ComponentName {
 pub(super) struct ComponentColumns {
     pub(super) additive: Vec<i32>,
     pub(super) multiplicative: Vec<i32>,
-    pub(super) holidays: Vec<i32>,
+    pub(super) all_holidays: Vec<i32>,
     pub(super) regressors_additive: Vec<i32>,
     pub(super) regressors_multiplicative: Vec<i32>,
-    pub(super) custom: HashMap<String, Vec<i32>>,
+    pub(super) seasonalities: HashMap<String, Vec<i32>>,
+    pub(super) holidays: HashMap<String, Vec<i32>>,
+    pub(super) regressors: HashMap<String, Vec<i32>>,
 }
 
 impl ComponentColumns {
@@ -77,10 +79,12 @@ impl ComponentColumns {
         let mut cols = Self {
             additive: vec![0; n_columns],
             multiplicative: vec![0; n_columns],
-            holidays: vec![0; n_columns],
+            all_holidays: vec![0; n_columns],
             regressors_additive: vec![0; n_columns],
             regressors_multiplicative: vec![0; n_columns],
-            custom: HashMap::new(),
+            seasonalities: HashMap::new(),
+            holidays: HashMap::new(),
+            regressors: HashMap::new(),
         };
         for (i, name) in components {
             let i = *i;
@@ -93,14 +97,21 @@ impl ComponentColumns {
                     cols.additive[i] = 0;
                     cols.multiplicative[i] = 1;
                 }
-                ComponentName::Holidays => cols.holidays[i] = 1,
+                ComponentName::Holidays => cols.all_holidays[i] = 1,
                 ComponentName::RegressorsAdditive => cols.regressors_additive[i] = 1,
                 ComponentName::RegressorsMultiplicative => cols.regressors_multiplicative[i] = 1,
-                ComponentName::Seasonality(name)
-                | ComponentName::Regressor(name)
-                | ComponentName::Holiday(name) => {
-                    // Don't add the placeholder column.
-                    cols.custom
+                ComponentName::Seasonality(name) => {
+                    cols.seasonalities
+                        .entry(name.to_string())
+                        .or_insert(vec![0; n_columns])[i] = 1;
+                }
+                ComponentName::Regressor(name) => {
+                    cols.regressors
+                        .entry(name.to_string())
+                        .or_insert(vec![0; n_columns])[i] = 1;
+                }
+                ComponentName::Holiday(name) => {
+                    cols.holidays
                         .entry(name.to_string())
                         .or_insert(vec![0; n_columns])[i] = 1;
                 }
@@ -1270,7 +1281,7 @@ mod test {
             cols.multiplicative,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
-        assert_eq!(cols.holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
+        assert_eq!(cols.all_holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
         assert_eq!(
             cols.regressors_additive,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
@@ -1279,26 +1290,31 @@ mod test {
             cols.regressors_multiplicative,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
-        assert_eq!(cols.custom.len(), 6);
-        assert_eq!(cols.custom["weekly"], &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(cols.seasonalities.len(), 1);
         assert_eq!(
-            cols.custom["bens-bday"],
+            cols.seasonalities["weekly"],
+            &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(cols.holidays.len(), 1);
+        assert_eq!(
+            cols.holidays["bens-bday"],
             &[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
         );
+        assert_eq!(cols.regressors.len(), 4);
         assert_eq!(
-            cols.custom["binary_feature"],
+            cols.regressors["binary_feature"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
         );
         assert_eq!(
-            cols.custom["numeric_feature"],
+            cols.regressors["numeric_feature"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
         );
         assert_eq!(
-            cols.custom["numeric_feature2"],
+            cols.regressors["numeric_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(
-            cols.custom["binary_feature2"],
+            cols.regressors["binary_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
         assert_eq!(
@@ -1394,7 +1410,7 @@ mod test {
             cols.multiplicative,
             vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0]
         );
-        assert_eq!(cols.holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
+        assert_eq!(cols.all_holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
         assert_eq!(
             cols.regressors_additive,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
@@ -1403,26 +1419,31 @@ mod test {
             cols.regressors_multiplicative,
             vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
-        assert_eq!(cols.custom.len(), 6);
-        assert_eq!(cols.custom["weekly"], &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(cols.seasonalities.len(), 1);
+        assert_eq!(cols.holidays.len(), 1);
+        assert_eq!(cols.regressors.len(), 4);
         assert_eq!(
-            cols.custom["birthday"],
+            cols.seasonalities["weekly"],
+            &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            cols.holidays["birthday"],
             &[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
         );
         assert_eq!(
-            cols.custom["binary_feature"],
+            cols.regressors["binary_feature"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
         );
         assert_eq!(
-            cols.custom["numeric_feature"],
+            cols.regressors["numeric_feature"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
         );
         assert_eq!(
-            cols.custom["numeric_feature2"],
+            cols.regressors["numeric_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(
-            cols.custom["binary_feature2"],
+            cols.regressors["binary_feature2"],
             &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
     }
