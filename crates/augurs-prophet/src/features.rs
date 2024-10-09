@@ -1,7 +1,7 @@
 //! Features used by Prophet, such as seasonality, regressors and holidays.
 use std::num::NonZeroU32;
 
-use crate::{positive_float::PositiveFloat, TimestampSeconds};
+use crate::{positive_float::PositiveFloat, Error, TimestampSeconds};
 
 /// The mode of a seasonality, regressor, or holiday.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -39,9 +39,17 @@ impl Holiday {
     /// that it is observed. For example, if the holiday is on
     /// 2023-01-01 and the lower window is -1, then the holiday will
     /// _also_ be observed on 2022-12-31.
-    pub fn with_lower_window(mut self, lower_window: Vec<i32>) -> Self {
+    pub fn with_lower_window(mut self, lower_window: Vec<i32>) -> Result<Self, Error> {
+        if self.ds.len() != lower_window.len() {
+            return Err(Error::MismatchedLengths {
+                a_name: "ds".to_string(),
+                a: self.ds.len(),
+                b_name: "lower_window".to_string(),
+                b: lower_window.len(),
+            });
+        }
         self.lower_window = Some(lower_window);
-        self
+        Ok(self)
     }
 
     /// Set the upper window for the holiday.
@@ -50,9 +58,17 @@ impl Holiday {
     /// that it is observed. For example, if the holiday is on
     /// 2023-01-01 and the upper window is 1, then the holiday will
     /// _also_ be observed on 2023-01-02.
-    pub fn with_upper_window(mut self, upper_window: Vec<i32>) -> Self {
+    pub fn with_upper_window(mut self, upper_window: Vec<i32>) -> Result<Self, Error> {
+        if self.ds.len() != upper_window.len() {
+            return Err(Error::MismatchedLengths {
+                a_name: "ds".to_string(),
+                a: self.ds.len(),
+                b_name: "upper_window".to_string(),
+                b: upper_window.len(),
+            });
+        }
         self.upper_window = Some(upper_window);
-        self
+        Ok(self)
     }
 
     /// Add a prior scale for the holiday.

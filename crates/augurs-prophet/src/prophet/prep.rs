@@ -1200,7 +1200,9 @@ mod test {
                 "bens-bday".to_string(),
                 Holiday::new(holiday_dates)
                     .with_lower_window(vec![0, 0])
-                    .with_upper_window(vec![1, 1]),
+                    .unwrap()
+                    .with_upper_window(vec![1, 1])
+                    .unwrap(),
             )]
             .into(),
             ..Default::default()
