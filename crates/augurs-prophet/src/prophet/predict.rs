@@ -10,7 +10,7 @@ use crate::{
     Error, GrowthType, Prophet, TimestampSeconds,
 };
 
-use super::prep::{Features, FeaturesFrame, ProcessedData};
+use super::prep::{ComponentName, Features, FeaturesFrame, ProcessedData};
 
 /// The prediction for a feature.
 ///
@@ -251,9 +251,9 @@ impl<O> Prophet<O> {
         let Features {
             features,
             component_columns,
+            modes,
             ..
         } = features;
-        // TODO: do the rest of the terms
         Ok(FeaturePredictions {
             additive: Self::predict_feature(
                 &component_columns.additive,
@@ -269,7 +269,66 @@ impl<O> Prophet<O> {
                 y_scale,
                 false,
             ),
-            ..Default::default()
+            holidays: component_columns
+                .holidays
+                .iter()
+                .map(|(name, holiday)| {
+                    (
+                        name.clone(),
+                        Self::predict_feature(
+                            holiday,
+                            &features.data,
+                            &params.beta,
+                            y_scale,
+                            modes
+                                .additive
+                                // Annoying that we have to clone here, we could work around it
+                                // if we made a `ComponentNameRef` type but that's a lot of work.
+                                .contains(&ComponentName::Holiday(name.clone())),
+                        ),
+                    )
+                })
+                .collect(),
+            seasonalities: component_columns
+                .seasonalities
+                .iter()
+                .map(|(name, seasonality)| {
+                    (
+                        name.clone(),
+                        Self::predict_feature(
+                            seasonality,
+                            &features.data,
+                            &params.beta,
+                            y_scale,
+                            modes
+                                .additive
+                                // Annoying that we have to clone here, we could work around it
+                                // if we made a `ComponentNameRef` type but that's a lot of work.
+                                .contains(&ComponentName::Holiday(name.clone())),
+                        ),
+                    )
+                })
+                .collect(),
+            regressors: component_columns
+                .regressors
+                .iter()
+                .map(|(name, regressor)| {
+                    (
+                        name.clone(),
+                        Self::predict_feature(
+                            regressor,
+                            &features.data,
+                            &params.beta,
+                            y_scale,
+                            modes
+                                .additive
+                                // Annoying that we have to clone here, we could work around it
+                                // if we made a `ComponentNameRef` type but that's a lot of work.
+                                .contains(&ComponentName::Holiday(name.clone())),
+                        ),
+                    )
+                })
+                .collect(),
         })
     }
 
