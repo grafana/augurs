@@ -121,7 +121,7 @@ impl ComponentColumns {
 }
 
 /// The name of a feature column in the `X` matrix passed to Stan.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum FeatureName {
     /// A seasonality feature.
     Seasonality {
@@ -696,7 +696,9 @@ impl<O> Prophet<O> {
             }
             holiday_names.insert(name.clone());
             modes.insert(
-                self.opts.holidays_mode,
+                self.opts
+                    .holidays_mode
+                    .unwrap_or(self.opts.seasonality_mode),
                 ComponentName::Holiday(name.clone()),
             );
         }
@@ -846,7 +848,12 @@ impl<O> Prophet<O> {
             .insert(ComponentName::RegressorsMultiplicative);
 
         // Add holidays.
-        modes.insert(self.opts.holidays_mode, ComponentName::Holidays);
+        modes.insert(
+            self.opts
+                .holidays_mode
+                .unwrap_or(self.opts.seasonality_mode),
+            ComponentName::Holidays,
+        );
 
         ComponentColumns::new(&components)
     }

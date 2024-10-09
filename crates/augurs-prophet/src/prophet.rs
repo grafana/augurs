@@ -509,6 +509,131 @@ mod test_seasonal {
 }
 
 #[cfg(test)]
+mod test_custom_seasonal {
+    use chrono::NaiveDate;
+
+    use crate::{
+        optimizer::mock_optimizer::MockOptimizer,
+        prophet::prep::{FeatureName, Features},
+        testdata::daily_univariate_ts,
+        FeatureMode, Holiday, ProphetOptions, Seasonality,
+    };
+
+    use super::Prophet;
+
+    #[test]
+    fn custom_prior() {
+        let holiday_dates = ["2017-01-02"]
+            .iter()
+            .map(|s| {
+                s.parse::<NaiveDate>()
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc()
+                    .timestamp()
+            })
+            .collect();
+
+        let opts = ProphetOptions {
+            holidays: [(
+                "special day".to_string(),
+                Holiday::new(holiday_dates).with_prior_scale(4.0.try_into().unwrap()),
+            )]
+            .into(),
+            seasonality_mode: FeatureMode::Multiplicative,
+            yearly_seasonality: crate::SeasonalityOption::Manual(false),
+            ..Default::default()
+        };
+
+        let data = daily_univariate_ts();
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
+        prophet
+            .add_seasonality(
+                "monthly".to_string(),
+                Seasonality::new(30.0.try_into().unwrap(), 5.try_into().unwrap())
+                    .with_prior_scale(2.0.try_into().unwrap())
+                    .with_mode(FeatureMode::Additive),
+            )
+            .unwrap();
+        prophet.fit(data, Default::default()).unwrap();
+        prophet.predict(None).unwrap();
+
+        assert_eq!(prophet.seasonalities["weekly"].mode, None);
+        assert_eq!(
+            prophet.seasonalities["monthly"].mode,
+            Some(FeatureMode::Additive)
+        );
+        let Features {
+            features,
+            prior_scales,
+            component_columns,
+            ..
+        } = prophet
+            .make_all_features(&prophet.processed.as_ref().unwrap().history)
+            .unwrap();
+
+        assert_eq!(
+            component_columns.seasonalities["monthly"]
+                .iter()
+                .sum::<i32>(),
+            10
+        );
+        assert_eq!(
+            component_columns.holidays["special day"]
+                .iter()
+                .sum::<i32>(),
+            1
+        );
+        assert_eq!(
+            component_columns.seasonalities["weekly"]
+                .iter()
+                .sum::<i32>(),
+            6
+        );
+        assert_eq!(component_columns.additive.iter().sum::<i32>(), 10);
+        assert_eq!(component_columns.multiplicative.iter().sum::<i32>(), 7);
+
+        if features.names[0]
+            == (FeatureName::Seasonality {
+                name: "monthly".to_string(),
+                _id: 1,
+            })
+        {
+            assert_eq!(
+                component_columns.seasonalities["monthly"],
+                &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+            );
+            assert_eq!(
+                component_columns.seasonalities["weekly"],
+                &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0],
+            );
+            let expected_prior_scales = [
+                2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+                10.0, 4.0,
+            ]
+            .map(|x| x.try_into().unwrap());
+            assert_eq!(&prior_scales, &expected_prior_scales);
+        } else {
+            assert_eq!(
+                component_columns.seasonalities["monthly"],
+                &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            );
+            assert_eq!(
+                component_columns.seasonalities["weekly"],
+                &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            );
+            let expected_prior_scales = [
+                10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+                2.0, 4.0,
+            ]
+            .map(|x| x.try_into().unwrap());
+            assert_eq!(&prior_scales, &expected_prior_scales);
+        }
+    }
+}
+
+#[cfg(test)]
 mod test_holidays {
     use chrono::NaiveDate;
 

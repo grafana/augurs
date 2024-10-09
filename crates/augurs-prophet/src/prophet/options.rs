@@ -248,7 +248,7 @@ impl From<OptProphetOptions> for ProphetOptions {
             holidays_prior_scale: value
                 .holidays_prior_scale
                 .unwrap_or(defaults.holidays_prior_scale),
-            holidays_mode: value.holidays_mode.unwrap_or(defaults.holidays_mode),
+            holidays_mode: value.holidays_mode,
         }
     }
 }
@@ -368,8 +368,8 @@ pub struct ProphetOptions {
 
     /// How to model holidays.
     ///
-    /// Defaults to [`FeatureMode::Additive`].
-    pub holidays_mode: FeatureMode,
+    /// Defaults to the same value as [`ProphetOptions::seasonality_mode`].
+    pub holidays_mode: Option<FeatureMode>,
 }
 
 impl Default for ProphetOptions {
@@ -391,7 +391,7 @@ impl Default for ProphetOptions {
             scaling: Scaling::AbsMax,
             holidays: HashMap::new(),
             holidays_prior_scale: 100.0.try_into().unwrap(),
-            holidays_mode: FeatureMode::Additive,
+            holidays_mode: None,
         }
     }
 }
