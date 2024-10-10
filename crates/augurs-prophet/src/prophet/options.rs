@@ -65,7 +65,9 @@ pub enum Scaling {
 ///
 /// Note: for now, only MLE/MAP estimation is supported, i.e. there
 /// is no support for MCMC sampling. This will be added in the future!
+/// The enum will be marked as `non_exhaustive` until that point.
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EstimationMode {
     /// Use MLE estimation.
     Mle,

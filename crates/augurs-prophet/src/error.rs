@@ -2,6 +2,7 @@ use crate::TimestampSeconds;
 
 /// Errors that can occur when using the Prophet forecasting algorithm.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     /// The data provided had mismatched column lengths.
     #[error("Mismatched column lengths: {a_name} has length {a} but {b_name} has length {b}")]
