@@ -13,7 +13,7 @@ impl PositiveFloat {
     ///
     /// # Errors
     ///
-    /// Returns an error if the provided float is less than 0.0.
+    /// Returns an error if the provided float is not finite or less than or equal to 0.0.
     pub fn try_new(f: f64) -> Result<Self, TryFromFloatError> {
         if !f.is_finite() || f <= 0.0 {
             return Err(TryFromFloatError(f));
