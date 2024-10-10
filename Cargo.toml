@@ -35,6 +35,8 @@ augurs-prophet = { version = "0.3.1", path = "crates/augurs-prophet" }
 augurs-seasons = { version = "0.3.1", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
+anyhow = "1.0.89"
+bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
 itertools = "0.13.0"

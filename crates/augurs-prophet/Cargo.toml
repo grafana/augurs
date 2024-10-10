@@ -9,6 +9,8 @@ edition.workspace = true
 keywords.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+bytemuck = { workspace = true, features = ["derive"], optional = true }
 itertools.workspace = true
 num-traits.workspace = true
 rand.workspace = true
@@ -19,3 +21,6 @@ thiserror.workspace = true
 augurs-testing.workspace = true
 chrono.workspace = true
 pretty_assertions.workspace = true
+
+[features]
+bytemuck = ["dep:bytemuck"]

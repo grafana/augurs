@@ -1,6 +1,7 @@
 /// A positive-only, 64 bit precision floating point number.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 pub struct PositiveFloat(f64);
 
 /// An invalid float was provided when trying to create a [`PositiveFloat`].
