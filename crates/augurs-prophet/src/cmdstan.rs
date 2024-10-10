@@ -40,10 +40,13 @@
 //! - the Prophet model binary is not statically linked to `libtbb`, since doing so is
 //!   not recommended by the Stan developers or TBB developers. This means that the
 //!   final binary will require the `libtbb` dynamic library to be present at runtime.
-//!   The first method takes care of this for you, but if using the second you'll need
-//!   to make sure the `libtbb` dynamic library is available at runtime. You can do this
-//!   by copying the `libtbb` dynamic library to a known directory and setting the
-//!   `LD_LIBRARY_PATH` environment variable to that directory.
+//!   The first method takes care of this for you, but if manually providing the path
+//!   using the second you'll need to make sure the `libtbb` dynamic library is
+//!   available at runtime. You can do this by copying the `libtbb` dynamic library
+//!   to a known directory and setting the `LD_LIBRARY_PATH` environment variable
+//!   to that directory. The `download-stan-model` tool adds this library to the
+//!   `lib` subdirectory next to the Prophet binary, and the `LD_LIBRARY_PATH`
+//!   environment variable is set to that directory by default.
 use std::{
     io,
     num::{ParseFloatError, ParseIntError},
@@ -202,7 +205,16 @@ impl Clone for ProphetInstallation {
 impl ProphetInstallation {
     fn command(&self) -> Command {
         let mut cmd = Command::new(&self.prophet_binary_path);
-        cmd.env("LD_LIBRARY_PATH", &self.lib_dir);
+        // Use the provided LD_LIBRARY_PATH if it's set, adding on the configured lib
+        // dir for good measure.
+        if let Ok(ld_library_path) = std::env::var("LD_LIBRARY_PATH") {
+            let path = format!("{}:{}", ld_library_path, self.lib_dir.display());
+            cmd.env("LD_LIBRARY_PATH", path);
+        }
+        // Otherwise, just use our lib_dir.
+        else {
+            cmd.env("LD_LIBRARY_PATH", &self.lib_dir);
+        }
         cmd
     }
 }
