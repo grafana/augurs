@@ -55,9 +55,9 @@ pub enum Error {
     /// the condition column was missing from the data.
     #[error("Missing condition for seasonality: {0}")]
     MissingSeasonalityCondition(String),
-    /// Scaling failed because of unusual input data.
-    #[error("Scaling failed")]
-    Scaling,
+    /// AbsMax scaling failed because the min and max were the same.
+    #[error("AbsMax scaling failed because the min and max were the same")]
+    AbsMaxScalingFailed,
     /// The `cap` column for logistic growth was missing.
     #[error("Missing cap for logistic growth")]
     MissingCap,

@@ -401,7 +401,7 @@ impl<O> Prophet<O> {
                                 a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
                             })
                         else {
-                            return Err(Error::Scaling);
+                            return Err(Error::AbsMaxScalingFailed);
                         };
                         scales.y_min = y_min;
                         scales.y_scale = y_scale;
