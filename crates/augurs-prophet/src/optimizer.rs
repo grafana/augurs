@@ -141,8 +141,14 @@ impl serde::Serialize for Data {
             where
                 S: serde::Serializer,
             {
-                let mut outer = serializer.serialize_seq(Some(self.0.len() / self.1))?;
-                for chunk in self.0.chunks(self.1) {
+                if self.1 == 0 {
+                    return Err(serde::ser::Error::custom(
+                        "Invalid value for K: cannot be zero",
+                    ));
+                }
+                let chunk_size = self.1;
+                let mut outer = serializer.serialize_seq(Some(self.0.len() / chunk_size))?;
+                for chunk in self.0.chunks(chunk_size) {
                     outer.serialize_element(&chunk)?;
                 }
                 outer.end()
