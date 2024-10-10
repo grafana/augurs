@@ -3,6 +3,46 @@
 `augurs-prophet` contains an implementation of the [Prophet]
 time series forecasting library.
 
+## Example
+
+First, download the Prophet Stan model using the included binary:
+
+```sh
+$ cargo install --bin download-stan-model --features download augurs-prophet
+$ download-stan-model
+```
+
+```rust,no_run
+use augurs::prophet::{cmdstan::CmdstanOptimizer, Prophet, TrainingData};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ds = vec![
+        1704067200, 1704871384, 1705675569, 1706479753, 1707283938, 1708088123, 1708892307,
+        1709696492, 1710500676, 1711304861, 1712109046, 1712913230, 1713717415,
+    ];
+    let y = vec![
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0,
+    ];
+    let data = TrainingData::new(ds, y.clone())?;
+
+    let cmdstan = CmdstanOptimizer::with_prophet_path("prophet_stan_model/prophet_model.bin")?;
+    // If you were using the embedded version of the cmdstan model, you'd enable
+    // the `compile-cmdstan` feature and use this:
+    //
+    // let cmdstan = CmdstanOptimizer::new_embedded();
+
+    let mut prophet = Prophet::new(Default::default(), cmdstan);
+
+    prophet.fit(data, Default::default())?;
+    let predictions = prophet.predict(None)?;
+    assert_eq!(predictions.yhat.point.len(), y.len());
+    assert!(predictions.yhat.lower.is_some());
+    assert!(predictions.yhat.upper.is_some());
+    println!("Predicted values: {:#?}", predictions.yhat);
+    Ok(())
+}
+```
+
 This crate aims to be low-dependency to enable it to run in as
 many places as possible. With that said, we need to talk about
 optimizers…
@@ -15,9 +55,13 @@ inference as well as maximum likelihood estimation using optimizers such as L-BF
 However, it is written in C++ and has non-trivial dependencies, which makes it
 difficult to interface with from Rust (or, indeed, Python).
 
-`augurs-prophet` (similar to the Python library) abstracts optimization
-and sampling implementations using the `Optimizer` and `Sampler` traits.
-These are yet to be implemented, but I have a few ideas:
+Similar to the Python library, `augurs-prophet` abstracts MLE optimization
+using the `Optimizer` and (later) MCMC using the `Sampler` traits.
+There is a single implementation of the `Optimizer` which uses
+`cmdstan` to run the optimization. See below and the `cmdstan` module
+for details.
+
+Further implementations are possible, with some ideas below.
 
 ### `cmdstan`
 
@@ -30,6 +74,14 @@ parameters between Stan and Python using files on the filesystem.
 This works fine if you're operating in a desktop or server environment,
 but poses issues when running in more esoteric environments such as
 WebAssembly.
+
+The `cmdstan` module of this crate contains an implementation of `Optimizer`
+which will use a compiled Stan program to do this. See the `cmdstan` module
+for more details on how to use it.
+
+This requires the `cmdstan` feature to be enabled, and optionally the
+`compile-cmdstan` feature to be enabled if you want to compile and embed
+the Stan model at build time.
 
 ### `libstan`
 

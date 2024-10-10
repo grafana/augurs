@@ -21,10 +21,13 @@
 //       WASM Components?
 // TODO: write a pure Rust optimizer for the default case.
 
+use std::fmt;
+
 use crate::positive_float::PositiveFloat;
 
 /// The initial parameters for the optimization.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitialParams {
     /// Base trend growth rate.
     pub k: f64,
@@ -47,6 +50,37 @@ pub enum TrendIndicator {
     Logistic,
     /// Flat trend.
     Flat,
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for TrendIndicator {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u8(match self {
+            Self::Linear => 0,
+            Self::Logistic => 1,
+            Self::Flat => 2,
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for TrendIndicator {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        D::Error: serde::de::Error,
+    {
+        let value = u8::deserialize(deserializer)?;
+        match value {
+            0 => Ok(Self::Linear),
+            1 => Ok(Self::Logistic),
+            2 => Ok(Self::Flat),
+            _ => Err(serde::de::Error::custom("invalid trend indicator")),
+        }
+    }
 }
 
 /// Data for the Prophet model.
@@ -75,12 +109,69 @@ pub struct Data {
     /// Indicator of multiplicative features, length k.
     pub s_m: Vec<i32>,
     /// Regressors, shape (n, k).
+    ///
+    /// This is stored as a `Vec<f64>` rather than a nested `Vec<Vec<f64>>`
+    /// because passing such a struct by reference is tricky in Rust, since
+    /// it can't be dereferenced to a `&[&[f64]]` (which would be ideal).
+    ///
+    /// However, when serialized to JSON, it is converted to a nested array
+    /// of arrays, which is what cmdstan expects.
     pub X: Vec<f64>,
     /// Scale on seasonality prior.
     pub sigmas: Vec<PositiveFloat>,
     /// Scale on changepoints prior.
     /// Must be greater than 0.
     pub tau: PositiveFloat,
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Data {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::{SerializeSeq, SerializeStruct};
+
+        /// A serializer which serializes X, a flat slice of f64s, as an sequence of sequences,
+        /// with each one having length equal to the second field.
+        struct XSerializer<'a>(&'a [f64], usize);
+
+        impl<'a> serde::Serialize for XSerializer<'a> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                if self.1 == 0 {
+                    return Err(serde::ser::Error::custom(
+                        "Invalid value for K: cannot be zero",
+                    ));
+                }
+                let chunk_size = self.1;
+                let mut outer = serializer.serialize_seq(Some(self.0.len() / chunk_size))?;
+                for chunk in self.0.chunks(chunk_size) {
+                    outer.serialize_element(&chunk)?;
+                }
+                outer.end()
+            }
+        }
+
+        let mut s = serializer.serialize_struct("Data", 13)?;
+        let x = XSerializer(&self.X, self.K as usize);
+        s.serialize_field("T", &self.T)?;
+        s.serialize_field("y", &self.y)?;
+        s.serialize_field("t", &self.t)?;
+        s.serialize_field("cap", &self.cap)?;
+        s.serialize_field("S", &self.S)?;
+        s.serialize_field("t_change", &self.t_change)?;
+        s.serialize_field("trend_indicator", &self.trend_indicator)?;
+        s.serialize_field("K", &self.K)?;
+        s.serialize_field("s_a", &self.s_a)?;
+        s.serialize_field("s_m", &self.s_m)?;
+        s.serialize_field("X", &x)?;
+        s.serialize_field("sigmas", &self.sigmas)?;
+        s.serialize_field("tau", &self.tau)?;
+        s.end()
+    }
 }
 
 /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
@@ -92,6 +183,17 @@ pub enum Algorithm {
     Bfgs,
     /// Use the Limited-memory BFGS (L-BFGS) algorithm.
     Lbfgs,
+}
+
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Lbfgs => "lbfgs",
+            Self::Newton => "newton",
+            Self::Bfgs => "bfgs",
+        };
+        f.write_str(s)
+    }
 }
 
 /// Arguments for optimization.
@@ -255,5 +357,92 @@ pub mod mock_optimizer {
                 trend: Vec::new(),
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn serialize_data() {
+        let data = Data {
+            T: 3,
+            y: vec![1.0, 2.0, 3.0],
+            t: vec![0.0, 1.0, 2.0],
+            X: vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0],
+            sigmas: vec![
+                1.0.try_into().unwrap(),
+                2.0.try_into().unwrap(),
+                3.0.try_into().unwrap(),
+            ],
+            tau: 1.0.try_into().unwrap(),
+            K: 2,
+            s_a: vec![1, 1, 1],
+            s_m: vec![0, 0, 0],
+            cap: vec![0.0, 0.0, 0.0],
+            S: 2,
+            t_change: vec![0.0, 0.0, 0.0],
+            trend_indicator: TrendIndicator::Linear,
+        };
+        let serialized = serde_json::to_string_pretty(&data).unwrap();
+        pretty_assertions::assert_eq!(
+            serialized,
+            r#"{
+  "T": 3,
+  "y": [
+    1.0,
+    2.0,
+    3.0
+  ],
+  "t": [
+    0.0,
+    1.0,
+    2.0
+  ],
+  "cap": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "S": 2,
+  "t_change": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "trend_indicator": 0,
+  "K": 2,
+  "s_a": [
+    1,
+    1,
+    1
+  ],
+  "s_m": [
+    0,
+    0,
+    0
+  ],
+  "X": [
+    [
+      1.0,
+      2.0
+    ],
+    [
+      3.0,
+      1.0
+    ],
+    [
+      2.0,
+      3.0
+    ]
+  ],
+  "sigmas": [
+    1.0,
+    2.0,
+    3.0
+  ],
+  "tau": 1.0
+}"#
+        );
     }
 }

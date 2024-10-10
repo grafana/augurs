@@ -11,4 +11,4 @@ keywords.workspace = true
 publish = false
 
 [dependencies]
-augurs = { workspace = true, features = ["ets", "mstl", "forecaster", "seasons"] }
+augurs = { workspace = true, features = ["ets", "mstl", "forecaster", "prophet", "prophet-cmdstan", "seasons"] }

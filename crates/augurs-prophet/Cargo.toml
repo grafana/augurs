@@ -15,12 +15,35 @@ itertools.workspace = true
 num-traits.workspace = true
 rand.workspace = true
 statrs.workspace = true
+serde = { workspace = true, optional = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
+tempfile = { version = "3.13.0", optional = true }
 thiserror.workspace = true
+ureq = { version = "2.10.1", optional = true }
+zip = { version = "2.2.0", optional = true }
 
 [dev-dependencies]
+augurs.workspace = true
 augurs-testing.workspace = true
 chrono.workspace = true
 pretty_assertions.workspace = true
 
+[build-dependencies]
+tempfile = { version = "3.13.0", optional = true }
+
 [features]
 bytemuck = ["dep:bytemuck"]
+cmdstan = ["dep:tempfile", "dep:serde_json", "serde"]
+compile-cmdstan = ["cmdstan", "dep:tempfile"]
+download = ["dep:ureq", "dep:zip"]
+# Ignore cmdstan compilation in the build script.
+# This should only be used for developing the library, not by
+# end users, or you may end up with a broken build where the
+# Prophet model isn't available to be compiled into the binary.
+internal-ignore-cmdstan-failure = []
+serde = ["dep:serde"]
+
+[[bin]]
+name = "download-stan-model"
+path = "src/bin/main.rs"
+required-features = ["download"]
