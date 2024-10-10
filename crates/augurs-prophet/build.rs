@@ -70,10 +70,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // This is a complete hack but lets us get away with still using
     // the `--all-features` flag of Cargo without everything failing
     // if there isn't a Stan installation.
-    // Basically, if we're
-    // hard fail, we just want to skip the feature.
+    // Basically, if have this feature enabled, skip any failures in
+    // the build process and just create some empty files.
     // This will cause things to fail at runtime if there isn't a Stan
-    // installation, but that's okay.
+    // installation, but that's okay because no-one should ever use this
+    // feature.
+    #[cfg(feature = "internal-ignore-cmdstan-failure")]
+    if _result.is_err() {
+        std::fs::create_dir_all("./build")?;
+        std::fs::File::create("./build/prophet")?;
+        std::fs::File::create("./build/libtbb.so.12")?;
+    }
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
     _result?;
     Ok(())
