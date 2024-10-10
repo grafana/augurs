@@ -28,6 +28,9 @@ pub use augurs_mstl as mstl;
 #[cfg(feature = "outlier")]
 pub use augurs_outlier as outlier;
 #[doc(inline)]
+#[cfg(feature = "prophet")]
+pub use augurs_prophet as prophet;
+#[doc(inline)]
 #[cfg(feature = "seasons")]
 pub use augurs_seasons as seasons;
 

@@ -17,6 +17,7 @@ augurs-ets = { workspace = true, optional = true }
 augurs-forecaster = { workspace = true, optional = true }
 augurs-mstl = { workspace = true, optional = true }
 augurs-outlier = { workspace = true, optional = true }
+augurs-prophet = { workspace = true, optional = true }
 augurs-seasons = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -33,5 +34,6 @@ forecaster = ["augurs-forecaster"]
 full = ["changepoint", "clustering", "dtw", "ets", "forecaster", "mstl", "outlier", "parallel", "seasons"]
 mstl = ["augurs-mstl", "augurs-ets?/mstl"]
 parallel = ["augurs-dtw?/parallel", "augurs-outlier?/parallel"]
+prophet = ["augurs-prophet"]
 outlier = ["augurs-outlier"]
 seasons = ["augurs-seasons"]

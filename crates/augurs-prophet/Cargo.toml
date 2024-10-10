@@ -1,0 +1,26 @@
+[package]
+name = "augurs-prophet"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bytemuck = { workspace = true, features = ["derive"], optional = true }
+itertools.workspace = true
+num-traits.workspace = true
+rand.workspace = true
+statrs.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+augurs-testing.workspace = true
+chrono.workspace = true
+pretty_assertions.workspace = true
+
+[features]
+bytemuck = ["dep:bytemuck"]
