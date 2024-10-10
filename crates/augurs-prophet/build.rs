@@ -10,7 +10,7 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
     use tempfile::TempDir;
 
     println!("cargo::rerun-if-changed=prophet.stan");
-    println!("cargo::rerun-if-env-changed=CMDSTAN_PATH");
+    println!("cargo::rerun-if-env-changed=STAN_PATH");
 
     let stan_path: PathBuf = std::env::var("STAN_PATH")
         .map_err(|_| "STAN_PATH not set")?
