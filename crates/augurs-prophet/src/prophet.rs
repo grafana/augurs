@@ -91,17 +91,22 @@ impl<O> Prophet<O> {
     }
 
     /// Add a custom seasonality to the model.
-    pub fn add_seasonality(&mut self, name: String, seasonality: Seasonality) -> Result<(), Error> {
+    pub fn add_seasonality(
+        &mut self,
+        name: String,
+        seasonality: Seasonality,
+    ) -> Result<&mut Self, Error> {
         if self.seasonalities.contains_key(&name) {
             return Err(Error::DuplicateSeasonality(name));
         }
         self.seasonalities.insert(name, seasonality);
-        Ok(())
+        Ok(self)
     }
 
     /// Add a regressor to the model.
-    pub fn add_regressor(&mut self, name: String, regressor: Regressor) {
+    pub fn add_regressor(&mut self, name: String, regressor: Regressor) -> &mut Self {
         self.regressors.insert(name, regressor);
+        self
     }
 
     /// Return `true` if the model has been fit, or `false` if not.
@@ -659,8 +664,7 @@ mod test_custom_seasonal {
                     .with_condition("is_conditional_week".to_string())
                     .with_mode(FeatureMode::Additive),
             )
-            .unwrap();
-        prophet
+            .unwrap()
             .add_seasonality(
                 "normal_monthly".to_string(),
                 Seasonality::new(30.5.try_into().unwrap(), 5.try_into().unwrap())

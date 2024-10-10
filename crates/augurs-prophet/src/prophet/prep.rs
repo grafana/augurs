@@ -1223,22 +1223,23 @@ mod test {
             ..Default::default()
         };
         let mut prophet = Prophet::new(opts, MockOptimizer::new());
-        prophet.add_regressor(
-            "binary_feature".to_string(),
-            Regressor::additive().with_prior_scale(0.2.try_into().unwrap()),
-        );
-        prophet.add_regressor(
-            "numeric_feature".to_string(),
-            Regressor::additive().with_prior_scale(0.5.try_into().unwrap()),
-        );
-        prophet.add_regressor(
-            "numeric_feature2".to_string(),
-            Regressor::multiplicative().with_prior_scale(0.5.try_into().unwrap()),
-        );
-        prophet.add_regressor(
-            "binary_feature2".to_string(),
-            Regressor::additive().with_standardize(Standardize::Yes),
-        );
+        prophet
+            .add_regressor(
+                "binary_feature".to_string(),
+                Regressor::additive().with_prior_scale(0.2.try_into().unwrap()),
+            )
+            .add_regressor(
+                "numeric_feature".to_string(),
+                Regressor::additive().with_prior_scale(0.5.try_into().unwrap()),
+            )
+            .add_regressor(
+                "numeric_feature2".to_string(),
+                Regressor::multiplicative().with_prior_scale(0.5.try_into().unwrap()),
+            )
+            .add_regressor(
+                "binary_feature2".to_string(),
+                Regressor::additive().with_standardize(Standardize::Yes),
+            );
         let mut modes = Modes {
             additive: HashSet::from([
                 ComponentName::Seasonality("weekly".to_string()),
