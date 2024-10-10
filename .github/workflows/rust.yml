@@ -39,7 +39,7 @@ jobs:
         run: just download-prophet-stan-model
 
       - name: Run cargo nextest
-        run: just test
+        run: just test-all
       - name: Run doc tests
         run: just doctest
 
