@@ -278,7 +278,7 @@ impl<O: Optimizer> Prophet<O> {
         }
         self.optimized = Some(
             self.optimizer
-                .optimize(init.clone(), preprocessed.data.clone(), opts)
+                .optimize(&init, &preprocessed.data, &opts)
                 .map_err(|e| Error::OptimizationFailed(e.to_string()))?,
         );
         self.processed = Some(preprocessed);

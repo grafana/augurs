@@ -95,7 +95,7 @@ pub enum Algorithm {
 }
 
 /// Arguments for optimization.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone)]
 pub struct OptimizeOpts {
     /// Algorithm to use.
     pub algorithm: Option<Algorithm>,
@@ -189,9 +189,9 @@ pub trait Optimizer: std::fmt::Debug {
     /// data, initial parameters and optimization options.
     fn optimize(
         &self,
-        init: InitialParams,
-        data: Data,
-        opts: OptimizeOpts,
+        init: &InitialParams,
+        data: &Data,
+        opts: &OptimizeOpts,
     ) -> Result<OptimizedParams, Error>;
 }
 
@@ -237,21 +237,21 @@ pub mod mock_optimizer {
     impl Optimizer for MockOptimizer {
         fn optimize(
             &self,
-            init: InitialParams,
-            data: Data,
-            opts: OptimizeOpts,
+            init: &InitialParams,
+            data: &Data,
+            opts: &OptimizeOpts,
         ) -> Result<OptimizedParams, Error> {
             *self.call.borrow_mut() = Some(OptimizeCall {
                 init: init.clone(),
-                data,
-                _opts: opts,
+                data: data.clone(),
+                _opts: opts.clone(),
             });
             Ok(OptimizedParams {
                 k: init.k,
                 m: init.m,
                 sigma_obs: init.sigma_obs,
-                delta: init.delta,
-                beta: init.beta,
+                delta: init.delta.clone(),
+                beta: init.beta.clone(),
                 trend: Vec::new(),
             })
         }
