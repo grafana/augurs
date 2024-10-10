@@ -396,8 +396,8 @@ impl CmdstanOptimizer {
     pub fn new_embedded() -> Self {
         static PROPHET_INSTALLATION: std::sync::LazyLock<ProphetInstallation> =
             std::sync::LazyLock::new(|| {
-                static PROPHET_BINARY: &[u8] = include_bytes!("../build/prophet");
-                static LIBTBB_SO: &[u8] = include_bytes!("../build/libtbb.so.12");
+                static PROPHET_BINARY: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/prophet"));
+                static LIBTBB_SO: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/libtbb.so.12"));
 
                 let dir = tempfile::tempdir().expect("could not create temporary directory");
                 let lib_dir = dir.path().join("lib");

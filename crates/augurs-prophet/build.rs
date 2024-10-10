@@ -19,7 +19,7 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
     let cmdstan_bin_path = stan_path.join("bin/cmdstan");
     let model_stan = include_bytes!("./prophet.stan");
 
-    let build_dir = PathBuf::from("./build");
+    let build_dir = PathBuf::from(std::env::var("OUT_DIR")?);
     fs::create_dir_all(&build_dir).map_err(|_| "could not create build directory")?;
 
     // Write the Prophet Stan file to a named file in a temporary directory.
@@ -77,9 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // feature.
     #[cfg(feature = "internal-ignore-cmdstan-failure")]
     if _result.is_err() {
-        std::fs::create_dir_all("./build")?;
-        std::fs::File::create("./build/prophet")?;
-        std::fs::File::create("./build/libtbb.so.12")?;
+        let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
+        std::fs::create_dir_all(&out_dir)?;
+        std::fs::File::create(out_dir.join("prophet"))?;
+        std::fs::File::create(out_dir.join("libtbb.so.12"))?;
     }
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
     _result?;
