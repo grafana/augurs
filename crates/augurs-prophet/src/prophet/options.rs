@@ -9,9 +9,10 @@ use std::{collections::HashMap, num::NonZeroU32};
 use crate::{Error, FeatureMode, Holiday, PositiveFloat, TimestampSeconds, TrendIndicator};
 
 /// The type of growth to use.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum GrowthType {
     /// Linear growth (default).
+    #[default]
     Linear,
     /// Logistic growth.
     Logistic,
@@ -53,9 +54,10 @@ pub enum SeasonalityOption {
 }
 
 /// How to scale the data prior to fitting the model.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum Scaling {
     /// Use abs-max scaling (the default).
+    #[default]
     AbsMax,
     /// Use min-max scaling.
     MinMax,
@@ -66,10 +68,11 @@ pub enum Scaling {
 /// Note: for now, only MLE/MAP estimation is supported, i.e. there
 /// is no support for MCMC sampling. This will be added in the future!
 /// The enum will be marked as `non_exhaustive` until that point.
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub enum EstimationMode {
     /// Use MLE estimation.
+    #[default]
     Mle,
     /// Use MAP estimation.
     Map,
