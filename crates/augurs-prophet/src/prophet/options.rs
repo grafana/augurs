@@ -62,14 +62,21 @@ pub enum Scaling {
 }
 
 /// How to do parameter estimation.
+///
+/// Note: for now, only MLE/MAP estimation is supported, i.e. there
+/// is no support for MCMC sampling. This will be added in the future!
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum EstimationMode {
     /// Use MLE estimation.
     Mle,
     /// Use MAP estimation.
     Map,
-    /// Do full Bayesian inference with the specified number of MCMC samples.
-    Mcmc(u32),
+    // This is not yet implemented. We need to add a new `Sampler` trait and
+    // implement it, then handle the different number outputs when predicting,
+    // before this can be enabled.
+    // /// Do full Bayesian inference with the specified number of MCMC samples.
+    //
+    // Mcmc(u32),
 }
 
 /// The width of the uncertainty intervals.
