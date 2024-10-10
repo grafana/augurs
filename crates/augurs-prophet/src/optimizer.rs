@@ -75,7 +75,7 @@ pub struct Data {
     /// Indicator of multiplicative features, length k.
     pub s_m: Vec<i32>,
     /// Regressors, shape (n, k).
-    pub X: Vec<Vec<f64>>,
+    pub X: Vec<f64>,
     /// Scale on seasonality prior.
     pub sigmas: Vec<PositiveFloat>,
     /// Scale on changepoints prior.

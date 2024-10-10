@@ -803,10 +803,10 @@ mod test_fit {
         );
         assert_eq!(&call.data.s_a, &[1; 6]);
         assert_eq!(&call.data.s_m, &[0; 6]);
-        assert_eq!(call.data.X.len(), 6);
-        let first = call.data.X.iter().map(|row| row[0]).collect_vec();
+        assert_eq!(call.data.X.len(), 6 * 480);
+        let first = &call.data.X[..6];
         assert_all_close(
-            &first,
+            first,
             &[0.781831, 0.623490, 0.974928, -0.222521, 0.433884, -0.900969],
         );
     }

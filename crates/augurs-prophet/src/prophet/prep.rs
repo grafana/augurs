@@ -244,6 +244,17 @@ impl<O> Prophet<O> {
             vec![0.0; n]
         };
 
+        // Transpose X; we store it column-major but Stan expects it a contiguous
+        // array in row-major format.
+        // format.
+        #[allow(non_snake_case)]
+        let mut X = vec![0.0; features.data.len() * features.data[0].len()];
+        for (i, row) in features.data.iter().enumerate() {
+            for (j, val) in row.iter().enumerate() {
+                X[i + features.data.len() * j] = *val;
+            }
+        }
+
         let data = Data {
             T: history
                 .ds
@@ -257,7 +268,7 @@ impl<O> Prophet<O> {
             y: history.y_scaled.clone(),
             t: history.t.clone(),
             t_change: changepoints_t,
-            X: features.data,
+            X,
             sigmas: prior_scales,
             s_a: component_columns.additive,
             s_m: component_columns.multiplicative,
