@@ -10,7 +10,12 @@ First, download the Prophet Stan model using the included binary:
 ```sh
 $ cargo install --bin download-stan-model --features download augurs-prophet
 $ download-stan-model
+Downloading https://files.pythonhosted.org/packages/1f/47/f7d10a904756830efd8522700e582822ff44a15f839b464044ee4c53ee36/prophet-1.1.6-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl to prophet_stan_model/prophet-1.1.6-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+Writing zipped prophet/stan_model/prophet_model.bin to prophet_stan_model/prophet_model.bin
+Writing zipped prophet.libs/libtbb-dc01d64d.so.2 to prophet_stan_model/lib/libtbb-dc01d64d.so.2
 ```
+
+Then use the `Prophet` model as follows:
 
 ```rust,no_run
 use augurs::prophet::{cmdstan::CmdstanOptimizer, Prophet, TrainingData};
@@ -42,6 +47,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+Note that the `CmdstanOptimizer` needs to know the path to the Prophet
+model binary.
 
 This crate aims to be low-dependency to enable it to run in as
 many places as possible. With that said, we need to talk about
