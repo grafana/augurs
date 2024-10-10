@@ -16,10 +16,22 @@
 //!    This will embed the Prophet model binary and the libtbb dynamic library into
 //!    the final executable, which will increase the size of the final executable by about
 //!    2MB, but the final binary won't require any additional dependencies.
-//! 2. Use [`CmdstanOptimizer::with_custom_prophet`] to create a new `CmdstanOptimizer` using
+//! 2. Use [`CmdstanOptimizer::with_prophet_path`] to create a new `CmdstanOptimizer` using
 //!    a precompiled Prophet Stan model. This model can be obtained by either manually building
 //!    the Prophet model (which still requires a working Stan installation) or extracting it from
 //!    the Prophet Python package for your target platform.
+//!    The `download-stan-model` binary of this crate can be used to do the latter easily.
+//!    It will download the precompiled model for the current architecture and OS, and
+//!    extract it to the `prophet_stan_model` directory. This won't work if there is no
+//!    wheel for the current architecture and OS, though.
+//!
+//!    For example:
+//!
+//!    ```sh
+//!    $ cargo install --bin download-stan-model augurs-prophet
+//!    $ download-stan-model
+//!    $ ls prophet_stan_model
+//!    ```
 //!
 //! # Gotchas
 //!
@@ -46,6 +58,9 @@ use crate::{optimizer, Optimizer, PositiveFloat, TryFromFloatError};
 /// Errors that can occur when trying to run optimization using cmdstan.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// The provided path to the Prophet binary has no parent directory.
+    #[error("Prophet path {0} has no parent")]
+    ProphetPathHasNoParent(PathBuf),
     /// An I/O error occurred when trying to run the Prophet model executable.
     #[error("Error running Prophet at {command}: {source}")]
     ProphetIOError {
@@ -167,7 +182,7 @@ pub struct OptimizedParamsFound {
 struct ProphetInstallation {
     #[cfg(feature = "compile-cmdstan")]
     _dir: Option<tempfile::TempDir>,
-    lib_dir: Option<PathBuf>,
+    lib_dir: PathBuf,
     prophet_binary_path: PathBuf,
 }
 
@@ -187,9 +202,7 @@ impl Clone for ProphetInstallation {
 impl ProphetInstallation {
     fn command(&self) -> Command {
         let mut cmd = Command::new(&self.prophet_binary_path);
-        if let Some(lib_dir) = &self.lib_dir {
-            cmd.env("LD_LIBRARY_PATH", lib_dir);
-        }
+        cmd.env("LD_LIBRARY_PATH", &self.lib_dir);
         cmd
     }
 }
@@ -323,7 +336,7 @@ impl<'a> OptimizeCommand<'a> {
             "seed={}",
             self.opts.seed.unwrap_or_else(|| {
                 let mut rng = thread_rng();
-                (&mut rng).gen_range(1..99999)
+                rng.gen_range(1..99999)
             })
         ));
         command.arg("data");
@@ -336,10 +349,7 @@ impl<'a> OptimizeCommand<'a> {
         command.arg("method=optimize");
         command.arg(format!(
             "algorithm={}",
-            self.opts
-                .algorithm
-                .unwrap_or(crate::Algorithm::Lbfgs)
-                .to_string()
+            self.opts.algorithm.unwrap_or(crate::Algorithm::Lbfgs)
         ));
         command
     }
@@ -361,12 +371,17 @@ impl CmdstanOptimizer {
     ///
     /// This is only available if the `compile-cmdstan` feature is enabled.
     ///
+    /// It will fail at compile-time if the Prophet model wasn't built by the build
+    /// script. Generally this shouldn't ever happen (since the build script will fail),
+    /// but there is always a chance that the built file is deleted in between
+    /// the build script running and compilation!
+    ///
     /// # Panics
     ///
     /// This function will panic if the temporary file could not be created, or if the
     /// Prophet model binary could not be written to the temporary file.
     #[cfg(feature = "compile-cmdstan")]
-    pub fn new() -> Self {
+    pub fn new_embedded() -> Self {
         static PROPHET_INSTALLATION: std::sync::LazyLock<ProphetInstallation> =
             std::sync::LazyLock::new(|| {
                 static PROPHET_BINARY: &[u8] = include_bytes!("../build/prophet");
@@ -398,7 +413,7 @@ impl CmdstanOptimizer {
                 ProphetInstallation {
                     _dir: Some(dir),
                     prophet_binary_path,
-                    lib_dir: Some(lib_dir),
+                    lib_dir,
                 }
             });
 
@@ -408,12 +423,20 @@ impl CmdstanOptimizer {
     }
 
     /// Create a new [`CmdstanOptimizer`] using the Prophet model found the provided path.
-    pub fn with_custom_prophet(prophet_path: impl Into<PathBuf>) -> Result<Self, Error> {
+    pub fn with_prophet_path(prophet_path: impl Into<PathBuf>) -> Result<Self, Error> {
+        let prophet_binary_path = prophet_path.into();
+        // Assume that the libtbb library is at the `lib` subdirectory of
+        // the Prophet binary, as arranged by the `download-stan-model`
+        // convenience script.
+        let lib_dir = prophet_binary_path
+            .parent()
+            .ok_or_else(|| Error::ProphetPathHasNoParent(prophet_binary_path.to_path_buf()))?
+            .join("lib");
         let prophet_installation = ProphetInstallation {
             #[cfg(feature = "compile-cmdstan")]
             _dir: None,
-            lib_dir: None,
-            prophet_binary_path: prophet_path.into(),
+            lib_dir,
+            prophet_binary_path,
         };
         // Test that the command can be executed.
         let mut command = prophet_installation.command();
@@ -445,9 +468,9 @@ impl Optimizer for CmdstanOptimizer {
     ) -> Result<optimizer::OptimizedParams, optimizer::Error> {
         OptimizeCommand {
             installation: &self.prophet_installation,
-            init: &init,
-            data: &data,
-            opts: &opts,
+            init,
+            data,
+            opts,
         }
         .run()
         .map_err(optimizer::Error::custom)

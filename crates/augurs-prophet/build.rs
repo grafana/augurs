@@ -13,14 +13,14 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo::rerun-if-env-changed=CMDSTAN_PATH");
 
     let stan_path: PathBuf = std::env::var("STAN_PATH")
-        .expect("STAN_PATH not set")
+        .map_err(|_| "STAN_PATH not set")?
         .parse()
-        .expect("invalid STAN_PATH");
+        .map_err(|_| "invalid STAN_PATH")?;
     let cmdstan_bin_path = stan_path.join("bin/cmdstan");
     let model_stan = include_bytes!("./prophet.stan");
 
     let build_dir = PathBuf::from("./build");
-    fs::create_dir_all(&build_dir).expect("could not create build directory");
+    fs::create_dir_all(&build_dir).map_err(|_| "could not create build directory")?;
 
     // Write the Prophet Stan file to a named file in a temporary directory.
     let tmp_dir = TempDir::new()?;
@@ -64,7 +64,17 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let _result = Ok::<(), &'static str>(());
     #[cfg(all(feature = "cmdstan", feature = "compile-cmdstan"))]
-    compile_model()?;
+    let _result = compile_model();
+    // This is a complete hack but lets us get away with still using
+    // the `--all-features` flag of Cargo without everything failing
+    // if there isn't a Stan installation.
+    // Basically, if we're
+    // hard fail, we just want to skip the feature.
+    // This will cause things to fail at runtime if there isn't a Stan
+    // installation, but that's okay.
+    #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
+    _result?;
     Ok(())
 }

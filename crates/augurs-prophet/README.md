@@ -31,6 +31,14 @@ This works fine if you're operating in a desktop or server environment,
 but poses issues when running in more esoteric environments such as
 WebAssembly.
 
+The `cmdstan` module of this crate contains an implementation of `Optimizer`
+which will use a compiled Stan program to do this. See the `cmdstan` module
+for more details on how to use it.
+
+This requires the `cmdstan` feature to be enabled, and optionally the
+`compile-cmdstan` feature to be enabled if you want to compile and embed
+the Stan model at build time.
+
 ### `libstan`
 
 We could choose to write a `libstan` crate which uses [`cxx`][cxx] to

@@ -20,3 +20,7 @@ doc:
 
 watch:
   bacon
+
+# Download the Prophet Stan model.
+download-prophet-stan-model:
+  cargo run --features download --bin download-stan-model

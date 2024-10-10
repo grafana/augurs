@@ -2,3 +2,4 @@
 /Cargo.lock
 .bacon-locations
 .vscode
+prophet_stan_model

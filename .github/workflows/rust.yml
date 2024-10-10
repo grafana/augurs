@@ -34,6 +34,10 @@ jobs:
         with:
           bins: cargo-nextest,just
 
+      - name: Download Prophet Stan model
+        # Download the Prophet Stan model since an example requires it.
+        run: just download-prophet-stan-model
+
       - name: Run cargo nextest
         run: just test
       - name: Run doc tests
