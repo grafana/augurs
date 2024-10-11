@@ -252,7 +252,10 @@ impl<F: FnMut(String)> StdioReader<F> {
         // Clear our temporary buffer.
         self.buf.clear();
         // Copying the new output into our buffer.
-        io::copy(&mut reader, &mut self.buf).unwrap();
+        if let Err(e) = io::copy(&mut reader, &mut self.buf) {
+            tracing::warn!(error = %e, "Error reading from child process");
+            return;
+        }
         let buf_str = String::from_utf8_lossy(&self.buf);
         // Always append whatever we see into our 'all' buffer.
         self.all_stdout.push_str(&buf_str);
