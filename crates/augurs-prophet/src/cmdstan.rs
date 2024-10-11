@@ -259,21 +259,19 @@ impl<'a> OptimizeCommand<'a> {
             });
         }
 
-        self.parse_output(output_path)
-    }
-
-    fn parse_output(&self, output_path: PathBuf) -> Result<optimizer::OptimizedParams, Error> {
         let output = std::fs::read_to_string(&output_path).map_err(|source| Error::ReadOutput {
             path: output_path,
             source,
         })?;
         let mut lines = output.lines().skip_while(|line| line.starts_with('#'));
-        let header = lines.next().ok_or(Error::NoHeader)?.split(',');
-        let data = lines
-            .next()
-            .ok_or(Error::NoData)?
-            .split(',')
-            .map(|val| val.parse());
+        let header = lines.next().ok_or(Error::NoHeader)?;
+        let data = lines.next().ok_or(Error::NoData)?;
+        Self::parse_output(header, data)
+    }
+
+    fn parse_output(header: &str, data: &str) -> Result<optimizer::OptimizedParams, Error> {
+        let header = header.split(',');
+        let data = data.split(',').map(|val| val.parse());
 
         let mut delta_indices: Vec<usize> = Vec::new();
         let mut beta_indices: Vec<usize> = Vec::new();
@@ -287,6 +285,7 @@ impl<'a> OptimizeCommand<'a> {
             trend: Vec::new(),
         };
         let mut found = OptimizedParamsFound::default();
+
         for (name, val) in header.zip(data) {
             match name.split_once('.') {
                 Some(("delta", i)) => {
@@ -486,5 +485,21 @@ impl Optimizer for CmdstanOptimizer {
         }
         .run()
         .map_err(optimizer::Error::custom)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn parse_output() {
+        let header = "k,m,sigma_obs,delta.1,delta.2,beta.1,beta.2,trend.2,trend.1";
+        let data = "0.5,0.5,1.0,0.1,0.2,0.3,0.4,0.5,0.6";
+        let out = super::OptimizeCommand::parse_output(header, data).unwrap();
+        assert_eq!(out.k, 0.5);
+        assert_eq!(out.m, 0.5);
+        assert_eq!(*out.sigma_obs, 1.0);
+        assert_eq!(out.delta, vec![0.1, 0.2]);
+        assert_eq!(out.beta, vec![0.3, 0.4]);
+        assert_eq!(out.trend, vec![0.6, 0.5]);
     }
 }
