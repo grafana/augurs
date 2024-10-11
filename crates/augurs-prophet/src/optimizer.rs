@@ -362,9 +362,11 @@ pub mod mock_optimizer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_data() {
+        use super::*;
         let data = Data {
             T: 3,
             y: vec![1.0, 2.0, 3.0],

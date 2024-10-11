@@ -9,11 +9,14 @@
 //! $ cargo run --features download --bin download-stan-model
 //! $ cargo run --example prophet_cmdstan
 //! ```
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use augurs::prophet::{cmdstan::CmdstanOptimizer, Prophet, Regressor, TrainingData};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt::init();
+    tracing::info!("Running Prophet example");
+
     let ds = vec![
         1704067200, 1704871384, 1705675569, 1706479753, 1707283938, 1708088123, 1708892307,
         1709696492, 1710500676, 1711304861, 1712109046, 1712913230, 1713717415,
@@ -38,7 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]))
         .unwrap();
 
-    let cmdstan = CmdstanOptimizer::with_prophet_path("prophet_stan_model/prophet_model.bin")?;
+    let cmdstan = CmdstanOptimizer::with_prophet_path("prophet_stan_model/prophet_model.bin")?
+        .with_poll_interval(Duration::from_millis(100))
+        .with_refresh(50);
     // If you were using the embedded version of the cmdstan model, you'd use this:
     // let cmdstan = CmdstanOptimizer::new_embedded();
 

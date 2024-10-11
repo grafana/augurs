@@ -48,10 +48,11 @@
 //!   `lib` subdirectory next to the Prophet binary, and the `LD_LIBRARY_PATH`
 //!   environment variable is set to that directory by default.
 use std::{
-    io,
+    io::{self, BufRead, BufReader, Read},
     num::{ParseFloatError, ParseIntError},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
+    time::Duration,
 };
 
 use rand::{thread_rng, Rng};
@@ -219,11 +220,151 @@ impl ProphetInstallation {
     }
 }
 
+struct StdioReader<F> {
+    // A temporary buffer for the current 'poll' call.
+    buf: Vec<u8>,
+
+    // A temporary buffer what we hope is the current line.
+    line_buf: String,
+
+    // Everything we've seen so far.
+    all_stdout: String,
+
+    // The position in the buffer where we've seen the last line.
+    position: u64,
+
+    // The callback to call when we see a full line.
+    on_line: F,
+}
+
+impl<F: FnMut(String)> StdioReader<F> {
+    fn new(on_line: F) -> Self {
+        Self {
+            buf: Vec::new(),
+            line_buf: String::new(),
+            position: 0,
+            all_stdout: String::new(),
+            on_line,
+        }
+    }
+
+    fn poll_output<T: Read>(&mut self, mut reader: T, end: bool) {
+        // Clear our temporary buffer.
+        self.buf.clear();
+        // Copying the new output into our buffer.
+        io::copy(&mut reader, &mut self.buf).unwrap();
+        let buf_str = String::from_utf8_lossy(&self.buf);
+        // Always append whatever we see into our 'all' buffer.
+        self.all_stdout.push_str(&buf_str);
+
+        // We want to look for complete lines, starting from the last position.
+        // If we find one, we want to consume it and log it, update the position,
+        // then repeat.
+        // If not, don't do anything.
+        let mut cursor = io::Cursor::new(&self.all_stdout);
+        cursor.set_position(self.position);
+        let mut bufreader = BufReader::new(&mut cursor);
+        self.line_buf.clear();
+        while let Ok(n) = bufreader.read_line(&mut self.line_buf) {
+            match n {
+                0 => {
+                    // We've reached the end of the buffer.
+                    // If we've been called with `end=true`, we should call the callback
+                    // with the current line buffer if it's non-empty.
+                    if end && !self.line_buf.is_empty() {
+                        (self.on_line)(self.line_buf.clone());
+                    }
+                    return;
+                }
+                n if self.line_buf.ends_with('\n') => {
+                    self.position += n as u64;
+                    // Remove the trailing newline.
+                    self.line_buf.truncate(n - 1);
+                    // Clear the buffer and call the callback.
+                    (self.on_line)(self.line_buf.split_off(0));
+                }
+                _ => {
+                    // Don't update position, we haven't consumed the line.
+                }
+            }
+        }
+    }
+}
+
+/// Struct representing a convergence log line, such as
+/// `      718       140.457   7.62967e-09       191.549      0.8667      0.8667      809`
+struct ConvergenceLog<'a> {
+    iter: usize,
+    log_prob: f64,
+    dx: f64,
+    grad: f64,
+    alpha: f64,
+    alpha0: f64,
+    evals: usize,
+    notes: &'a str,
+}
+
+impl<'a> ConvergenceLog<'a> {
+    fn new(s: &'a str) -> Option<Self> {
+        let mut split = s.split_whitespace();
+        let iter = split.next()?.parse::<usize>().ok()?;
+        let log_prob = split.next()?.parse::<f64>().ok()?;
+        let dx = split.next()?.parse::<f64>().ok()?;
+        let grad = split.next()?.parse::<f64>().ok()?;
+        let alpha = split.next()?.parse::<f64>().ok()?;
+        let alpha0 = split.next()?.parse::<f64>().ok()?;
+        let evals = split.next()?.parse::<usize>().ok()?;
+        let notes = split.next().unwrap_or_default();
+        Some(Self {
+            iter,
+            log_prob,
+            dx,
+            grad,
+            alpha,
+            alpha0,
+            evals,
+            notes,
+        })
+    }
+}
+
+#[inline]
+fn log_stdout(s: String) {
+    if s.contains("Iter") {
+        return;
+    }
+    match ConvergenceLog::new(s.as_str()) {
+        Some(log) => {
+            tracing::debug!(
+                target: "augurs::prophet::cmdstan::optimize::progress",
+                iter = log.iter,
+                log_prob = log.log_prob,
+                dx = log.dx,
+                grad = log.grad,
+                alpha = log.alpha,
+                alpha0 = log.alpha0,
+                evals = log.evals,
+                notes = log.notes,
+            );
+        }
+        None => {
+            tracing::debug!(target: "augurs::prophet::cmdstan::optimize", message = s)
+        }
+    }
+}
+
+#[inline]
+fn log_stderr(s: String) {
+    tracing::error!(target: "augurs::prophet::cmdstan::optimize", message = s)
+}
+
 struct OptimizeCommand<'a> {
     installation: &'a ProphetInstallation,
     init: &'a optimizer::InitialParams,
     data: &'a optimizer::Data,
     opts: &'a optimizer::OptimizeOpts,
+    poll_interval: Duration,
+    refresh: usize,
 }
 
 impl<'a> OptimizeCommand<'a> {
@@ -246,19 +387,55 @@ impl<'a> OptimizeCommand<'a> {
 
         // Run the command.
         let mut command = self.command(&data_path, &init_path, &output_path);
-        let output = command.output().map_err(|source| Error::ProphetIOError {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+        let mut handle = command.spawn().map_err(|source| Error::ProphetIOError {
             command: format!("{:?}", command),
             source,
         })?;
-        if !output.status.success() {
-            return Err(Error::ProphetExeError {
-                command: format!("{:?}", command),
-                code: output.status.code(),
-                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-            });
+        // Capture the output.
+        // We'll store it in these buffers in case of an error, and also
+        // periodically log to stdout/stderr using `tracing`.
+        let mut stdout = handle.stdout.take().expect("stdout has been captured");
+        let mut stderr = handle.stderr.take().expect("stderr has been captured");
+        let mut stdout_reader = StdioReader::new(log_stdout);
+        let mut stderr_reader = StdioReader::new(log_stderr);
+
+        // Wait for the child to exit.
+        loop {
+            match handle.try_wait() {
+                Ok(None) => {
+                    // Still running, parse stdout and stderr so far.
+                    stdout_reader.poll_output(&mut stdout, false);
+                    stderr_reader.poll_output(&mut stderr, true);
+                }
+                Ok(Some(status)) => {
+                    // Child has exited, parse everything left.
+                    stdout_reader.poll_output(&mut stdout, true);
+                    stderr_reader.poll_output(&mut stderr, true);
+
+                    // If the child exited with a non-zero status, return an error.
+                    if !status.success() {
+                        return Err(Error::ProphetExeError {
+                            command: format!("{:?}", command),
+                            code: status.code(),
+                            stdout: stdout_reader.all_stdout,
+                            stderr: stderr_reader.all_stdout,
+                        });
+                    }
+                    break;
+                }
+                Err(e) => {
+                    // Error while waiting for child, return an error.
+                    return Err(Error::ProphetIOError {
+                        command: format!("{:?}", command),
+                        source: e,
+                    });
+                }
+            }
+            std::thread::sleep(self.poll_interval);
         }
 
+        // Read and parse the output file.
         let output = std::fs::read_to_string(&output_path).map_err(|source| Error::ReadOutput {
             path: output_path,
             source,
@@ -357,6 +534,7 @@ impl<'a> OptimizeCommand<'a> {
         ]);
         command.arg("output");
         command.arg(format!("file={}", output_path.display()));
+        command.arg(format!("refresh={}", self.refresh));
         command.arg("method=optimize");
         command.arg(format!(
             "algorithm={}",
@@ -372,6 +550,8 @@ impl<'a> OptimizeCommand<'a> {
 #[derive(Debug, Clone)]
 pub struct CmdstanOptimizer {
     prophet_installation: ProphetInstallation,
+    poll_interval: Duration,
+    refresh: usize,
 }
 
 impl CmdstanOptimizer {
@@ -430,6 +610,8 @@ impl CmdstanOptimizer {
 
         Self {
             prophet_installation: PROPHET_INSTALLATION.clone(),
+            poll_interval: Duration::from_millis(10),
+            refresh: 100,
         }
     }
 
@@ -466,7 +648,30 @@ impl CmdstanOptimizer {
         }
         Ok(Self {
             prophet_installation,
+            poll_interval: Duration::from_millis(10),
+            refresh: 100,
         })
+    }
+
+    /// Set the poll interval for the child process.
+    ///
+    /// This is the interval at which the child process will be polled for
+    /// output and completion. Decreasing this value will increase the
+    /// responsiveness of the optimizer and frequency of the log output,
+    /// but will require polling more frequently.
+    ///
+    /// The default is 10ms.
+    pub fn with_poll_interval(mut self, interval: Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    /// Set the number of iterations between progress messages.
+    ///
+    /// The default is 100.
+    pub fn with_refresh(mut self, refresh: usize) -> Self {
+        self.refresh = refresh;
+        self
     }
 }
 
@@ -482,6 +687,8 @@ impl Optimizer for CmdstanOptimizer {
             init,
             data,
             opts,
+            poll_interval: self.poll_interval,
+            refresh: self.refresh,
         }
         .run()
         .map_err(optimizer::Error::custom)
@@ -490,6 +697,43 @@ impl Optimizer for CmdstanOptimizer {
 
 #[cfg(test)]
 mod test {
+    use std::{cell::RefCell, io::Cursor};
+
+    #[test]
+    fn reader() {
+        let mut stdout = Cursor::new(Vec::new());
+
+        let got_stdout_logs = RefCell::new(vec![]);
+
+        let mut reader =
+            super::StdioReader::new(|s| got_stdout_logs.borrow_mut().push(s.to_string()));
+
+        reader.poll_output(&mut stdout, false);
+        assert!(got_stdout_logs.borrow().is_empty());
+
+        stdout.get_mut().extend(b"hello\n");
+        reader.poll_output(&mut stdout, false);
+        assert_eq!(*got_stdout_logs.borrow(), &["hello".to_string()]);
+
+        stdout.get_mut().extend(b"wor");
+        reader.poll_output(&mut stdout, false);
+        assert_eq!(*got_stdout_logs.borrow(), &["hello".to_string()]);
+
+        stdout.get_mut().extend(b"ld\n");
+        reader.poll_output(&mut stdout, false);
+        assert_eq!(
+            *got_stdout_logs.borrow(),
+            &["hello".to_string(), "world".to_string()]
+        );
+
+        stdout.get_mut().extend(b"end");
+        reader.poll_output(&mut stdout, true);
+        assert_eq!(
+            *got_stdout_logs.borrow(),
+            &["hello".to_string(), "world".to_string(), "end".to_string()]
+        );
+    }
+
     #[test]
     fn parse_output() {
         let header = "k,m,sigma_obs,delta.1,delta.2,beta.1,beta.2,trend.2,trend.1";
