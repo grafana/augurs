@@ -68,10 +68,30 @@ inspect: build
   wasm-tools component wit cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
 
 transpile: build
-  jco transpile --name prophet-wasmstan -O -o js/prophet-wasmstan cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  jco transpile \
+    --name prophet-wasmstan \
+    --optimize \
+    --out-dir js/prophet-wasmstan \
+    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  jco types \
+    --name prophet-wasmstan \
+    --out-dir js/prophet-wasmstan \
+    cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
+
+transpile-min: build
+  jco transpile \
+    --name prophet-wasmstan \
+    --minify \
+    --optimize \
+    --out-dir js/prophet-wasmstan \
+    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  jco types \
+    --name prophet-wasmstan \
+    --out-dir js/prophet-wasmstan \
+    cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
 
 test: transpile
   cd js/prophet-wasmstan && npm ci && npm run test:ci
 
-publish:
+publish: transpile-min
   cd js/prophet-wasmstan && npm ci && npm publish --access public
