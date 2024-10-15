@@ -62,6 +62,7 @@ mod dtw;
 pub mod ets;
 pub mod mstl;
 mod outlier;
+mod prophet;
 pub mod seasons;
 
 /// Initialize the logger and panic hook.
