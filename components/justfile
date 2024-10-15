@@ -1,0 +1,77 @@
+TOOLS_DIR := "./tools"
+WASI_ARCH := `uname -m`
+WASI_OS := os()
+WASI_VERSION := "24"
+WASI_VERSION_FULL := WASI_VERSION + ".0"
+WASI_SDK_PATH := "wasi-sdk-" + WASI_VERSION_FULL + "-" + WASI_ARCH + "-" + WASI_OS
+
+STAN_VERSION := "2.34.0"
+STAN_PATH := ""
+
+CLANG := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang"
+CLANG_CPP := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang++"
+
+# Checkout git submodules.
+checkout-submodules:
+  git submodule update --init --recursive
+
+# Install dependencies to work with WASI.
+install-deps: checkout-submodules
+  cargo binstall -y cargo-component
+  cargo binstall -y wit-bindgen-cli
+  cargo binstall -y wasm-tools
+  cargo binstall -y wac-cli
+  curl https://wasmtime.dev/install.sh -sSf | bash
+  npm install --yes -g @bytecodealliance/jco
+  curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-{{WASI_VERSION}}/{{WASI_SDK_PATH}}.tar.gz
+  tar -xf {{WASI_SDK_PATH}}.tar.gz
+  rm {{WASI_SDK_PATH}}.tar.gz
+  mkdir -p {{TOOLS_DIR}}
+  mv {{WASI_SDK_PATH}} {{TOOLS_DIR}}
+  curl -Lo {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm https://github.com/bytecodealliance/wasmtime/releases/download/v17.0.0/wasi_snapshot_preview1.reactor.wasm
+
+# Use `wit-bindgen` to generate the C bindings for the prophet-wasmstan WIT package.
+generate-skeleton:
+  wit-bindgen c --out-dir cpp/prophet-wasmstan cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
+  mv cpp/prophet-wasmstan/prophet_wasmstan.c cpp/prophet-wasmstan/prophet_wasmstan.cpp
+
+# Build the prophet-wasmstan C++ library using the custom `clang` compiler from the WASI SDK.
+compile: checkout-submodules generate-skeleton
+  {{CLANG_CPP}} \
+    -std=c++14 \
+    -O3 \
+    -D _REENTRANT \
+    -D BOOST_DISABLE_ASSERTS \
+    -D BOOST_PHOENIX_NO_VARIADIC_EXPRESSION \
+    -I ./cpp/prophet-wasmstan/stan/src \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/eigen_3.4.0 \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/boost_1.81.0 \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/sundials_6.1.1/include \
+    -I ./cpp/prophet-wasmstan/model \
+    -I ./cpp/prophet-wasmstan/shim \
+    -target wasm32-wasi-threads \
+    ./cpp/prophet-wasmstan/prophet_wasmstan.cpp \
+    ./cpp/prophet-wasmstan/prophet_wasmstan_component_type.o \
+    ./cpp/prophet-wasmstan/optimizer.cpp \
+    ./cpp/prophet-wasmstan/shim/cpp/exceptions.cpp \
+    -mexec-model=reactor \
+    -flto \
+    -o ./cpp/prophet-wasmstan/prophet-wasmstan-core.wasm
+
+# Convert the prophet-wasmstan C++ library into a WASM component.
+build: compile
+  wasm-tools component new cpp/prophet-wasmstan/prophet-wasmstan-core.wasm --adapt {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm -o cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+
+# Inspect the prophet-wasmstan WASM component.
+inspect: build
+  wasm-tools component wit cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+
+transpile: build
+  jco transpile --name prophet-wasmstan -O -o js/prophet-wasmstan cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+
+test: transpile
+  cd js/prophet-wasmstan && npm ci && npm run test:ci
+
+publish:
+  cd js/prophet-wasmstan && npm ci && npm publish --access public
