@@ -18,7 +18,6 @@ doctest = false
 test = false
 
 [features]
-default = ["console_error_panic_hook"]
 parallel = ["wasm-bindgen-rayon"]
 
 [dependencies]
@@ -31,11 +30,7 @@ augurs-forecaster.workspace = true
 augurs-mstl = { workspace = true }
 augurs-outlier = { workspace = true }
 augurs-seasons = { workspace = true }
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
-console_error_panic_hook = { version = "0.1.7", optional = true }
+console_error_panic_hook = "0.1.7"
 getrandom = { version = "0.2.10", features = ["js"] }
 js-sys = "0.3.64"
 serde.workspace = true
