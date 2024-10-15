@@ -29,13 +29,19 @@ augurs-ets = { workspace = true, features = ["mstl"] }
 augurs-forecaster.workspace = true
 augurs-mstl = { workspace = true }
 augurs-outlier = { workspace = true }
+augurs-prophet = { workspace = true, features = ["serde"] }
 augurs-seasons = { workspace = true }
 console_error_panic_hook = "0.1.7"
 getrandom = { version = "0.2.10", features = ["js"] }
 js-sys = "0.3.64"
 serde.workspace = true
 serde-wasm-bindgen = "0.6.0"
+tracing.workspace = true
 tracing-wasm = { version = "0.2.1", optional = true }
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
 wasm-bindgen = "0.2.87"
 wasm-bindgen-rayon = { version = "1.2.1", optional = true }
+
+[package.metadata.wasm-pack.profile.release]
+# previously had just ['-O4']
+wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']

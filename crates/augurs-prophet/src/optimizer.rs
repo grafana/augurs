@@ -136,7 +136,7 @@ impl serde::Serialize for Data {
         /// with each one having length equal to the second field.
         struct XSerializer<'a>(&'a [f64], usize);
 
-        impl<'a> serde::Serialize for XSerializer<'a> {
+        impl serde::Serialize for XSerializer<'_> {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
@@ -226,6 +226,8 @@ pub struct OptimizeOpts {
     /// When `true`, use the Jacobian matrix to approximate the Hessian.
     /// Default is `false`.
     pub jacobian: Option<bool>,
+    /// How frequently to emit convergence statistics, in number of iterations.
+    pub refresh: Option<u32>,
 }
 
 /// The optimized parameters.
@@ -298,7 +300,7 @@ pub trait Optimizer: std::fmt::Debug {
 }
 
 #[cfg(test)]
-pub mod mock_optimizer {
+pub(crate) mod mock_optimizer {
     use std::cell::RefCell;
 
     use super::*;
