@@ -63,6 +63,21 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn fallback() -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
+    std::fs::create_dir_all(&out_dir)?;
+    let prophet_path = out_dir.join("prophet");
+    let libtbb_path = out_dir.join("libtbb.so.12");
+    std::fs::File::create(&prophet_path)?;
+    std::fs::File::create(&libtbb_path)?;
+    eprintln!(
+        "Created empty files for prophet ({}) and libtbb ({})",
+        prophet_path.display(),
+        libtbb_path.display()
+    );
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _result = Ok::<(), &'static str>(());
     #[cfg(all(feature = "cmdstan", feature = "compile-cmdstan"))]
@@ -76,12 +91,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // installation, but that's okay because no-one should ever use this
     // feature.
     #[cfg(feature = "internal-ignore-cmdstan-failure")]
-    if _result.is_err() || std::env::var("DOCS_RS").is_ok() {
-        let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
-        std::fs::create_dir_all(&out_dir)?;
-        std::fs::File::create(out_dir.join("prophet"))?;
-        std::fs::File::create(out_dir.join("libtbb.so.12"))?;
+    if _result.is_err() {
+        fallback()?;
     }
+    // Do the same thing in docs.rs builds.
+    #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
+    if std::env::var("DOCS_RS").is_ok() {
+        fallback()?;
+    }
+
+    // If we're not in a docs.rs build and we don't have the 'ignore'
+    // feature enabled, then we should fail if there's an error.
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
     if std::env::var("DOCS_RS").is_err() {
         _result?;
