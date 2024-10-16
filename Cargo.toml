@@ -22,7 +22,7 @@ keywords = [
 ]
 
 [workspace.dependencies]
-augurs = { version = "0.4.0", path = "crates/augurs" }
+augurs = { path = "crates/augurs" }
 augurs-changepoint = { version = "0.4.0", path = "crates/augurs-changepoint" }
 augurs-clustering = { version = "0.4.0", path = "crates/augurs-clustering" }
 augurs-core = { version = "0.4.0", path = "crates/augurs-core" }
