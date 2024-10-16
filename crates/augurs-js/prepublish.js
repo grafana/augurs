@@ -34,8 +34,8 @@ try {
     console.log('"snippets/" already exists in package.json.');
   }
 
-  // Rename the npm package from "augurs-js" to "augurs".
-  pkg.name = 'augurs';
+  // Rename the npm package from "@bsull/augurs-js" to "@bsull/augurs".
+  pkg.name = '@bsull/augurs';
   console.log('Renamed the npm package from "augurs-js" to "augurs".');
 
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
