@@ -2,7 +2,7 @@
   "name": "@bsull/augurs-prophet-wasmstan",
   "type": "module",
   "collaborators": [
-    "Ben Sully <ben.sully@grafana.com"
+    "Ben Sully <ben.sully@grafana.com>"
   ],
   "description": "Prophet's Stan model, compiled to WASM, for use with the @bsull/augurs library.",
   "version": "0.1.0",
