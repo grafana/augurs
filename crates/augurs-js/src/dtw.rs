@@ -72,6 +72,8 @@ pub struct DtwOptions {
     #[tsify(optional)]
     pub upper_bound: Option<f64>,
 
+    #[cfg(feature = "parallel")]
+    /// Parallelize the DTW distance matrix calculation.
     #[tsify(optional)]
     pub parallelize: Option<bool>,
 }
@@ -134,6 +136,7 @@ impl Dtw {
         if let Some(upper_bound) = opts.upper_bound {
             dtw = dtw.with_upper_bound(upper_bound);
         }
+        #[cfg(feature = "parallel")]
         if let Some(parallelize) = opts.parallelize {
             dtw = dtw.parallelize(parallelize);
         }
