@@ -76,13 +76,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // installation, but that's okay because no-one should ever use this
     // feature.
     #[cfg(feature = "internal-ignore-cmdstan-failure")]
-    if _result.is_err() {
+    if _result.is_err() || std::env::var("DOCS_RS").is_ok() {
         let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
         std::fs::create_dir_all(&out_dir)?;
         std::fs::File::create(out_dir.join("prophet"))?;
         std::fs::File::create(out_dir.join("libtbb.so.12"))?;
     }
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
-    _result?;
+    if !std::env::var("DOCS_RS").is_ok() {
+        _result?;
+    }
     Ok(())
 }
