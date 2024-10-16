@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::File::create(out_dir.join("libtbb.so.12"))?;
     }
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
-    if !std::env::var("DOCS_RS").is_ok() {
+    if std::env::var("DOCS_RS").is_err() {
         _result?;
     }
     Ok(())
