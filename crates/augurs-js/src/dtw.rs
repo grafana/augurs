@@ -43,7 +43,7 @@ impl fmt::Debug for InnerDtw {
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
-pub struct DtwOpts {
+pub struct DtwOptions {
     /// The size of the Sakoe-Chiba band.
     #[tsify(optional)]
     pub window: Option<usize>,
@@ -119,7 +119,7 @@ pub struct Dtw {
 impl Dtw {
     /// Create a new `Dtw` instance using the Euclidean distance.
     #[wasm_bindgen]
-    pub fn euclidean(opts: Option<DtwOpts>) -> Result<Dtw, JsValue> {
+    pub fn euclidean(opts: Option<DtwOptions>) -> Result<Dtw, JsValue> {
         let opts = opts.unwrap_or_default();
         let mut dtw = augurs_dtw::Dtw::euclidean();
         if let Some(window) = opts.window {
@@ -144,7 +144,7 @@ impl Dtw {
 
     /// Create a new `Dtw` instance using the Euclidean distance.
     #[wasm_bindgen]
-    pub fn manhattan(opts: Option<DtwOpts>) -> Result<Dtw, JsValue> {
+    pub fn manhattan(opts: Option<DtwOptions>) -> Result<Dtw, JsValue> {
         let opts = opts.unwrap_or_default();
         let mut dtw = augurs_dtw::Dtw::manhattan();
         if let Some(window) = opts.window {

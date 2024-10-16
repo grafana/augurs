@@ -10,7 +10,7 @@ use crate::dtw::DistanceMatrix;
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
-pub struct DbscanOpts {
+pub struct DbscanOptions {
     /// The maximum distance between two samples for one to be considered as in the
     /// neighborhood of the other.
     pub epsilon: f64,
@@ -23,15 +23,15 @@ pub struct DbscanOpts {
 /// A DBSCAN clustering algorithm.
 #[derive(Debug)]
 #[wasm_bindgen]
-pub struct Dbscan {
+pub struct DbscanClusterer {
     inner: augurs_clustering::DbscanClusterer,
 }
 
 #[wasm_bindgen]
-impl Dbscan {
+impl DbscanClusterer {
     /// Create a new DBSCAN instance.
     #[wasm_bindgen(constructor)]
-    pub fn new(opts: DbscanOpts) -> Self {
+    pub fn new(opts: DbscanOptions) -> Self {
         Self {
             inner: augurs_clustering::DbscanClusterer::new(opts.epsilon, opts.min_cluster_size),
         }

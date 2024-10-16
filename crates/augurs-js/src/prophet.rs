@@ -30,7 +30,7 @@ const OPTIMIZER_FUNCTION: &'static str = r#"
  * @returns An object containing the the optimized parameters and any log
  *          messages.
  */
-type OptimizerFunction = (init: InitialParams, data: Data, opts: OptimizeOpts) => OptimizeOutput;
+type OptimizerFunction = (init: InitialParams, data: Data, opts: OptimizeOptions) => OptimizeOutput;
 
 /**
  * An optimizer for the Prophet model.
@@ -64,7 +64,7 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         opts: &augurs_prophet::optimizer::OptimizeOpts,
     ) -> Result<augurs_prophet::optimizer::OptimizedParams, augurs_prophet::optimizer::Error> {
         let this = JsValue::null();
-        let opts: OptimizeOpts = opts.into();
+        let opts: OptimizeOptions = opts.into();
         let init: InitialParams<'_> = init.into();
         let data: Data<'_> = data.into();
         let init = serde_wasm_bindgen::to_value(&init)
@@ -158,7 +158,7 @@ impl Prophet {
 #[derive(Debug, Clone, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
-struct OptimizeOpts {
+struct OptimizeOptions {
     /// Algorithm to use.
     pub algorithm: Option<Algorithm>,
     /// The random seed to use for the optimization.
@@ -190,7 +190,7 @@ struct OptimizeOpts {
     pub refresh: Option<u32>,
 }
 
-impl From<&augurs_prophet::optimizer::OptimizeOpts> for OptimizeOpts {
+impl From<&augurs_prophet::optimizer::OptimizeOpts> for OptimizeOptions {
     fn from(opts: &augurs_prophet::optimizer::OptimizeOpts) -> Self {
         Self {
             algorithm: opts.algorithm.map(Into::into),
