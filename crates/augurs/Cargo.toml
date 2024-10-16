@@ -9,6 +9,9 @@ edition.workspace = true
 keywords.workspace = true
 description = "A time-series toolkit for forecasting, outlier detection, clustering and more."
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 augurs-changepoint = { workspace = true, optional = true }
 augurs-clustering = { workspace = true, optional = true }
