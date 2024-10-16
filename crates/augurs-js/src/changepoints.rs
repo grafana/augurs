@@ -38,9 +38,9 @@ impl ChangepointDetector {
     /// Create a new Bayesian Online changepoint detector with a Normal Gamma prior.
     #[wasm_bindgen(js_name = "normalGamma")]
     pub fn normal_gamma(
-        opts: Option<NormalGammaDetectorOpts>,
+        opts: Option<NormalGammaDetectorOptions>,
     ) -> Result<ChangepointDetector, JsValue> {
-        let NormalGammaDetectorOpts {
+        let NormalGammaDetectorOptions {
             hazard_lambda,
             prior,
         } = opts.unwrap_or_default();
@@ -57,7 +57,7 @@ impl ChangepointDetector {
     /// with the default kernel and parameters.
     #[wasm_bindgen(js_name = "defaultArgpcp")]
     pub fn default_argpcp(
-        opts: Option<DefaultArgpcpDetectorOpts>,
+        opts: Option<DefaultArgpcpDetectorOptions>,
     ) -> Result<ChangepointDetector, JsValue> {
         let mut builder = ArgpcpDetector::builder();
         if let Some(opts) = opts {
@@ -147,7 +147,7 @@ impl TryFrom<NormalGammaParameters> for dist::NormalGamma {
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
-pub struct NormalGammaDetectorOpts {
+pub struct NormalGammaDetectorOptions {
     /// The hazard lambda.
     ///
     /// `1/hazard` is the probability of the next step being a changepoint.
@@ -168,7 +168,7 @@ pub struct NormalGammaDetectorOpts {
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi)]
-pub struct DefaultArgpcpDetectorOpts {
+pub struct DefaultArgpcpDetectorOptions {
     /// The value of the constant kernel.
     #[tsify(optional)]
     pub constant_value: Option<f64>,
