@@ -26,3 +26,24 @@ prophet.predict({ ds: [ 1713717414 ]})
 ```
 
 See the documentation for `@bsull/augurs` for more details.
+
+## Troubleshooting
+
+### Webpack
+
+The generated Javascript bindings in this package may require some additional Webpack configuration to work.
+Adding this to your `webpack.config.js` should be enough:
+
+```javascript
+{
+  experiments: {
+    // Required to load WASM modules.
+    asyncWebAssembly: true,
+  },
+  resolve: {
+    fallback: {
+      fs: false,
+    },
+  },
+}
+```

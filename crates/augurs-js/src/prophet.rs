@@ -1,4 +1,4 @@
-use std::{collections::HashMap, mem, num::TryFromIntError};
+use std::{collections::HashMap, num::TryFromIntError};
 
 use augurs_prophet::PositiveFloat;
 use js_sys::{Float64Array, Int32Array};
@@ -414,28 +414,14 @@ struct Logs {
     pub error: String,
     /// Fatal logs.
     pub fatal: String,
-
-    #[serde(default, skip)]
-    emitted_header: bool,
 }
 
 impl Logs {
-    fn emit(mut self) {
-        let debug = mem::take(&mut self.debug);
-        let info = mem::take(&mut self.info);
-        let warn = mem::take(&mut self.warn);
-        let error = mem::take(&mut self.error);
-        let fatal = mem::take(&mut self.fatal);
-        for line in debug.lines() {
+    fn emit(self) {
+        for line in self.debug.lines() {
             tracing::trace!(target: "augurs::prophet::stan::optimize", "{}", line);
         }
-        for line in info.lines() {
-            if line.contains("Iter") {
-                if self.emitted_header {
-                    return;
-                }
-                self.emitted_header = true;
-            }
+        for line in self.info.lines().filter(|line| !line.contains("Iter")) {
             match ConvergenceLog::new(line) {
                 Some(log) => {
                     tracing::debug!(
@@ -455,13 +441,13 @@ impl Logs {
                 }
             }
         }
-        for line in warn.lines() {
+        for line in self.warn.lines() {
             tracing::warn!(target: "augurs::prophet::stan::optimize", "{}", line);
         }
-        for line in error.lines() {
+        for line in self.error.lines() {
             tracing::error!(target: "augurs::prophet::stan::optimize", "{}", line);
         }
-        for line in fatal.lines() {
+        for line in self.fatal.lines() {
             tracing::error!(target: "augurs::prophet::stan::optimize", "{}", line);
         }
     }
@@ -488,6 +474,7 @@ struct OptimizedParams {
     /// Trend offset.
     pub m: f64,
     /// Observation noise.
+    #[tsify(type = "number")]
     pub sigma_obs: PositiveFloat,
     /// Trend rate adjustments.
     #[tsify(type = "Float64Array")]

@@ -74,21 +74,17 @@ transpile: build
     --name prophet-wasmstan \
     --out-dir js/prophet-wasmstan \
     cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
-
-transpile-min: build
-  jco transpile \
-    --name prophet-wasmstan \
-    --minify \
-    --optimize \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
-  jco types \
-    --name prophet-wasmstan \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
+  rg --replace="$(rg --invert-match --no-line-number '//' js/prophet-wasmstan/run.js)" \
+    --multiline --multiline-dotall \
+    --passthru \
+    --no-line-number \
+    '  let promise, resolve, reject;.+?return promise \|\| maybeSyncReturn;' \
+    js/prophet-wasmstan/prophet-wasmstan.js \
+    > js/prophet-wasmstan/prophet-wasmstan.fixed.js
+  mv js/prophet-wasmstan/prophet-wasmstan.fixed.js js/prophet-wasmstan/prophet-wasmstan.js
 
 test: transpile
   cd js/prophet-wasmstan && npm ci && npm run test:ci
 
-publish: transpile-min
+publish: transpile
   cd js/prophet-wasmstan && npm ci && npm publish --access public

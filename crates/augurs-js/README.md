@@ -8,7 +8,7 @@ Javascript bindings to the [`augurs`][repo] time series framework.
 
 ```json
 "dependencies": {
-    "@bsull/augurs": "^0.3.0"
+    "@bsull/augurs": "^0.4.1"
 }
 ```
 
@@ -34,6 +34,32 @@ const predictionInterval = 0.95;
 const { point, lower, upper } = model.predictInSample(predictionInterval);
 // Generate out-of-sample forecasts.
 const { point: futurePoint, lower: futureLower, upper: futureUpper } = model.predict(10, predictionInterval);
+```
+
+## Troubleshooting
+
+### Webpack
+
+Some of the dependencies of `augurs` require a few changes to the Webpack configuration to work correctly.
+Adding this to your `webpack.config.js` should be enough:
+
+```javascript
+{
+  experiments: {
+    // Required to load WASM modules.
+    asyncWebAssembly: true,
+  },
+  module: {
+    rules: [
+      {
+        test: /\@bsull\/augurs\/.*\.js$/,
+        resolve: {
+          fullySpecified: false
+        }
+      },
+    ]
+  },
+}
 ```
 
 [repo]: https://github.com/grafana/augurs
