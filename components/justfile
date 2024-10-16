@@ -75,20 +75,8 @@ transpile: build
     --out-dir js/prophet-wasmstan \
     cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
 
-transpile-min: build
-  jco transpile \
-    --name prophet-wasmstan \
-    --minify \
-    --optimize \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
-  jco types \
-    --name prophet-wasmstan \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
-
 test: transpile
   cd js/prophet-wasmstan && npm ci && npm run test:ci
 
-publish: transpile-min
+publish: transpile
   cd js/prophet-wasmstan && npm ci && npm publish --access public
