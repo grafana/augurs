@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/grafana/augurs/releases/tag/augurs-clustering-v0.4.0) - 2024-10-16
+
+### Added
+
+- add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
+- add augurs-clustering crate with DBSCAN algorithm ([#100](https://github.com/grafana/augurs/pull/100))
+
+### Other
+
+- release v0.4.0 ([#128](https://github.com/grafana/augurs/pull/128))
+
 ## [0.4.0](https://github.com/grafana/augurs/compare/augurs-clustering-v0.3.1...augurs-clustering-v0.4.0) - 2024-10-16
 
 ### Added

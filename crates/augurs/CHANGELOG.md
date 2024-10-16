@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/grafana/augurs/releases/tag/augurs-v0.4.0) - 2024-10-16
+
+### Added
+
+- add cmdstan-based optimizer for augurs-prophet ([#121](https://github.com/grafana/augurs/pull/121))
+- add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
+
+### Other
+
+- release v0.4.0 ([#128](https://github.com/grafana/augurs/pull/128))
+- Add Prophet algorithm in `augurs-prophet` crate ([#118](https://github.com/grafana/augurs/pull/118))
+
 ## [0.4.0](https://github.com/grafana/augurs/compare/augurs-v0.3.1...augurs-v0.4.0) - 2024-10-16
 
 ### Added
