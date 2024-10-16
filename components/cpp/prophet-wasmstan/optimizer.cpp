@@ -272,9 +272,10 @@ struct LBFGSArgs {
 // The parameter writer just writes parameters to vectors of strings
 // and doubles respectively, so we need to turn those into something
 // more structured.
-void store_optimized_params(
+bool store_optimized_params(
     std::vector<std::string> &names, std::vector<double> &values,
-    augurs_prophet_wasmstan_types_optimized_params_t *ret) {
+    augurs_prophet_wasmstan_types_optimized_params_t *ret,
+    prophet_wasmstan_string_t *err) {
   std::vector<double> beta;
   std::vector<double> delta;
   std::vector<double> trend;
@@ -315,14 +316,28 @@ void store_optimized_params(
   ret->trend.len = trend.size();
 
   ret->beta.ptr = (double *)malloc(sizeof(double) * beta.size());
+  if (ret->beta.ptr == NULL) {
+    prophet_wasmstan_string_set(err, "Memory allocation failed for beta");
+    return false;
+  }
   for (size_t i = 0; i < beta.size(); i++) {
     ret->beta.ptr[i] = beta[beta_indices[i]];
   }
+
   ret->delta.ptr = (double *)malloc(sizeof(double) * delta.size());
+  if (ret->delta.ptr == NULL) {
+    prophet_wasmstan_string_set(err, "Memory allocation failed for delta");
+    return false;
+  }
   for (size_t i = 0; i < delta.size(); i++) {
     ret->delta.ptr[i] = delta[delta_indices[i]];
   }
+
   ret->trend.ptr = (double *)malloc(sizeof(double) * trend.size());
+  if (ret->trend.ptr == NULL) {
+    prophet_wasmstan_string_set(err, "Memory allocation failed for trend");
+    return false;
+  }
   for (size_t i = 0; i < trend.size(); i++) {
     ret->trend.ptr[i] = trend[trend_indices[i]];
   }
@@ -430,7 +445,10 @@ bool exports_augurs_prophet_wasmstan_optimizer_optimize(
                                 "Expected names and values lengths to match");
   }
 
-  store_optimized_params(names, params, &ret->params);
+  bool success = store_optimized_params(names, params, &ret->params, err);
+  if (!success) {
+    return false;
+  }
   prophet_wasmstan_string_dup(&ret->logs.debug, debug.str().c_str());
   prophet_wasmstan_string_dup(&ret->logs.info, info.str().c_str());
   prophet_wasmstan_string_dup(&ret->logs.warn, warn.str().c_str());
