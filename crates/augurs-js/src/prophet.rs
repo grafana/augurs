@@ -474,6 +474,7 @@ struct OptimizedParams {
     /// Trend offset.
     pub m: f64,
     /// Observation noise.
+    #[tsify(type = "number")]
     pub sigma_obs: PositiveFloat,
     /// Trend rate adjustments.
     #[tsify(type = "Float64Array")]
