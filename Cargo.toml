@@ -28,7 +28,7 @@ augurs-clustering = { version = "0.4.0", path = "crates/augurs-clustering" }
 augurs-core = { version = "0.4.0", path = "crates/augurs-core" }
 augurs-dtw = { version = "0.4.0", path = "crates/augurs-dtw" }
 augurs-ets = { version = "0.4.0", path = "crates/augurs-ets" }
-augurs-forecaster = { path = "crates/augurs-forecaster" }
+augurs-forecaster = { version = "0.4.0", path = "crates/augurs-forecaster" }
 augurs-mstl = { version = "0.4.0", path = "crates/augurs-mstl" }
 augurs-outlier = { version = "0.4.0", path = "crates/augurs-outlier" }
 augurs-prophet = { version = "0.4.0", path = "crates/augurs-prophet" }
