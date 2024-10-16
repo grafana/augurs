@@ -341,6 +341,7 @@ bool store_optimized_params(
   for (size_t i = 0; i < trend.size(); i++) {
     ret->trend.ptr[i] = trend[trend_indices[i]];
   }
+  return true;
 }
 
 // Optimize a Prophet model using Stan.
@@ -443,6 +444,7 @@ bool exports_augurs_prophet_wasmstan_optimizer_optimize(
   if (params.size() != names.size()) {
     prophet_wasmstan_string_set(err,
                                 "Expected names and values lengths to match");
+    return false;
   }
 
   bool success = store_optimized_params(names, params, &ret->params, err);
