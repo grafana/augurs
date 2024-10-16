@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 edition.workspace = true
 keywords.workspace = true
+description = "Prophet: time-series forecasting at scale, in Rust."
 
 [dependencies]
 anyhow.workspace = true
