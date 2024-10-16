@@ -8,6 +8,7 @@ license.workspace = true
 edition.workspace = true
 keywords.workspace = true
 description = "Test framework and data for the augurs library."
+publish = false
 
 [lib]
 bench = false
