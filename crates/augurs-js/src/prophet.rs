@@ -221,9 +221,11 @@ struct InitialParams<'a> {
     /// Trend offset.
     pub m: f64,
     /// Trend rate adjustments, length s in data.
+    #[tsify(type = "Float64Array")]
     #[serde(with = "serde_wasm_bindgen::preserve")]
     pub delta: Float64Array,
     /// Regressor coefficients, length k in data.
+    #[tsify(type = "Float64Array")]
     #[serde(with = "serde_wasm_bindgen::preserve")]
     pub beta: Float64Array,
     /// Observation noise.
@@ -308,11 +310,13 @@ struct Data<'a> {
     #[serde(with = "serde_wasm_bindgen::preserve")]
     /// Time series, length n.
     pub y: Float64Array,
-    #[serde(with = "serde_wasm_bindgen::preserve")]
     /// Time, length n.
+    #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     pub t: Float64Array,
     /// Capacities for logistic trend, length n.
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     pub cap: Float64Array,
     /// Number of changepoints.
     /// This is 'S' in the Prophet STAN model definition,
@@ -320,6 +324,7 @@ struct Data<'a> {
     pub s: i32,
     /// Times of trend changepoints, length s.
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     pub t_change: Float64Array,
     /// The type of trend to use.
     pub trend_indicator: TrendIndicator,
@@ -332,11 +337,13 @@ struct Data<'a> {
     /// This is `s_a` in the Prophet STAN model definition,
     /// but WIT identifiers must be lower kebab-case.
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Int32Array")]
     pub s_a: Int32Array,
     /// Indicator of multiplicative features, length k.
     /// This is `s_m` in the Prophet STAN model definition,
     /// but WIT identifiers must be lower kebab-case.
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Int32Array")]
     pub s_m: Int32Array,
     /// Regressors.
     /// This is `X` in the Prophet STAN model definition,
@@ -344,9 +351,11 @@ struct Data<'a> {
     /// This is passed as a flat array but should be treated as
     /// a matrix with shape (n, k) (i.e. strides of length n).
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     pub x: Float64Array,
     /// Scale on seasonality prior.
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     pub sigmas: Float64Array,
     /// Scale on changepoints prior.
     /// Must be greater than 0.
@@ -481,10 +490,13 @@ struct OptimizedParams {
     /// Observation noise.
     pub sigma_obs: PositiveFloat,
     /// Trend rate adjustments.
+    #[tsify(type = "Float64Array")]
     pub delta: Vec<f64>,
     /// Regressor coefficients.
+    #[tsify(type = "Float64Array")]
     pub beta: Vec<f64>,
     /// Transformed trend.
+    #[tsify(type = "Float64Array")]
     pub trend: Vec<f64>,
 }
 
