@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+use crate::{Forecast, ForecastIntervals};
+
 // We just take an untyped Function here, but we'll use the `Tsify` macro to
 // customize the type in `ProphetOptions`. Here we add the JSDoc and type
 // annotations for the function to make it harder to misuse.
@@ -117,6 +119,7 @@ impl augurs_prophet::Optimizer for JsOptimizer {
 #[wasm_bindgen]
 pub struct Prophet {
     inner: augurs_prophet::Prophet<JsOptimizer>,
+    level: Option<f64>,
 }
 
 #[wasm_bindgen]
@@ -126,8 +129,10 @@ impl Prophet {
     pub fn new(opts: ProphetOptions) -> Result<Prophet, JsError> {
         let (optimizer, opts): (JsOptimizer, augurs_prophet::OptProphetOptions) =
             opts.try_into()?;
+        let level = opts.interval_width.map(Into::into);
         Ok(Self {
             inner: augurs_prophet::Prophet::new(opts.into(), optimizer),
+            level,
         })
     }
 
@@ -147,7 +152,8 @@ impl Prophet {
     pub fn predict(&self, data: Option<PredictionData>) -> Result<Predictions, JsError> {
         let data: Option<augurs_prophet::PredictionData> =
             data.map(TryInto::try_into).transpose()?;
-        Ok(self.inner.predict(data)?.into())
+        let predictions = self.inner.predict(data)?;
+        Ok(Predictions::from((self.level, predictions)))
     }
 }
 
@@ -588,36 +594,18 @@ impl TryFrom<PredictionData> for augurs_prophet::PredictionData {
     }
 }
 
-/// The prediction for a feature.
-///
-/// 'Feature' could refer to the forecasts themselves (`yhat`)
-/// or any of the other component features which contribute to
-/// the final estimate, such as trend, seasonality, seasonalities,
-/// regressors or holidays.
-#[derive(Clone, Debug, Default, Serialize, Tsify)]
-#[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub struct FeaturePrediction {
-    /// The point estimate for this feature.
-    pub point: Vec<f64>,
-    /// The lower estimate for this feature.
-    ///
-    /// Only present if `uncertainty_samples` was greater than zero
-    /// when the model was created.
-    pub lower: Option<Vec<f64>>,
-    /// The upper estimate for this feature.
-    ///
-    /// Only present if `uncertainty_samples` was greater than zero
-    /// when the model was created.
-    pub upper: Option<Vec<f64>>,
-}
-
-impl From<augurs_prophet::FeaturePrediction> for FeaturePrediction {
-    fn from(value: augurs_prophet::FeaturePrediction) -> Self {
+impl From<(Option<f64>, augurs_prophet::FeaturePrediction)> for Forecast {
+    fn from((level, value): (Option<f64>, augurs_prophet::FeaturePrediction)) -> Self {
         Self {
             point: value.point,
-            lower: value.lower,
-            upper: value.upper,
+            intervals: level
+                .zip(value.lower)
+                .zip(value.upper)
+                .map(|((level, lower), upper)| ForecastIntervals {
+                    level,
+                    lower,
+                    upper,
+                }),
         }
     }
 }
@@ -631,7 +619,7 @@ impl From<augurs_prophet::FeaturePrediction> for FeaturePrediction {
 /// Certain fields (such as `cap` and `floor`) may be `None` if the
 /// model did not use them (e.g. the model was not configured to use
 /// logistic trend).
-#[derive(Clone, Debug, Default, Serialize, Tsify)]
+#[derive(Clone, Debug, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub struct Predictions {
@@ -639,10 +627,10 @@ pub struct Predictions {
     pub ds: Vec<TimestampSeconds>,
 
     /// Forecasts of the input time series `y`.
-    pub yhat: FeaturePrediction,
+    pub yhat: Forecast,
 
     /// The trend contribution at each time point.
-    pub trend: FeaturePrediction,
+    pub trend: Forecast,
 
     /// The cap for the logistic growth.
     ///
@@ -658,48 +646,48 @@ pub struct Predictions {
     ///
     /// This includes seasonalities, holidays and regressors if their mode
     /// was configured to be [`FeatureMode::Additive`](crate::FeatureMode::Additive).
-    pub additive: FeaturePrediction,
+    pub additive: Forecast,
 
     /// The combined combination of all _multiplicative_ components.
     ///
     /// This includes seasonalities, holidays and regressors if their mode
     /// was configured to be [`FeatureMode::Multiplicative`](crate::FeatureMode::Multiplicative).
-    pub multiplicative: FeaturePrediction,
+    pub multiplicative: Forecast,
 
     /// Mapping from holiday name to that holiday's contribution.
-    pub holidays: HashMap<String, FeaturePrediction>,
+    pub holidays: HashMap<String, Forecast>,
 
     /// Mapping from seasonality name to that seasonality's contribution.
-    pub seasonalities: HashMap<String, FeaturePrediction>,
+    pub seasonalities: HashMap<String, Forecast>,
 
     /// Mapping from regressor name to that regressor's contribution.
-    pub regressors: HashMap<String, FeaturePrediction>,
+    pub regressors: HashMap<String, Forecast>,
 }
 
-impl From<augurs_prophet::Predictions> for Predictions {
-    fn from(value: augurs_prophet::Predictions) -> Self {
+impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
+    fn from((level, value): (Option<f64>, augurs_prophet::Predictions)) -> Self {
         Self {
             ds: value.ds,
-            yhat: value.yhat.into(),
-            trend: value.trend.into(),
+            yhat: (level, value.yhat).into(),
+            trend: (level, value.trend).into(),
             cap: value.cap,
             floor: value.floor,
-            additive: value.additive.into(),
-            multiplicative: value.multiplicative.into(),
+            additive: (level, value.additive).into(),
+            multiplicative: (level, value.multiplicative).into(),
             holidays: value
                 .holidays
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
             seasonalities: value
                 .seasonalities
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
             regressors: value
                 .regressors
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
         }
     }
