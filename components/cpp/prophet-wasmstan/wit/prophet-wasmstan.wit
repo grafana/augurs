@@ -1,0 +1,175 @@
+package augurs:prophet-wasmstan;
+
+/// Types used by prophet-wasmstan.
+///
+/// These are split out into a separate interface to work around
+/// https://github.com/bytecodealliance/wac/issues/141.
+interface types {
+    /// The initial parameters for the optimization.
+    record inits {
+        /// Base trend growth rate.
+        k: f64,
+        /// Trend offset.
+        m: f64,
+        /// Trend rate adjustments, length s in data.
+        delta: list<f64>,
+        /// Regressor coefficients, length k in data.
+        beta: list<f64>,
+        /// Observation noise.
+        sigma-obs: f64,
+    }
+
+    /// The type of trend to use.
+    enum trend-indicator {
+        /// Linear trend (default).
+        linear, // 0
+        /// Logistic trend.
+        logistic, // 1
+        /// Flat trend.
+        flat, // 2
+    }
+
+    /// Data for the Prophet model.
+    record data {
+        /// Number of time periods.
+        /// This is `T` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        n: s32,
+        /// Time series, length n.
+        y: list<f64>,
+        /// Time, length n.
+        t: list<f64>,
+        /// Capacities for logistic trend, length n.
+        cap: list<f64>,
+
+        /// Number of changepoints.
+        /// This is 'S' in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s: s32,
+        /// Times of trend changepoints, length s.
+        t-change: list<f64>,
+
+        /// The type of trend to use.
+        trend-indicator: trend-indicator,
+
+        /// Number of regressors.
+        /// Must be greater than or equal to 1.
+        /// This is `K` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        k: s32,
+        /// Indicator of additive features, length k.
+        /// This is `s_a` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s-a: list<s32>,
+        /// Indicator of multiplicative features, length k.
+        /// This is `s_m` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s-m: list<s32>,
+        /// Regressors.
+        /// This is `X` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        /// This is passed as a flat array but should be treated as
+        /// a matrix with shape (n, k) (i.e. strides of length n).
+        x: list<f64>,
+
+        /// Scale on seasonality prior.
+        sigmas: list<f64>,
+        /// Scale on changepoints prior.
+        /// Must be greater than 0.
+        tau: f64,
+    }
+
+    /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
+    enum algorithm {
+        /// Use the Newton algorithm.
+        newton,
+        /// Use the Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm.
+        bfgs,
+        /// Use the Limited-memory BFGS (L-BFGS) algorithm.
+        lbfgs,
+    }
+
+    /// Arguments for optimization.
+    record optimize-opts {
+        /// Algorithm to use.
+        algorithm: option<algorithm>,
+        /// The random seed to use for the optimization.
+        seed: option<u32>,
+        /// The chain id to advance the PRNG.
+        chain: option<u32>,
+        /// Line search step size for first iteration.
+        init-alpha: option<f64>,
+        /// Convergence tolerance on changes in objective function value.
+        tol-obj: option<f64>,
+        /// Convergence tolerance on relative changes in objective function value.
+        tol-rel-obj: option<f64>,
+        /// Convergence tolerance on the norm of the gradient.
+        tol-grad: option<f64>,
+        /// Convergence tolerance on the relative norm of the gradient.
+        tol-rel-grad: option<f64>,
+        /// Convergence tolerance on changes in parameter value.
+        tol-param: option<f64>,
+        /// Size of the history for LBFGS Hessian approximation. The value should
+        /// be less than the dimensionality of the parameter space. 5-10 usually
+        /// sufficient.
+        history-size: option<u32>,
+        /// Total number of iterations.
+        iter: option<u32>,
+        /// When `true`, use the Jacobian matrix to approximate the Hessian.
+        /// Default is `false`.
+        jacobian: option<bool>,
+
+        /// How frequently to update the log message, in number of iterations.
+        refresh: option<u32>,
+    }
+
+    /// Log lines produced during optimization.
+    record logs {
+        /// Debug log lines.
+        debug: string,
+        /// Info log lines.
+        info: string,
+        /// Warning log lines.
+        warn: string,
+        /// Error log lines.
+        error: string,
+        /// Fatal log lines.
+        fatal: string,
+    }
+
+    /// The optimal parameter values found by optimization.
+    record optimized-params {
+        /// Base trend growth rate.
+        k: f64,
+        /// Trend offset.
+        m: f64,
+        /// Trend rate adjustments, length s in data.
+        delta: list<f64>,
+        /// Regressor coefficients, length k in data.
+        beta: list<f64>,
+        /// Observation noise.
+        sigma-obs: f64,
+        /// Transformed trend.
+        trend: list<f64>,
+    }
+
+    /// The result of optimization.
+    ///
+    /// This includes both the parameters and any logs produced by the
+    /// process.
+    record optimize-output {
+        /// Logs produced by the optimization process.
+        logs: logs,
+        /// The optimized parameters.
+        params: optimized-params,
+    }
+}
+
+interface optimizer {
+    use types.{inits, data, optimize-opts, optimize-output};
+    optimize: func(init: inits, data: data, opts: optimize-opts) -> result<optimize-output, string>;
+}
+
+world prophet-wasmstan {
+    export optimizer;
+}

@@ -1,0 +1,6 @@
+/interfaces
+/node_modules
+prophet-wasmstan.*.wasm
+prophet-wasmstan.d.ts
+prophet-wasmstan.js
+bsull-augurs-prophet-wasmstan-*.tgz

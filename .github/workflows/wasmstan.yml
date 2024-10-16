@@ -1,0 +1,29 @@
+name: prophet-wasmstan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown,wasm32-wasip1
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-binstall,just,wasmtime
+    - name: Install deps
+      run: just components/install-deps
+    - uses: actions/setup-node@v4
+    - name: Run node test
+      run: just components/test
