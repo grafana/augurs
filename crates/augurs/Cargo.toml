@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 edition.workspace = true
 keywords.workspace = true
+description = "A time-series toolkit for forecasting, outlier detection, clustering and more."
 
 [dependencies]
 augurs-changepoint = { workspace = true, optional = true }
