@@ -2,7 +2,7 @@
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PositiveFloat(f64);
 
 /// An invalid float was provided when trying to create a [`PositiveFloat`].
@@ -46,5 +46,16 @@ impl std::ops::Deref for PositiveFloat {
 impl From<PositiveFloat> for f64 {
     fn from(value: PositiveFloat) -> Self {
         value.0
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for PositiveFloat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let f = f64::deserialize(deserializer)?;
+        Self::try_new(f).map_err(serde::de::Error::custom)
     }
 }
