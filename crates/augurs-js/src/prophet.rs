@@ -930,7 +930,7 @@ impl From<GrowthType> for augurs_prophet::GrowthType {
 
 /// Define whether to include a specific seasonality, and how it should be specified.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "type")]
 #[tsify(from_wasm_abi)]
 pub enum SeasonalityOption {
     /// Automatically determine whether to include this seasonality.
@@ -948,9 +948,15 @@ pub enum SeasonalityOption {
     #[default]
     Auto,
     /// Manually specify whether to include this seasonality.
-    Manual(bool),
+    Manual {
+        /// Whether to include this seasonality.
+        enabled: bool,
+    },
     /// Enable this seasonality and use the provided number of Fourier terms.
-    Fourier(u32),
+    Fourier {
+        /// The order of the Fourier terms to use.
+        order: u32,
+    },
 }
 
 impl TryFrom<SeasonalityOption> for augurs_prophet::SeasonalityOption {
@@ -959,8 +965,8 @@ impl TryFrom<SeasonalityOption> for augurs_prophet::SeasonalityOption {
     fn try_from(value: SeasonalityOption) -> Result<Self, Self::Error> {
         match value {
             SeasonalityOption::Auto => Ok(Self::Auto),
-            SeasonalityOption::Manual(b) => Ok(Self::Manual(b)),
-            SeasonalityOption::Fourier(n) => Ok(Self::Fourier(n.try_into()?)),
+            SeasonalityOption::Manual { enabled } => Ok(Self::Manual(enabled)),
+            SeasonalityOption::Fourier { order } => Ok(Self::Fourier(order.try_into()?)),
         }
     }
 }
