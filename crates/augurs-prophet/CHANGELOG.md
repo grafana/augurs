@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.4.1...augurs-prophet-v0.4.2) - 2024-10-16
+
+### Fixed
+
+- *(docs)* handle build failures in docs.rs gracefully
+
+### Other
+
+- Fix sad clippy
+
 ## [0.4.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.4.0...augurs-prophet-v0.4.1) - 2024-10-16
 
 ### Fixed
