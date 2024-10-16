@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/grafana/augurs/compare/augurs-outlier-v0.3.1...augurs-outlier-v0.4.0) - 2024-10-16
+
+### Added
+
+- add cmdstan-based optimizer for augurs-prophet ([#121](https://github.com/grafana/augurs/pull/121))
+- add 'augurs' convenience crate, re-exporting other crates ([#117](https://github.com/grafana/augurs/pull/117))
+
+### Fixed
+
+- [**breaking**] add serde derives for more types ([#112](https://github.com/grafana/augurs/pull/112))
+- [**breaking**] make `cluster_band` optional, undefined if no cluster is found ([#105](https://github.com/grafana/augurs/pull/105))
+
+### Other
+
+- Add Prophet algorithm in `augurs-prophet` crate ([#118](https://github.com/grafana/augurs/pull/118))
+
 ## [0.3.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.3.0...augurs-outlier-v0.3.1) - 2024-07-30
 
 No notable changes in this release.
