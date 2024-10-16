@@ -5,9 +5,6 @@ WASI_VERSION := "24"
 WASI_VERSION_FULL := WASI_VERSION + ".0"
 WASI_SDK_PATH := "wasi-sdk-" + WASI_VERSION_FULL + "-" + WASI_ARCH + "-" + WASI_OS
 
-STAN_VERSION := "2.34.0"
-STAN_PATH := ""
-
 CLANG := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang"
 CLANG_CPP := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang++"
 
