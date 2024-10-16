@@ -86,5 +86,5 @@ transpile: build
 test: transpile
   cd js/prophet-wasmstan && npm ci && npm run test:ci
 
-publish: transpile
+publish: test
   cd js/prophet-wasmstan && npm ci && npm publish --access public
