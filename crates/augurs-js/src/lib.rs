@@ -122,3 +122,56 @@ impl From<augurs_core::Forecast> for Forecast {
         }
     }
 }
+
+// These custom types are needed to have the correct TypeScript types generated
+// for functions which accept either `number[]` or typed arrays when called
+// from Javascript.
+// They should always be preferred over using `Vec<T>` directly in functions
+// exported to Javascript, even if it is a bit of hassle to convert them.
+// They can be converted using:
+//
+//     let y = y.convert()?;
+#[wasm_bindgen]
+extern "C" {
+    /// Custom type for `Vec<u32>`.
+    #[wasm_bindgen(typescript_type = "number[] | Uint32Array")]
+    #[derive(Debug)]
+    pub type VecU32;
+
+    /// Custom type for `Vec<usize>`.
+    #[wasm_bindgen(typescript_type = "number[] | Uint32Array")]
+    #[derive(Debug)]
+    pub type VecUsize;
+
+    /// Custom type for `Vec<f64>`.
+    #[wasm_bindgen(typescript_type = "number[] | Float64Array")]
+    #[derive(Debug)]
+    pub type VecF64;
+
+    /// Custom type for `Vec<Vec<f64>>`.
+    #[wasm_bindgen(typescript_type = "number[][] | Float64Array[]")]
+    #[derive(Debug)]
+    pub type VecVecF64;
+}
+
+impl VecUsize {
+    fn convert(self) -> Result<Vec<usize>, JsError> {
+        serde_wasm_bindgen::from_value(self.into())
+            .map_err(|_| JsError::new("TypeError: expected array of integers or Uint32Array"))
+    }
+}
+
+impl VecF64 {
+    fn convert(self) -> Result<Vec<f64>, JsError> {
+        serde_wasm_bindgen::from_value(self.into())
+            .map_err(|_| JsError::new("TypeError: expected array of numbers or Float64Array"))
+    }
+}
+
+impl VecVecF64 {
+    fn convert(self) -> Result<Vec<Vec<f64>>, JsError> {
+        serde_wasm_bindgen::from_value(self.into()).map_err(|_| {
+            JsError::new("TypeError: expected array of number arrays or array of Float64Array")
+        })
+    }
+}

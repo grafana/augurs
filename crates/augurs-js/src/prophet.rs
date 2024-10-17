@@ -519,16 +519,17 @@ type TimestampSeconds = i64;
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct TrainingData {
-    #[tsify(type = "TimestampSeconds[]")]
+    #[tsify(type = "TimestampSeconds[] | BigInt64Array")]
     pub ds: Vec<TimestampSeconds>,
+    #[tsify(type = "number[] | Float64Array")]
     pub y: Vec<f64>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "number[] | Float64Array")]
     pub cap: Option<Vec<f64>>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "number[] | Float64Array")]
     pub floor: Option<Vec<f64>>,
     #[tsify(optional)]
     pub seasonality_conditions: Option<HashMap<String, Vec<bool>>>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "Map<string, number[] | Float64Array>")]
     pub x: Option<HashMap<String, Vec<f64>>>,
 }
 
