@@ -4,7 +4,7 @@
   "private": true,
   "devDependencies": {
     "@bsull/augurs": "../pkg",
-    "@bsull/augurs-prophet-wasmstan": "../../../components/js/prophet-wasmstan",
+    "@bsull/augurs-prophet-wasmstan": "0.1.1",
     "@bytecodealliance/preview2-shim": "0.17.0",
     "@types/node": "^22.7.5",
     "typescript": "^5.6.3",
