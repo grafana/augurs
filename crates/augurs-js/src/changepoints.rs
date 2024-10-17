@@ -1,6 +1,5 @@
 use std::num::NonZeroUsize;
 
-use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -8,6 +7,8 @@ use wasm_bindgen::prelude::*;
 use augurs_changepoint::{
     dist, ArgpcpDetector, BocpdDetector, DefaultArgpcpDetector, Detector, NormalGammaDetector,
 };
+
+use crate::VecF64;
 
 #[derive(Debug)]
 enum EitherDetector {
@@ -24,6 +25,18 @@ impl EitherDetector {
     }
 }
 
+/// The type of changepoint detector to use.
+#[derive(Debug, Clone, Copy, Deserialize, Tsify)]
+#[serde(rename_all = "kebab-case")]
+#[tsify(from_wasm_abi)]
+pub enum ChangepointDetectorType {
+    /// A Bayesian Online Changepoint Detector with a Normal Gamma prior.
+    NormalGamma,
+    /// An autoregressive Gaussian Process changepoint detector,
+    /// with the default kernel and parameters.
+    DefaultArgpcp,
+}
+
 /// A changepoint detector.
 #[derive(Debug)]
 #[wasm_bindgen]
@@ -35,6 +48,14 @@ const DEFAULT_HAZARD_LAMBDA: f64 = 250.0;
 
 #[wasm_bindgen]
 impl ChangepointDetector {
+    #[wasm_bindgen(constructor)]
+    pub fn new(detectorType: ChangepointDetectorType) -> Result<ChangepointDetector, JsValue> {
+        match detectorType {
+            ChangepointDetectorType::NormalGamma => Self::normal_gamma(None),
+            ChangepointDetectorType::DefaultArgpcp => Self::default_argpcp(None),
+        }
+    }
+
     /// Create a new Bayesian Online changepoint detector with a Normal Gamma prior.
     #[wasm_bindgen(js_name = "normalGamma")]
     pub fn normal_gamma(
@@ -73,10 +94,10 @@ impl ChangepointDetector {
 
     /// Detect changepoints in the given time series.
     #[wasm_bindgen(js_name = "detectChangepoints")]
-    pub fn detect_changepoints(&mut self, y: Float64Array) -> Changepoints {
-        Changepoints {
-            indices: self.detector.detect_changepoints(&y.to_vec()),
-        }
+    pub fn detect_changepoints(&mut self, y: VecF64) -> Result<Changepoints, JsError> {
+        Ok(Changepoints {
+            indices: self.detector.detect_changepoints(&y.convert()?),
+        })
     }
 }
 

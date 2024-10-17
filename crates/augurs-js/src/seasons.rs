@@ -6,6 +6,8 @@ use wasm_bindgen::prelude::*;
 
 use augurs_seasons::{Detector, PeriodogramDetector};
 
+use crate::VecF64;
+
 /// Options for detecting seasonal periods.
 #[derive(Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +49,6 @@ impl From<SeasonalityOptions> for PeriodogramDetector {
 
 /// Detect the seasonal periods in a time series.
 #[wasm_bindgen]
-pub fn seasonalities(y: &[f64], options: Option<SeasonalityOptions>) -> Vec<u32> {
-    PeriodogramDetector::from(options.unwrap_or_default()).detect(y)
+pub fn seasonalities(y: VecF64, options: Option<SeasonalityOptions>) -> Result<Vec<u32>, JsError> {
+    Ok(PeriodogramDetector::from(options.unwrap_or_default()).detect(&y.convert()?))
 }

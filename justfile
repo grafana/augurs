@@ -1,9 +1,12 @@
 set ignore-comments
 
-# Build and publish the augurs-js package to npm with the @bsull scope.
-publish-npm:
+build-augurs-js:
   cd crates/augurs-js && \
-    wasm-pack build --release --scope bsull --out-name augurs --target web -- --features parallel,tracing-wasm && \
+    wasm-pack build --release --target web -- --features parallel,tracing-wasm
+
+# Build and publish the augurs-js package to npm with the @bsull scope.
+publish-npm: build-augurs-js
+  cd crates/augurs-js && \
     node prepublish && \
     wasm-pack publish --access public
 

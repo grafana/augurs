@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
+use crate::{Forecast, ForecastIntervals};
+
 // We just take an untyped Function here, but we'll use the `Tsify` macro to
 // customize the type in `ProphetOptions`. Here we add the JSDoc and type
 // annotations for the function to make it harder to misuse.
@@ -30,13 +32,13 @@ const OPTIMIZER_FUNCTION: &'static str = r#"
  * @returns An object containing the the optimized parameters and any log
  *          messages.
  */
-type OptimizerFunction = (init: InitialParams, data: Data, opts: OptimizeOptions) => OptimizeOutput;
+type ProphetOptimizerFunction = (init: ProphetInitialParams, data: ProphetStanData, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
 
 /**
  * An optimizer for the Prophet model.
  */
-interface Optimizer {
-    optimize: OptimizerFunction;
+interface ProphetOptimizer {
+    optimize: ProphetOptimizerFunction;
 }
 "#;
 
@@ -117,17 +119,20 @@ impl augurs_prophet::Optimizer for JsOptimizer {
 #[wasm_bindgen]
 pub struct Prophet {
     inner: augurs_prophet::Prophet<JsOptimizer>,
+    level: Option<f64>,
 }
 
 #[wasm_bindgen]
 impl Prophet {
     /// Create a new Prophet model.
     #[wasm_bindgen(constructor)]
-    pub fn new(opts: ProphetOptions) -> Result<Prophet, JsError> {
+    pub fn new(opts: Options) -> Result<Prophet, JsError> {
         let (optimizer, opts): (JsOptimizer, augurs_prophet::OptProphetOptions) =
             opts.try_into()?;
+        let level = opts.interval_width.map(Into::into);
         Ok(Self {
             inner: augurs_prophet::Prophet::new(opts.into(), optimizer),
+            level,
         })
     }
 
@@ -147,7 +152,8 @@ impl Prophet {
     pub fn predict(&self, data: Option<PredictionData>) -> Result<Predictions, JsError> {
         let data: Option<augurs_prophet::PredictionData> =
             data.map(TryInto::try_into).transpose()?;
-        Ok(self.inner.predict(data)?.into())
+        let predictions = self.inner.predict(data)?;
+        Ok(Predictions::from((self.level, predictions)))
     }
 }
 
@@ -157,7 +163,7 @@ impl Prophet {
 /// Arguments for optimization.
 #[derive(Debug, Clone, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "Prophet")]
 struct OptimizeOptions {
     /// Algorithm to use.
     pub algorithm: Option<Algorithm>,
@@ -213,7 +219,7 @@ impl From<&augurs_prophet::optimizer::OptimizeOpts> for OptimizeOptions {
 /// The initial parameters for the optimization.
 #[derive(Clone, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "Prophet")]
 struct InitialParams<'a> {
     _phantom: std::marker::PhantomData<&'a ()>,
     /// Base trend growth rate.
@@ -254,7 +260,7 @@ impl<'a> From<&'a augurs_prophet::optimizer::InitialParams> for InitialParams<'a
 /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Tsify)]
 #[serde(rename_all = "lowercase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "Prophet")]
 pub enum Algorithm {
     /// Use the Newton algorithm.
     Newton,
@@ -277,7 +283,7 @@ impl From<augurs_prophet::Algorithm> for Algorithm {
 /// The type of trend to use.
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "Prophet")]
 enum TrendIndicator {
     /// Linear trend (default).
     Linear,
@@ -300,7 +306,7 @@ impl From<augurs_prophet::TrendIndicator> for TrendIndicator {
 /// Data for the Prophet model.
 #[derive(Clone, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "ProphetStan")]
 struct Data<'a> {
     _phantom: std::marker::PhantomData<&'a ()>,
     /// Number of time periods.
@@ -308,6 +314,7 @@ struct Data<'a> {
     /// but WIT identifiers must be lower kebab-case.
     pub n: i32,
     #[serde(with = "serde_wasm_bindgen::preserve")]
+    #[tsify(type = "Float64Array")]
     /// Time series, length n.
     pub y: Float64Array,
     /// Time, length n.
@@ -327,6 +334,7 @@ struct Data<'a> {
     #[tsify(type = "Float64Array")]
     pub t_change: Float64Array,
     /// The type of trend to use.
+    #[tsify(type = "ProphetTrendIndicator")]
     pub trend_indicator: TrendIndicator,
     /// Number of regressors.
     /// Must be greater than or equal to 1.
@@ -402,7 +410,7 @@ impl<'a> From<&'a augurs_prophet::optimizer::Data> for Data<'a> {
 /// Log messages from the optimizer.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 struct Logs {
     /// Debug logs.
     pub debug: String,
@@ -456,7 +464,7 @@ impl Logs {
 /// The output of the optimizer.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 struct OptimizeOutput {
     /// Logs emitted by the optimizer, split by log level.
     pub logs: Logs,
@@ -467,7 +475,7 @@ struct OptimizeOutput {
 /// The optimal parameters found by the optimizer.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 struct OptimizedParams {
     /// Base trend growth rate.
     pub k: f64,
@@ -509,17 +517,19 @@ type TimestampSeconds = i64;
 /// floor and cap columns.
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct TrainingData {
+    #[tsify(type = "TimestampSeconds[] | BigInt64Array")]
     pub ds: Vec<TimestampSeconds>,
+    #[tsify(type = "number[] | Float64Array")]
     pub y: Vec<f64>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "number[] | Float64Array")]
     pub cap: Option<Vec<f64>>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "number[] | Float64Array")]
     pub floor: Option<Vec<f64>>,
     #[tsify(optional)]
     pub seasonality_conditions: Option<HashMap<String, Vec<bool>>>,
-    #[tsify(optional)]
+    #[tsify(optional, type = "Map<string, number[] | Float64Array>")]
     pub x: Option<HashMap<String, Vec<f64>>>,
 }
 
@@ -554,8 +564,9 @@ impl TryFrom<TrainingData> for augurs_prophet::TrainingData {
 /// regressors, you must include them in the prediction data.
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct PredictionData {
+    #[tsify(type = "TimestampSeconds[]")]
     pub ds: Vec<TimestampSeconds>,
     #[tsify(optional)]
     pub cap: Option<Vec<f64>>,
@@ -588,36 +599,18 @@ impl TryFrom<PredictionData> for augurs_prophet::PredictionData {
     }
 }
 
-/// The prediction for a feature.
-///
-/// 'Feature' could refer to the forecasts themselves (`yhat`)
-/// or any of the other component features which contribute to
-/// the final estimate, such as trend, seasonality, seasonalities,
-/// regressors or holidays.
-#[derive(Clone, Debug, Default, Serialize, Tsify)]
-#[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub struct FeaturePrediction {
-    /// The point estimate for this feature.
-    pub point: Vec<f64>,
-    /// The lower estimate for this feature.
-    ///
-    /// Only present if `uncertainty_samples` was greater than zero
-    /// when the model was created.
-    pub lower: Option<Vec<f64>>,
-    /// The upper estimate for this feature.
-    ///
-    /// Only present if `uncertainty_samples` was greater than zero
-    /// when the model was created.
-    pub upper: Option<Vec<f64>>,
-}
-
-impl From<augurs_prophet::FeaturePrediction> for FeaturePrediction {
-    fn from(value: augurs_prophet::FeaturePrediction) -> Self {
+impl From<(Option<f64>, augurs_prophet::FeaturePrediction)> for Forecast {
+    fn from((level, value): (Option<f64>, augurs_prophet::FeaturePrediction)) -> Self {
         Self {
             point: value.point,
-            lower: value.lower,
-            upper: value.upper,
+            intervals: level
+                .zip(value.lower)
+                .zip(value.upper)
+                .map(|((level, lower), upper)| ForecastIntervals {
+                    level,
+                    lower,
+                    upper,
+                }),
         }
     }
 }
@@ -631,18 +624,21 @@ impl From<augurs_prophet::FeaturePrediction> for FeaturePrediction {
 /// Certain fields (such as `cap` and `floor`) may be `None` if the
 /// model did not use them (e.g. the model was not configured to use
 /// logistic trend).
-#[derive(Clone, Debug, Default, Serialize, Tsify)]
+#[derive(Clone, Debug, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
+#[tsify(into_wasm_abi, type_prefix = "Prophet")]
 pub struct Predictions {
+    #[tsify(type = "TimestampSeconds[]")]
     /// The timestamps of the forecasts.
     pub ds: Vec<TimestampSeconds>,
 
     /// Forecasts of the input time series `y`.
-    pub yhat: FeaturePrediction,
+    #[tsify(type = "Forecast")]
+    pub yhat: Forecast,
 
     /// The trend contribution at each time point.
-    pub trend: FeaturePrediction,
+    #[tsify(type = "Forecast")]
+    pub trend: Forecast,
 
     /// The cap for the logistic growth.
     ///
@@ -658,48 +654,53 @@ pub struct Predictions {
     ///
     /// This includes seasonalities, holidays and regressors if their mode
     /// was configured to be [`FeatureMode::Additive`](crate::FeatureMode::Additive).
-    pub additive: FeaturePrediction,
+    #[tsify(type = "Forecast")]
+    pub additive: Forecast,
 
     /// The combined combination of all _multiplicative_ components.
     ///
     /// This includes seasonalities, holidays and regressors if their mode
     /// was configured to be [`FeatureMode::Multiplicative`](crate::FeatureMode::Multiplicative).
-    pub multiplicative: FeaturePrediction,
+    #[tsify(type = "Forecast")]
+    pub multiplicative: Forecast,
 
     /// Mapping from holiday name to that holiday's contribution.
-    pub holidays: HashMap<String, FeaturePrediction>,
+    #[tsify(type = "Map<string, Forecast>")]
+    pub holidays: HashMap<String, Forecast>,
 
     /// Mapping from seasonality name to that seasonality's contribution.
-    pub seasonalities: HashMap<String, FeaturePrediction>,
+    #[tsify(type = "Map<string, Forecast>")]
+    pub seasonalities: HashMap<String, Forecast>,
 
     /// Mapping from regressor name to that regressor's contribution.
-    pub regressors: HashMap<String, FeaturePrediction>,
+    #[tsify(type = "Map<string, Forecast>")]
+    pub regressors: HashMap<String, Forecast>,
 }
 
-impl From<augurs_prophet::Predictions> for Predictions {
-    fn from(value: augurs_prophet::Predictions) -> Self {
+impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
+    fn from((level, value): (Option<f64>, augurs_prophet::Predictions)) -> Self {
         Self {
             ds: value.ds,
-            yhat: value.yhat.into(),
-            trend: value.trend.into(),
+            yhat: (level, value.yhat).into(),
+            trend: (level, value.trend).into(),
             cap: value.cap,
             floor: value.floor,
-            additive: value.additive.into(),
-            multiplicative: value.multiplicative.into(),
+            additive: (level, value.additive).into(),
+            multiplicative: (level, value.multiplicative).into(),
             holidays: value
                 .holidays
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
             seasonalities: value
                 .seasonalities
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
             regressors: value
                 .regressors
                 .into_iter()
-                .map(|(k, v)| (k, v.into()))
+                .map(|(k, v)| (k, (level, v).into()))
                 .collect(),
         }
     }
@@ -716,14 +717,14 @@ impl From<augurs_prophet::Predictions> for Predictions {
 /// [documentation]: https://facebook.github.io/prophet/docs/quick_start.html
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
-pub struct ProphetOptions {
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
+pub struct Options {
     /// Optimizer, used to find the maximum likelihood estimate of the
     /// Prophet Stan model parameters.
     ///
     /// See the documentation for `ProphetOptions` for more details.
     #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Optimizer")]
+    #[tsify(type = "ProphetOptimizer")]
     pub optimizer: js_sys::Object,
 
     /// The type of growth (trend) to use.
@@ -735,7 +736,7 @@ pub struct ProphetOptions {
     /// An optional list of changepoints.
     ///
     /// If not provided, changepoints will be automatically selected.
-    #[tsify(optional)]
+    #[tsify(optional, type = "TimestampSeconds[]")]
     pub changepoints: Option<Vec<TimestampSeconds>>,
 
     /// The number of potential changepoints to include.
@@ -859,10 +860,10 @@ pub struct ProphetOptions {
     pub holidays_mode: Option<FeatureMode>,
 }
 
-impl TryFrom<ProphetOptions> for (JsOptimizer, augurs_prophet::OptProphetOptions) {
+impl TryFrom<Options> for (JsOptimizer, augurs_prophet::OptProphetOptions) {
     type Error = JsError;
 
-    fn try_from(value: ProphetOptions) -> Result<Self, Self::Error> {
+    fn try_from(value: Options) -> Result<Self, Self::Error> {
         let Ok(val) = js_sys::Reflect::get(&value.optimizer, &js_sys::JsString::from("optimize"))
         else {
             return Err(JsError::new("optimizer does not have `optimize` property"));
@@ -919,7 +920,7 @@ impl TryFrom<ProphetOptions> for (JsOptimizer, augurs_prophet::OptProphetOptions
 /// The type of growth to use.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum GrowthType {
     /// Linear growth (default).
     #[default]
@@ -942,8 +943,8 @@ impl From<GrowthType> for augurs_prophet::GrowthType {
 
 /// Define whether to include a specific seasonality, and how it should be specified.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[serde(rename_all = "camelCase", tag = "type")]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum SeasonalityOption {
     /// Automatically determine whether to include this seasonality.
     ///
@@ -960,9 +961,15 @@ pub enum SeasonalityOption {
     #[default]
     Auto,
     /// Manually specify whether to include this seasonality.
-    Manual(bool),
+    Manual {
+        /// Whether to include this seasonality.
+        enabled: bool,
+    },
     /// Enable this seasonality and use the provided number of Fourier terms.
-    Fourier(u32),
+    Fourier {
+        /// The order of the Fourier terms to use.
+        order: u32,
+    },
 }
 
 impl TryFrom<SeasonalityOption> for augurs_prophet::SeasonalityOption {
@@ -971,8 +978,8 @@ impl TryFrom<SeasonalityOption> for augurs_prophet::SeasonalityOption {
     fn try_from(value: SeasonalityOption) -> Result<Self, Self::Error> {
         match value {
             SeasonalityOption::Auto => Ok(Self::Auto),
-            SeasonalityOption::Manual(b) => Ok(Self::Manual(b)),
-            SeasonalityOption::Fourier(n) => Ok(Self::Fourier(n.try_into()?)),
+            SeasonalityOption::Manual { enabled } => Ok(Self::Manual(enabled)),
+            SeasonalityOption::Fourier { order } => Ok(Self::Fourier(order.try_into()?)),
         }
     }
 }
@@ -980,7 +987,7 @@ impl TryFrom<SeasonalityOption> for augurs_prophet::SeasonalityOption {
 /// How to scale the data prior to fitting the model.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum Scaling {
     /// Use abs-max scaling (the default).
     #[default]
@@ -1005,7 +1012,7 @@ impl From<Scaling> for augurs_prophet::Scaling {
 /// The enum will be marked as `non_exhaustive` until that point.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum EstimationMode {
     /// Use MLE estimation.
     #[default]
@@ -1032,7 +1039,7 @@ impl From<EstimationMode> for augurs_prophet::EstimationMode {
 /// The mode of a seasonality, regressor, or holiday.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum FeatureMode {
     /// Additive mode.
     #[default]
@@ -1053,9 +1060,10 @@ impl From<FeatureMode> for augurs_prophet::FeatureMode {
 /// A holiday to be considered by the Prophet model.
 #[derive(Clone, Debug, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct Holiday {
     /// The dates of the holiday.
+    #[tsify(type = "TimestampSeconds[]")]
     pub ds: Vec<TimestampSeconds>,
 
     /// The lower window for the holiday.
@@ -1064,6 +1072,7 @@ pub struct Holiday {
     /// that it is observed. For example, if the holiday is on
     /// 2023-01-01 and the lower window is -1, then the holiday will
     /// _also_ be observed on 2022-12-31.
+    #[tsify(optional)]
     pub lower_window: Option<Vec<i32>>,
 
     /// The upper window for the holiday.
@@ -1072,9 +1081,11 @@ pub struct Holiday {
     /// that it is observed. For example, if the holiday is on
     /// 2023-01-01 and the upper window is 1, then the holiday will
     /// _also_ be observed on 2023-01-02.
+    #[tsify(optional)]
     pub upper_window: Option<Vec<i32>>,
 
     /// The prior scale for the holiday.
+    #[tsify(optional)]
     pub prior_scale: Option<f64>,
 }
 

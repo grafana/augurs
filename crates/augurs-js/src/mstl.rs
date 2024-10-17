@@ -1,5 +1,4 @@
 //! JavaScript bindings for the MSTL model.
-use js_sys::Float64Array;
 use serde::Deserialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -8,7 +7,17 @@ use augurs_ets::{trend::AutoETSTrendModel, AutoETS};
 use augurs_forecaster::{Forecaster, Transform};
 use augurs_mstl::{MSTLModel, TrendModel};
 
-use crate::Forecast;
+use crate::{Forecast, VecF64, VecUsize};
+
+/// The type of trend forecaster to use.
+#[derive(Debug, Clone, Copy, Deserialize, Tsify)]
+#[serde(rename_all = "kebab-case")]
+#[tsify(from_wasm_abi)]
+#[non_exhaustive]
+pub enum MSTLTrendModel {
+    /// Use the `ETS` trend model.
+    Ets,
+}
 
 /// A MSTL model.
 #[derive(Debug)]
@@ -19,10 +28,35 @@ pub struct MSTL {
 
 #[wasm_bindgen]
 impl MSTL {
+    /// Create a new MSTL model with the given periods using the given trend model.
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        trend_forecaster: MSTLTrendModel,
+        periods: VecUsize,
+        options: Option<ETSOptions>,
+    ) -> Result<MSTL, JsError> {
+        match trend_forecaster {
+            MSTLTrendModel::Ets => MSTL::ets(periods, options),
+        }
+    }
+
+    /// Create a new MSTL model with the given periods using the `AutoETS` trend model.
+    #[wasm_bindgen]
+    pub fn ets(periods: VecUsize, options: Option<ETSOptions>) -> Result<MSTL, JsError> {
+        let ets: Box<dyn TrendModel + Sync + Send> =
+            Box::new(AutoETSTrendModel::from(AutoETS::non_seasonal()));
+        let model = MSTLModel::new(periods.convert()?, ets);
+        let forecaster =
+            Forecaster::new(model).with_transforms(options.unwrap_or_default().into_transforms());
+        Ok(MSTL { forecaster })
+    }
+
     /// Fit the model to the given time series.
     #[wasm_bindgen]
-    pub fn fit(&mut self, y: Float64Array) -> Result<(), JsValue> {
-        self.forecaster.fit(y.to_vec()).map_err(|e| e.to_string())?;
+    pub fn fit(&mut self, y: VecF64) -> Result<(), JsValue> {
+        self.forecaster
+            .fit(y.convert()?)
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -77,13 +111,12 @@ impl ETSOptions {
     }
 }
 
-#[wasm_bindgen]
 /// Create a new MSTL model with the given periods using the `AutoETS` trend model.
-pub fn ets(periods: Vec<usize>, options: Option<ETSOptions>) -> MSTL {
-    let ets: Box<dyn TrendModel + Sync + Send> =
-        Box::new(AutoETSTrendModel::from(AutoETS::non_seasonal()));
-    let model = MSTLModel::new(periods, ets);
-    let forecaster =
-        Forecaster::new(model).with_transforms(options.unwrap_or_default().into_transforms());
-    MSTL { forecaster }
+///
+/// @deprecated use `MSTL.ets` instead
+#[wasm_bindgen]
+#[deprecated(since = "0.4.2", note = "use `MSTL.ets` instead")]
+#[allow(deprecated)]
+pub fn ets(periods: VecUsize, options: Option<ETSOptions>) -> Result<MSTL, JsError> {
+    MSTL::ets(periods, options)
 }
