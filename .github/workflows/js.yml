@@ -1,0 +1,39 @@
+name: augurs-js
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: JS tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly-2024-09-01
+        targets: wasm32-unknown-unknown
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: just,wasm-pack
+
+    - name: Build augurs-js
+      run: just build-augurs-js
+
+    - uses: actions/setup-node@v4
+    - name: Install dependencies
+      run: npm ci
+      working-directory: crates/augurs-js/testpkg
+    - name: Run typecheck
+      run: npm run typecheck
+      working-directory: crates/augurs-js/testpkg
+    - name: Run tests
+      run: npm run test:ci
+      working-directory: crates/augurs-js/testpkg

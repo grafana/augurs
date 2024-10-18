@@ -19,6 +19,8 @@ doctest = false
 test = false
 
 [features]
+default = ["logging"]
+logging = ["wasm-tracing"]
 parallel = ["wasm-bindgen-rayon"]
 
 [dependencies]
@@ -38,10 +40,11 @@ js-sys = "0.3.64"
 serde.workspace = true
 serde-wasm-bindgen = "0.6.0"
 tracing.workspace = true
-tracing-wasm = { version = "0.2.1", optional = true }
+tracing-subscriber = { workspace = true, features = ["registry"], default-features = false }
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
 wasm-bindgen = "=0.2.93"
 wasm-bindgen-rayon = { version = "1.2.1", optional = true }
+wasm-tracing = { version = "0.2.1", optional = true }
 
 [package.metadata.wasm-pack.profile.release]
 # previously had just ['-O4']
