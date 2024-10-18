@@ -13,4 +13,4 @@ publish = false
 [dependencies]
 augurs = { workspace = true, features = ["ets", "mstl", "forecaster", "prophet", "prophet-cmdstan", "seasons"] }
 tracing.workspace = true
-tracing-subscriber.workspace = true
+tracing-subscriber = { workspace = true, default-features = true }
