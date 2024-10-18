@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.5.0...augurs-prophet-v0.4.3) - 2024-10-18
+
+No changes to the Rust crate; this version bump is due to breaking changes in the
+Javascript package.
+
 ## [0.4.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.4.2...augurs-prophet-v0.4.3) - 2024-10-16
 
 ### Other

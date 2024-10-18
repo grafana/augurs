@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2024-10-18
+
+This is a large release with some breaking changes and enhancements. In particular, it
+ensures the APIs are more ergonomic and the code is more idiomatic Javascript.
+It also adds tests for the Javascript APIs.
+
 ## [0.1.0-alpha.0](https://github.com/grafana/augurs/releases/tag/augurs-js-v0.1.0-alpha.0) - 2023-09-08
 
 ### Other
