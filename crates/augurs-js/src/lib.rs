@@ -60,6 +60,8 @@ mod changepoints;
 pub mod clustering;
 mod dtw;
 pub mod ets;
+#[cfg(feature = "logging")]
+pub mod logging;
 pub mod mstl;
 mod outlier;
 mod prophet;
@@ -74,8 +76,6 @@ pub mod seasons;
 #[wasm_bindgen(start)]
 pub fn custom_init() {
     console_error_panic_hook::set_once();
-    #[cfg(feature = "tracing-wasm")]
-    tracing_wasm::try_set_as_global_default().ok();
 }
 
 // Wrapper types for the core types, so we can derive `Tsify` for them.
