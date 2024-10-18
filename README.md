@@ -59,12 +59,12 @@ git push --tags
 
 ### Releasing the `augurs` npm library
 
-The `augurs` npm library must also be published manually. This can be done using `just publish-npm`; note you'll need to login with npm first.
+The `augurs` npm library must also be published manually. This can be done using `just publish-augurs-js`; note you'll need to login with npm first.
 
 ```bash
 npm login
 # Log in online, etc...
-just publish-npm
+just publish-augurs-js
 ```
 
 ## License
