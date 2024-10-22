@@ -22,7 +22,6 @@
 //! ```
 //!
 //! [statsforecast]: https://nixtla.github.io/statsforecast/models.html#autoets
-#![warn(missing_docs)]
 
 mod auto;
 mod ets;

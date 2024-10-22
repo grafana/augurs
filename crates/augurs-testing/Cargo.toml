@@ -16,3 +16,6 @@ bench = false
 [dependencies]
 assert_approx_eq = "1.1.0"
 once_cell = "1.18.0"
+
+[lints]
+workspace = true

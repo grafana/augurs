@@ -7,7 +7,7 @@ const TOLERANCE: f64 = 1e-10;
 const HUGEN: f64 = 1e10;
 
 #[derive(Debug, Clone)]
-pub struct FitState {
+pub(crate) struct FitState {
     x: Vec<f64>,
     params: Params,
     lik: f64,
@@ -29,13 +29,13 @@ pub struct FitState {
 impl FitState {
     /// The likelihood of the model, given the data.
     #[inline]
-    pub fn likelihood(&self) -> f64 {
+    pub(crate) fn likelihood(&self) -> f64 {
         self.lik
     }
 
     /// The mean squared error (MSE) of the model.
     #[inline]
-    pub fn mse(&self) -> f64 {
+    pub(crate) fn mse(&self) -> f64 {
         self.amse[0]
     }
 
@@ -43,19 +43,19 @@ impl FitState {
     ///
     /// This is the average of the MSE over the number of forecasting horizons (`nmse`).
     #[inline]
-    pub fn amse(&self) -> f64 {
+    pub(crate) fn amse(&self) -> f64 {
         self.amse.iter().sum::<f64>() / self.amse.len() as f64
     }
 
     #[inline]
-    pub fn sigma_squared(&self) -> f64 {
+    pub(crate) fn sigma_squared(&self) -> f64 {
         self.residuals.iter().map(|e| e.powi(2)).sum::<f64>()
             / (self.residuals.len() as f64 - self.n_params as f64 - 2.0)
     }
 
     /// The mean absolute error (MAE) of the model.
     #[inline]
-    pub fn mae(&self) -> f64 {
+    pub(crate) fn mae(&self) -> f64 {
         self.residuals.iter().map(|e| e.abs()).sum::<f64>() / self.residuals.len() as f64
     }
 
@@ -63,7 +63,7 @@ impl FitState {
     ///
     /// Each element is a slice of length `n_states` containing the level,
     /// growth and seasonal parameters of the model.
-    pub fn states(&self) -> impl Iterator<Item = &[f64]> {
+    pub(crate) fn states(&self) -> impl Iterator<Item = &[f64]> {
         self.x.chunks_exact(self.n_states)
     }
 
@@ -71,31 +71,31 @@ impl FitState {
     ///
     /// This should be the best value found while fitting the model,
     /// after which training stopped.
-    pub fn last_state(&self) -> &[f64] {
+    pub(crate) fn last_state(&self) -> &[f64] {
         self.states().last().unwrap()
     }
 
     /// The parameters used when fitting the model.
     #[inline]
-    pub fn params(&self) -> &Params {
+    pub(crate) fn params(&self) -> &Params {
         &self.params
     }
 
     /// The number of parameters used when fitting the model.
     #[inline]
-    pub fn n_params(&self) -> usize {
+    pub(crate) fn n_params(&self) -> usize {
         self.n_params
     }
 
     /// The residuals of the model against the training data.
     #[inline]
-    pub fn residuals(&self) -> &[f64] {
+    pub(crate) fn residuals(&self) -> &[f64] {
         &self.residuals
     }
 
     /// The fitted values of the model.
     #[inline]
-    pub fn fitted(&self) -> &[f64] {
+    pub(crate) fn fitted(&self) -> &[f64] {
         &self.fitted
     }
 }
@@ -105,7 +105,7 @@ impl FitState {
 /// This includes everything specified by the user, but not the state of the
 /// model (which is stored in [`FitState`]).
 #[derive(Debug, Clone)]
-pub struct Ets {
+pub(crate) struct Ets {
     pub model_type: ModelType,
     #[allow(dead_code)] // unused for now as seasonal models are unimplemented.
     pub season_length: usize,

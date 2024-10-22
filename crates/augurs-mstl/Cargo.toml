@@ -35,3 +35,6 @@ harness = false
 [[bench]]
 name = "vic_elec_iai"
 harness = false
+
+[lints]
+workspace = true

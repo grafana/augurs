@@ -4,12 +4,6 @@
 //! The documentation here is useful for understanding the Python API, however.
 //!
 //! See the crate README for information on Python API usage and installation.
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
 
 use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;

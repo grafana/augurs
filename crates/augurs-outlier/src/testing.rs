@@ -1,6 +1,6 @@
 use crate::OutlierInterval;
 
-pub const SERIES: &[&[f64]] = &[
+pub(crate) const SERIES: &[&[f64]] = &[
     &[
         84.57766308278907,
         1.4076132246566786,

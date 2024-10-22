@@ -1,3 +1,5 @@
+//! Build script for the Prophet model.
+
 /// Compile the Prophet model (in prophet.stan) to a binary,
 /// using the Makefile in the cmdstan installation.
 ///

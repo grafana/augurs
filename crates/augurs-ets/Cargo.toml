@@ -43,3 +43,6 @@ harness = false
 [[bench]]
 name = "air_passengers_iai"
 harness = false
+
+[lints]
+workspace = true

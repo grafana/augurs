@@ -34,3 +34,6 @@ augurs-testing.workspace = true
 criterion.workspace = true
 iai.workspace = true
 pprof.workspace = true
+
+[lints]
+workspace = true

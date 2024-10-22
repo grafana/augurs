@@ -14,3 +14,6 @@ bench = false
 
 [dependencies]
 serde = { version = "1.0.166", optional = true, features = ["derive"] }
+
+[lints]
+workspace = true

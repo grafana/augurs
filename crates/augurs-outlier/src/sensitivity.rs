@@ -13,7 +13,7 @@
 /// Crucially, though, sensitivity will always be a value between 0.0
 /// and 1.0 to make it easier to reason about for users.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct Sensitivity(pub f64);
+pub(crate) struct Sensitivity(pub f64);
 
 impl TryFrom<f64> for Sensitivity {
     type Error = SensitivityError;

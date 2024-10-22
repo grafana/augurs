@@ -1,5 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![warn(missing_docs)]
 use std::{fmt, num::NonZeroUsize};
 
 pub use changepoint::rv::{dist, process::gaussian::kernel};
@@ -144,6 +143,7 @@ impl Default for DefaultArgpcpDetector {
 }
 
 /// Builder for a [`DefaultArgpcpDetector`].
+#[derive(Debug, Clone)]
 pub struct DefaultArgpcpDetectorBuilder {
     constant_value: f64,
     length_scale: f64,

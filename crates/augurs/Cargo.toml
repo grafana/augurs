@@ -43,3 +43,6 @@ prophet-cmdstan = ["augurs-prophet/cmdstan"]
 prophet-compile-cmdstan = ["augurs-prophet/compile-cmdstan"]
 outlier = ["augurs-outlier"]
 seasons = ["augurs-seasons"]
+
+[lints]
+workspace = true

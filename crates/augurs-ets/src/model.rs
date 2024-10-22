@@ -299,7 +299,7 @@ pub(crate) struct OptimizeParams {
 }
 
 impl OptimizeParams {
-    pub fn n_included(&self) -> usize {
+    pub(crate) fn n_included(&self) -> usize {
         self.alpha as usize + self.beta as usize + self.gamma as usize + self.phi as usize
     }
 }
@@ -1225,7 +1225,7 @@ impl Predict for Model {
 
 struct Forecast<'a>(&'a mut augurs_core::Forecast);
 
-impl<'a> Forecast<'a> {
+impl Forecast<'_> {
     /// Calculate the prediction intervals for the forecast.
     fn calculate_intervals(&mut self, ets: &Ets, fit: &FitState, horizon: usize, level: f64) {
         let sigma = fit.sigma_squared();
