@@ -2,12 +2,6 @@
 // Annoying, hopefully https://github.com/madonoharu/tsify/issues/42 will
 // be resolved at some point.
 #![allow(non_snake_case, clippy::empty_docs)]
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
 
 use serde::Serialize;
 use tsify_next::Tsify;

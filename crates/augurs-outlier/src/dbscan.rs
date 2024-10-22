@@ -255,7 +255,7 @@ impl DbscanDetector {
     }
 }
 
-pub struct DBScan1DResults {
+pub(crate) struct DBScan1DResults {
     cluster_min: Option<f64>,
     cluster_max: Option<f64>,
     outlier_indices: TinyVec<[Index; 24]>,
@@ -368,7 +368,7 @@ mod tests {
     // Transposed dataset for testing DBSCAN.
     // There are 13 timestamps and 9 series: each inner
     // array contains the values for the all series at that timestamp.
-    pub static DBSCAN_DATASET: &[&[f64]] = &[
+    static DBSCAN_DATASET: &[&[f64]] = &[
         // all in cluster if eps<=1
         &[1., 2., 3., 4., 5., 6., 7., 8., 9.],
         // all anomalous unless eps>=3

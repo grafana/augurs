@@ -57,6 +57,15 @@ iai = "0.1.1"
 pprof = { version = "0.13.0", features = ["criterion", "frame-pointer", "prost-codec"] }
 pretty_assertions = "1.4.1"
 
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+missing_docs = "warn"
+rust_2018_idioms = "warn"
+# Allow `non_local_definitions` until https://github.com/rust-lang/rust/issues/131643
+# is resolved.
+non_local_definitions = { level = "allow", priority = 1 }
+unreachable_pub = "warn"
+
 # See https://nnethercote.github.io/perf-book/build-configuration.html
 # for more information on why we're using these settings.
 [profile.release]

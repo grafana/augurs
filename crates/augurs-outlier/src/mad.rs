@@ -500,7 +500,7 @@ mod test {
         lower.into_iter().interleave(upper).collect()
     }
 
-    const MAD_TEST_CASES: &[MADTestCase] = &[
+    const MAD_TEST_CASES: &[MADTestCase<'_>] = &[
         MADTestCase {
             name: "normal",
             data: BASE_SAMPLE,
@@ -618,7 +618,7 @@ mod test {
         },
     ];
 
-    fn test_calculate_mad(tc: &MADTestCase) {
+    fn test_calculate_mad(tc: &MADTestCase<'_>) {
         let mad = MADDetector::with_sensitivity(0.5).unwrap();
         let result = tc
             .precalculated_medians

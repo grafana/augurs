@@ -48,3 +48,6 @@ wasm-tracing = { version = "0.2.1", optional = true }
 [package.metadata.wasm-pack.profile.release]
 # previously had just ['-O4']
 wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']
+
+[lints]
+workspace = true

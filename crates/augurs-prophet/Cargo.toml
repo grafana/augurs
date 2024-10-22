@@ -49,3 +49,6 @@ serde = ["dep:serde"]
 name = "download-stan-model"
 path = "src/bin/main.rs"
 required-features = ["download"]
+
+[lints]
+workspace = true

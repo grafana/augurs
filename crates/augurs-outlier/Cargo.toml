@@ -30,3 +30,6 @@ serde_json.workspace = true
 
 [features]
 parallel = ["rayon"]
+
+[lints]
+workspace = true

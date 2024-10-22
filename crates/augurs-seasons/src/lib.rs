@@ -1,11 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
-
 mod periodogram;
 #[cfg(test)]
 mod test_data;

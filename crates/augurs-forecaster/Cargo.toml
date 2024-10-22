@@ -20,3 +20,6 @@ thiserror.workspace = true
 [dev-dependencies]
 augurs.workspace = true
 augurs-testing.workspace = true
+
+[lints]
+workspace = true

@@ -1,4 +1,4 @@
-pub trait VarExt {
+pub(crate) trait VarExt {
     fn var(&self, ddof: usize) -> f64;
     fn std(&self, ddof: usize) -> f64 {
         self.var(ddof).sqrt()

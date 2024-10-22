@@ -28,3 +28,6 @@ pprof.workspace = true
 [[bench]]
 name = "periodogram"
 harness = false
+
+[lints]
+workspace = true
