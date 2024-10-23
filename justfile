@@ -1,21 +1,14 @@
 set ignore-comments
 
 build-augurs-js:
-  cd crates/augurs-js && \
-    rm -rf ./pkg && \
-    wasm-pack build --scope bsull --out-name augurs --release --target web -- --features parallel
+  just js/build
 
 test-augurs-js: build-augurs-js
-  cd crates/augurs-js/testpkg && \
-    npm ci && \
-    npm run typecheck && \
-    npm run test:ci
+  just js/test
 
 # Build and publish the augurs JS package to npm with the @bsull scope.
 publish-augurs-js: test-augurs-js
-  cd crates/augurs-js && \
-    node prepublish && \
-    wasm-pack publish --access public
+  just js/publish
 
 test:
   cargo nextest run \
@@ -33,7 +26,14 @@ test-all:
     --all-features \
     --all-targets \
     --workspace \
-    --exclude augurs-js \
+    --exclude augurs-changepoint-js \
+    --exclude augurs-clustering-js \
+    --exclude augurs-core-js \
+    --exclude augurs-dtw-js \
+    --exclude augurs-ets-js \
+    --exclude augurs-mstl-js \
+    --exclude augurs-prophet-js \
+    --exclude augurs-seasons-js \
     --exclude pyaugurs \
     -E 'not (binary(/iai/) | binary(/prophet-cmdstan/))'
 

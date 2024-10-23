@@ -1,0 +1,42 @@
+{
+  "name": "@bsull/augurs",
+  "description": "JavaScript bindings for the augurs time series library.",
+  "version": "0.5.0",
+  "collaborators": [
+    "Ben Sully <ben.sully@grafana.com"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grafana/augurs"
+  },
+  "files": [
+    "*.wasm",
+    "*.js",
+    "*.d.ts",
+    "snippets/"
+  ],
+  "main": "core.js",
+  "exports": {
+    ".": "./core.js",
+    "./changepoint": "./changepoint.js",
+    "./clustering": "./clustering.js",
+    "./dtw": "./dtw.js",
+    "./ets": "./ets.js",
+    "./mstl": "./mstl.js",
+    "./prophet": "./prophet.js",
+    "./outlier": "./outlier.js",
+    "./seasons": "./seasons.js"
+  },
+  "types": "augurs.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "analysis",
+    "forecasting",
+    "outlier-detection",
+    "time-series"
+  ]
+}

@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - define lints in Cargo.toml instead of each crate's lib.rs ([#138](https://github.com/grafana/augurs/pull/138))
 
+## [0.5.0](https://github.com/grafana/augurs/compare/augurs-dtw-v0.5.0...augurs-dtw-v0.4.3) - 2024-10-18
+
+No changes to the Rust crate; this version bump is due to breaking changes in the
+Javascript package.
+
 ## [0.4.0](https://github.com/grafana/augurs/compare/augurs-dtw-v0.3.1...augurs-dtw-v0.4.0) - 2024-10-16
 
 ### Added
