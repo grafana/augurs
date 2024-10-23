@@ -1,0 +1,36 @@
+[package]
+name = "prophet"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+
+[dependencies]
+augurs-prophet = { workspace = true, features = ["bytemuck"] }
+bytemuck.workspace = true
+itertools.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+wit-bindgen-rt.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.component]
+package = "augurs:prophet"
+
+[package.metadata.component.bindings]
+ownership = "borrowing-duplicate-if-necessary"
+
+[package.metadata.component.target]
+path = "wit"
+world = "component"
+
+[package.metadata.component.target.dependencies]
+"augurs:prophet-wasmstan" = { path = "../../cpp/prophet-wasmstan/wit" }

@@ -1,0 +1,251 @@
+package augurs:prophet;
+
+/// The Prophet model.
+interface prophet {
+    use augurs:prophet-wasmstan/types.{optimize-opts};
+
+    /// A timestamp in seconds since the epoch.
+    type timestamp-seconds = s64;
+
+    /// The type of growth to use.
+    enum growth-type {
+        /// Linear growth (default).
+        linear, // 0
+        /// Logistic growth.
+        logistic, // 1
+        /// Flat growth.
+        flat, // 2
+    }
+
+    /// Whether to include a specific seasonality, and if so, how
+    /// many Fourier terms to use.
+    variant seasonality-option {
+        /// Automatically determine whether to include this seasonality.
+        auto,
+        /// Manually specify whether to include this seasonality.
+        manual(bool),
+        /// Enable this seasonality and use the provided number of Fourier terms.
+        fourier(u32),
+    }
+
+    /// How to model seasonality.
+    enum seasonality-mode {
+        /// Additive seasonality (the default).
+        additive,
+        /// Multiplicative seasonality.
+        multiplicative,
+    } 
+
+    /// How to do parameter estimation.
+    variant estimation-mode {
+        /// Use MAP estimation.
+        map,
+        /// Use maximum likelihood estimation.
+        mle,
+        /// Do full Bayesian inference with the specified number of MCMC samples.
+        /// Not yet implemented.
+        // mcmc(u32),
+    }
+
+    /// How to scale the data prior to fitting the model.
+    enum scaling {
+        /// Use abs-max scaling (the default).
+        abs-max,
+        /// Use min-max scaling.
+        min-max,
+    }
+
+    /// A holiday to include in the model.
+    record holiday {
+      /// The name of the holiday.
+      name: string,
+      /// The date of the holiday.
+      ds: list<timestamp-seconds>,
+      /// The lower window of the holiday.
+      lower-window: option<list<s32>>,
+      /// The upper window of the holiday.
+      upper-window: option<list<s32>>,
+      /// The prior scale of the holiday.
+      prior-scale: option<f64>,
+    }
+
+    /// Options for the Prophet model.
+    record prophet-opts {
+      /// The type of growth to use.
+      growth: option<growth-type>,
+      /// List of dates at which to include potential changepoints. If
+      /// not specified, potential changepoints are selected automatically.
+      changepoints: option<list<timestamp-seconds>>,
+      /// Number of potential changepoints to include. Not used
+      /// if input `changepoints` is supplied. If `changepoints` is not supplied,
+      /// then `n-changepoints` potential changepoints are selected uniformly from
+      /// the first `changepoint_range` proportion of the history.
+      n-changepoints: option<u32>,
+      /// Proportion of history in which trend changepoints will
+      /// be estimated. Defaults to 0.8 for the first 80%. Not used if
+      /// `changepoints` is specified.
+      changepoint-range: option<f64>,
+      /// Fit yearly seasonality.
+      yearly-seasonality: option<seasonality-option>,
+      /// Fit weekly seasonality.
+      weekly-seasonality: option<seasonality-option>,
+      /// Fit daily seasonality.
+      daily-seasonality: option<seasonality-option>,
+      /// Whether to treat seasonality as additive (default) or multiplicative.
+      seasonality-mode: option<seasonality-mode>,
+      /// Parameter modulating the strength of the
+      /// seasonality model. Larger values allow the model to fit larger seasonal
+      /// fluctuations, smaller values dampen the seasonality. Can be specified
+      /// for individual seasonalities using add_seasonality.
+      seasonality-prior-scale: option<f64>,
+      /// Parameter modulating the flexibility of the
+      /// automatic changepoint selection. Large values will allow many
+      /// changepoints, small values will allow few changepoints.
+      changepoint-prior-scale: option<f64>,
+      /// If supplied and greater than 0, will do full Bayesian inference
+      /// with the specified number of MCMC samples. If 0, will do MAP
+      /// estimation.
+      /// Corresponds to the `mcmc_samples` argument in Prophet.
+      estimation: option<estimation-mode>,
+      /// Width of the uncertainty intervals provided for the forecast.
+      /// If estimation=map, this will be only the uncertainty in the trend
+      /// using the MAP estimate of the extrapolated generative model.
+      /// If estimation=mcmc this will be integrated over all model
+      /// parameters, which will include uncertainty in seasonality.
+      interval-width: option<f64>,
+      /// Number of simulated draws used to estimate uncertainty intervals.
+      /// Settings this value to 0 or False will disable uncertainty estimation
+      /// and speed up the calculation.
+      uncertainty-samples: option<u32>,
+      /// How to scale the data prior to fitting.
+      scaling: option<scaling>,
+
+      /// Holidays to include in the model.
+      holidays: option<list<holiday>>,
+      /// How to treat holidays.
+      holidays-mode: option<seasonality-mode>,
+      /// Prior scale for holidays.
+      ///
+      /// This parameter modulates the strength of the holiday
+      /// components model, unless overridden in each individual
+      /// holiday's input.
+      holidays-prior-scale: option<f64>,
+    }
+
+    /// A seasonality condition.
+    record seasonality-condition {
+        /// The name of the seasonality condition.
+        /// This must match the `condition_name` provided when
+        /// the seasonality was added to the Prophet model.
+        name: string,
+        /// A list of booleans indicating whether the seasonality is active
+        /// on each date.
+        is-active: list<bool>,
+    }
+
+    /// An external regressor.
+    record regressor {
+        /// The name of the regressor.
+        name: string,
+        /// The regressor values.
+        values: list<f64>,
+    }
+
+    /// Data to fit the Prophet model.
+    record training-data {
+        /// The date-time column.
+        ds: list<timestamp-seconds>,
+        /// The time series.
+        y: list<f64>,
+        /// The capacity of the logistic growth component.
+        /// Required if the Prophet model's `growth-type` is `logistic`.
+        cap: option<list<f64>>,
+        /// The floor of the logistic growth component.
+        /// Optional, only used if the Prophet model's `growth-type` is `logistic`.
+        floor: option<list<f64>>,
+        /// Seasonality conditions.
+        /// Optional, only used if a seasonality added to the Prophet model was
+        /// marked as conditional.
+        seasonality-conditions: option<list<seasonality-condition>>,
+        /// External regressors.
+        regressors: option<list<regressor>>,
+    }
+
+    /// Data to predict using the Prophet model.
+    ///
+    /// The prediction data must have the same fields as the training data used
+    /// to fit the model, except that the `y` column is not required.
+    record prediction-data {
+        /// The date-time column.
+        ds: list<timestamp-seconds>,
+        /// The capacity of the logistic growth component.
+        cap: option<list<f64>>,
+        /// The floor of the logistic growth component.
+        floor: option<list<f64>>,
+        /// Seasonality conditions.
+        seasonality-conditions: option<list<seasonality-condition>>,
+        /// External regressors.
+        regressors: option<list<regressor>>,
+    }
+
+    /// A prediction for a component.
+    record prediction {
+        point: list<f64>,
+        /// The lower bound of the prediction interval.
+        ///
+        /// Will be `none` if `uncertainty-samples` was
+        /// set to `none` or zero.
+        lower: option<list<f64>>,
+        /// The upper bound of the prediction interval.
+        ///
+        /// Will be `none` if `uncertainty-samples` was
+        /// set to `none` or zero.
+        upper: option<list<f64>>,
+    }
+
+    /// Predictions made by Prophet.
+    record predictions {
+        /// The date-time column.
+        ds: list<timestamp-seconds>,
+        /// The predicted values.
+        yhat: prediction,
+        /// The trend component.
+        trend: prediction,
+
+        /// The logistic cap, if applicable.
+        cap: option<list<f64>>,
+        /// The logistic floor, if applicable.
+        floor: option<list<f64>>,
+
+        /// The contributions from additive terms.
+        additive-terms: prediction,
+        /// The contributions from multiplicative terms.
+        multiplicative-terms: prediction,
+    }
+
+    /// A Prophet model.
+    resource prophet {
+        /// Construct a Prophet model.
+        ///
+        /// The `opts` argument is optional, and if not supplied, will use the
+        /// default options.
+        new: static func(opts: option<prophet-opts>) -> result<prophet, string>;
+
+        /// Fit the Prophet model to the given data.
+        ///
+        /// The `opts` argument is optional, and if not supplied, will use the
+        /// default options.
+        fit: func(data: training-data, opts: option<optimize-opts>) -> result<_, string>;
+
+        /// Predict future values.
+        ///
+        /// If `data` is not supplied, the model will predict values for
+        /// the training data.
+        predict: func(data: option<prediction-data>) -> result<predictions, string>;
+    }
+}
+
+world component {
+    import augurs:prophet-wasmstan/optimizer;
+    export prophet;
+}

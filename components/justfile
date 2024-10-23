@@ -74,6 +74,9 @@ transpile: build
     --name prophet-wasmstan \
     --out-dir js/prophet-wasmstan \
     cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
+  # Replace the generator function created by jco with one that works better
+  # for me, using `ripgrep` to replace the multiline string with the function
+  # contained in `run.js`.
   rg --replace="$(rg --invert-match --no-line-number '//' js/prophet-wasmstan/run.js)" \
     --multiline --multiline-dotall \
     --passthru \
@@ -82,6 +85,20 @@ transpile: build
     js/prophet-wasmstan/prophet-wasmstan.js \
     > js/prophet-wasmstan/prophet-wasmstan.fixed.js
   mv js/prophet-wasmstan/prophet-wasmstan.fixed.js js/prophet-wasmstan/prophet-wasmstan.js
+
+build-prophet:
+  cd rust/prophet && cargo component build --release
+
+transpile-prophet:
+  jco transpile \
+    --name augurs-prophet \
+    --optimize \
+    --out-dir js/prophet \
+    ../target/wasm32-wasip1/release/prophet.wasm
+  jco types \
+    --name augurs-prophet \
+    --out-dir js/prophet \
+    rust/prophet/wit
 
 test: transpile
   cd js/prophet-wasmstan && npm ci && npm run test:ci

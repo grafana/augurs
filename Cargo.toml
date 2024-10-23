@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "components/rust/*",
   "crates/*",
   "examples/*",
 ]
@@ -50,6 +51,7 @@ thiserror = "1.0.40"
 tinyvec = "1.6.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", default-features = false }
+wit-bindgen-rt = "0.34.0"
 
 assert_approx_eq = "1.1.0"
 criterion = "0.5.1"

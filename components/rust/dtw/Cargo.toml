@@ -1,0 +1,28 @@
+[package]
+name = "dtw"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+
+[dependencies]
+augurs-dtw = { workspace = true }
+wit-bindgen-rt = { version = "0.34.0", features = ["bitflags"] }
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.component]
+package = "augurs:dtw"
+
+[package.metadata.component.bindings]
+ownership = "borrowing-duplicate-if-necessary"
+
+[package.metadata.component.target]
+path = "wit"
+world = "component"
+
+[package.metadata.component.dependencies]
