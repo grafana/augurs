@@ -58,50 +58,52 @@ compile: checkout-submodules generate-skeleton
 
 # Convert the prophet-wasmstan C++ library into a WASM component.
 build: compile
-  wasm-tools component new cpp/prophet-wasmstan/prophet-wasmstan-core.wasm --adapt {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm -o cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  wasm-tools component new ./cpp/prophet-wasmstan/prophet-wasmstan-core.wasm --adapt {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm -o ./cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
 
 # Inspect the prophet-wasmstan WASM component.
 inspect: build
-  wasm-tools component wit cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  wasm-tools component wit ./cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
 
 transpile: build
   jco transpile \
     --name prophet-wasmstan \
     --optimize \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+    --out-dir ./js/prophet-wasmstan \
+    ./cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
   jco types \
-    --name prophet-wasmstan \
-    --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
+    --name ./prophet-wasmstan \
+    --out-dir ./js/prophet-wasmstan \
+    ./cpp/prophet-wasmstan/wit/prophet-wasmstan.wit
   # Replace the generator function created by jco with one that works better
   # for me, using `ripgrep` to replace the multiline string with the function
   # contained in `run.js`.
-  rg --replace="$(rg --invert-match --no-line-number '//' js/prophet-wasmstan/run.js)" \
+  rg --replace="$(rg --invert-match --no-line-number '//' ./js/prophet-wasmstan/run.js)" \
     --multiline --multiline-dotall \
     --passthru \
     --no-line-number \
     '  let promise, resolve, reject;.+?return promise \|\| maybeSyncReturn;' \
-    js/prophet-wasmstan/prophet-wasmstan.js \
-    > js/prophet-wasmstan/prophet-wasmstan.fixed.js
-  mv js/prophet-wasmstan/prophet-wasmstan.fixed.js js/prophet-wasmstan/prophet-wasmstan.js
+    ./js/prophet-wasmstan/prophet-wasmstan.js \
+    > ./js/prophet-wasmstan/prophet-wasmstan.fixed.js
+  mv ./js/prophet-wasmstan/prophet-wasmstan.fixed.js ./js/prophet-wasmstan/prophet-wasmstan.js
 
-build-prophet:
-  cd rust/prophet && cargo component build --release
+build-prophet: build
+  cd ./rust/prophet && cargo component build --release
+  wac plug ../target/wasm32-wasip1/release/prophet.wasm \
+    --output ./rust/prophet/prophet.wasm \
+    --plug ./cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
 
-transpile-prophet:
+transpile-prophet: build-prophet
   jco transpile \
     --name augurs-prophet \
-    --optimize \
-    --out-dir js/prophet \
-    ../target/wasm32-wasip1/release/prophet.wasm
+    --out-dir ./js/prophet \
+    ./rust/prophet/prophet.wasm
   jco types \
     --name augurs-prophet \
-    --out-dir js/prophet \
-    rust/prophet/wit
+    --out-dir ./js/prophet \
+    ./rust/prophet/wit
 
 test: transpile
-  cd js/prophet-wasmstan && npm ci && npm run test:ci
+  cd ./js/prophet-wasmstan && npm ci && npm run test:ci
 
 publish: test
-  cd js/prophet-wasmstan && npm ci && npm publish --access public
+  cd ./js/prophet-wasmstan && npm ci && npm publish --access public
