@@ -319,11 +319,16 @@ impl<O> Prophet<O> {
             .collect_vec();
         // Matrix multiply `beta_c` and `x`.
         let mut point = vec![0.0; X[0].len()];
-        for (p, feature, b) in izip!(point.iter_mut(), X, beta_c) {
-            for x in feature {
+        for (feature, b) in izip!(X, beta_c) {
+            for (p, x) in izip!(point.iter_mut(), feature) {
                 *p += b * x;
             }
         }
+        // for (p, feature, b) in izip!(point.iter_mut(), X, beta_c) {
+        //     for x in feature {
+        //         *p += b * x;
+        //     }
+        // }
         if is_additive {
             point.iter_mut().for_each(|x| *x *= y_scale);
         }
