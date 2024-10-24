@@ -1,3 +1,5 @@
+//! Integration tests for the augurs wrapper crate.
+
 #[cfg(feature = "changepoint")]
 #[test]
 fn test_changepoint() {
