@@ -29,6 +29,7 @@ augurs.workspace = true
 augurs-testing.workspace = true
 chrono.workspace = true
 pretty_assertions.workspace = true
+tracing-subscriber.workspace = true
 
 [build-dependencies]
 tempfile = { version = "3.13.0", optional = true }
