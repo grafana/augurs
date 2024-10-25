@@ -317,11 +317,6 @@ impl<O> Prophet<O> {
                 *p += b * x;
             }
         }
-        // for (p, feature, b) in izip!(point.iter_mut(), X, beta_c) {
-        //     for x in feature {
-        //         *p += b * x;
-        //     }
-        // }
         if is_additive {
             point.iter_mut().for_each(|x| *x *= y_scale);
         }
