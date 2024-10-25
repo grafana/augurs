@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.5.2...augurs-prophet-v0.5.3) - 2024-10-25
+
+### Other
+
+- Remove commented code
+
 ## [0.5.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.5.1...augurs-prophet-v0.5.2) - 2024-10-25
 
 ### Other
