@@ -26,7 +26,8 @@ test:
 
 # Run all unit and integration tests, plus examples and benchmarks,
 # except for those which require `iai` (which isn't available on
-# all platforms).
+# all platforms) and the Prophet benchmarks which require a STAN
+# installation.
 test-all:
   cargo nextest run \
     --all-features \
@@ -34,7 +35,7 @@ test-all:
     --workspace \
     --exclude augurs-js \
     --exclude pyaugurs \
-    -E 'not binary(/iai/)'
+    -E 'not (binary(/iai/) | binary(/real-life/))'
 
 doctest:
   # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
