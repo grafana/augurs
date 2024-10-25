@@ -51,7 +51,12 @@ serde = ["dep:serde"]
 bench = false
 
 [[bench]]
-name = "real-life"
+name = "prophet-linear"
+harness = false
+required-features = ["cmdstan", "compile-cmdstan"]
+
+[[bench]]
+name = "prophet-logistic"
 harness = false
 required-features = ["cmdstan", "compile-cmdstan"]
 

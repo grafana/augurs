@@ -35,7 +35,13 @@ fn fit(c: &mut Criterion) {
 }
 
 fn predict(c: &mut Criterion) {
-    let mut model = Prophet::new(Default::default(), CmdstanOptimizer::new_embedded());
+    let opts = ProphetOptions {
+        yearly_seasonality: SeasonalityOption::Manual(false),
+        interval_width: 0.8.try_into().unwrap(),
+        uncertainty_samples: 500,
+        ..Default::default()
+    };
+    let mut model = Prophet::new(opts, CmdstanOptimizer::new_embedded());
     let training_data = TrainingData::new(TRAINING_DS.to_vec(), TRAINING_Y.to_vec()).unwrap();
     model
         .fit(

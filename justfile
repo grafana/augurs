@@ -35,7 +35,7 @@ test-all:
     --workspace \
     --exclude augurs-js \
     --exclude pyaugurs \
-    -E 'not (binary(/iai/) | binary(/real-life/))'
+    -E 'not (binary(/iai/) | binary(/prophet/))'
 
 doctest:
   # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
