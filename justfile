@@ -3,7 +3,7 @@ set ignore-comments
 build-augurs-js:
   cd crates/augurs-js && \
     rm -rf ./pkg && \
-    wasm-pack build --scope bsull --out-name augurs --release --target web -- --features parallel
+    wasm-pack build --scope bsull --out-name augurs --release --target web --no-opt -- --features parallel
 
 test-augurs-js: build-augurs-js
   cd crates/augurs-js/testpkg && \

@@ -114,6 +114,11 @@ impl<O> Prophet<O> {
         self.optimized.is_some()
     }
 
+    /// Get the optimized parameters, if the model has been fit.
+    pub fn params(&self) -> Option<&OptimizedParams> {
+        self.optimized.as_ref()
+    }
+
     /// Predict using the Prophet model.
     ///
     /// # Errors
@@ -286,6 +291,7 @@ impl<O: Optimizer> Prophet<O> {
                 .optimize(&init, &preprocessed.data, &opts)
                 .map_err(|e| Error::OptimizationFailed(e.to_string()))?,
         );
+        // tracing::debug!("{:#?}", &self.optimized);
         self.processed = Some(preprocessed);
         self.init = Some(init);
         Ok(())

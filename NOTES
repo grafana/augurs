@@ -1,0 +1,11 @@
+Dear future me,
+
+Something very weird is happening when trying to run the prophet model in the WASM environment.
+
+Everything _looks_ fine, but by the second iteration of the optimizer the gradient and log prob look
+completely different to when it's run outside of WASM.
+
+To do:
+
+- print out the data before the first iteration of the optimization, from _inside STAN_.
+

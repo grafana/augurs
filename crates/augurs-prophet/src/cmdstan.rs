@@ -668,14 +668,6 @@ impl CmdstanOptimizer {
         self.poll_interval = interval;
         self
     }
-
-    /// Set the number of iterations between progress messages.
-    ///
-    /// The default is 100.
-    pub fn with_refresh(mut self, refresh: usize) -> Self {
-        self.refresh = refresh;
-        self
-    }
 }
 
 impl Optimizer for CmdstanOptimizer {
@@ -691,7 +683,7 @@ impl Optimizer for CmdstanOptimizer {
             data,
             opts,
             poll_interval: self.poll_interval,
-            refresh: self.refresh,
+            refresh: opts.refresh.unwrap_or(100) as usize,
         }
         .run()
         .map_err(optimizer::Error::custom)

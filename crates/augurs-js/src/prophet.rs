@@ -66,6 +66,8 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         opts: &augurs_prophet::optimizer::OptimizeOpts,
     ) -> Result<augurs_prophet::optimizer::OptimizedParams, augurs_prophet::optimizer::Error> {
         let this = JsValue::null();
+        let msg = format!("{:?}", &opts);
+        tracing::debug!("prophet: {}", &msg);
         let opts: OptimizeOptions = opts.into();
         let init: InitialParams<'_> = init.into();
         let data: Data<'_> = data.into();
@@ -138,8 +140,22 @@ impl Prophet {
 
     /// Fit the model to some training data.
     #[wasm_bindgen]
-    pub fn fit(&mut self, data: TrainingData) -> Result<(), JsError> {
-        Ok(self.inner.fit(data.try_into()?, Default::default())?)
+    pub fn fit(
+        &mut self,
+        data: TrainingData,
+        opts: Option<OptimizeOptions>,
+    ) -> Result<(), JsError> {
+        let msg = format!("{:?}", &opts);
+        tracing::debug!("prophet: {}", &msg);
+        Ok(self
+            .inner
+            .fit(data.try_into()?, opts.map(Into::into).unwrap_or_default())?)
+    }
+
+    /// Get the optimized parameters, if the model has been fit.
+    #[wasm_bindgen]
+    pub fn params(&self) -> Option<OptimizedParams> {
+        self.inner.params().cloned().map(Into::into)
     }
 
     /// Predict using the model.
@@ -161,43 +177,76 @@ impl Prophet {
 // the 'libprophet' / 'wasmstan' optimize function expects different field names.
 
 /// Arguments for optimization.
-#[derive(Debug, Clone, Serialize, Tsify)]
+#[derive(Debug, Clone, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi, type_prefix = "Prophet")]
-struct OptimizeOptions {
+#[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
+pub struct OptimizeOptions {
     /// Algorithm to use.
+    #[tsify(optional)]
     pub algorithm: Option<Algorithm>,
     /// The random seed to use for the optimization.
+    #[tsify(optional)]
     pub seed: Option<u32>,
     /// The chain id to advance the PRNG.
+    #[tsify(optional)]
     pub chain: Option<u32>,
     /// Line search step size for first iteration.
+    #[tsify(optional)]
     pub init_alpha: Option<f64>,
     /// Convergence tolerance on changes in objective function value.
+    #[tsify(optional)]
     pub tol_obj: Option<f64>,
     /// Convergence tolerance on relative changes in objective function value.
+    #[tsify(optional)]
     pub tol_rel_obj: Option<f64>,
     /// Convergence tolerance on the norm of the gradient.
+    #[tsify(optional)]
     pub tol_grad: Option<f64>,
     /// Convergence tolerance on the relative norm of the gradient.
+    #[tsify(optional)]
     pub tol_rel_grad: Option<f64>,
     /// Convergence tolerance on changes in parameter value.
+    #[tsify(optional)]
     pub tol_param: Option<f64>,
     /// Size of the history for LBFGS Hessian approximation. The value should
     /// be less than the dimensionality of the parameter space. 5-10 usually
     /// sufficient.
+    #[tsify(optional)]
     pub history_size: Option<u32>,
     /// Total number of iterations.
+    #[tsify(optional)]
     pub iter: Option<u32>,
     /// When `true`, use the Jacobian matrix to approximate the Hessian.
     /// Default is `false`.
+    #[tsify(optional)]
     pub jacobian: Option<bool>,
     /// How frequently to emit convergence statistics, in number of iterations.
+    #[tsify(optional)]
     pub refresh: Option<u32>,
 }
 
 impl From<&augurs_prophet::optimizer::OptimizeOpts> for OptimizeOptions {
     fn from(opts: &augurs_prophet::optimizer::OptimizeOpts) -> Self {
+        Self {
+            algorithm: opts.algorithm.map(Into::into),
+            seed: opts.seed,
+            chain: opts.chain,
+            init_alpha: opts.init_alpha,
+            tol_obj: opts.tol_obj,
+            tol_rel_obj: opts.tol_rel_obj,
+            tol_grad: opts.tol_grad,
+            tol_rel_grad: opts.tol_rel_grad,
+            tol_param: opts.tol_param,
+            history_size: opts.history_size,
+            iter: opts.iter,
+            jacobian: opts.jacobian,
+            refresh: opts.refresh,
+        }
+    }
+}
+
+impl From<OptimizeOptions> for augurs_prophet::optimizer::OptimizeOpts {
+    fn from(opts: OptimizeOptions) -> Self {
         Self {
             algorithm: opts.algorithm.map(Into::into),
             seed: opts.seed,
@@ -258,7 +307,7 @@ impl<'a> From<&'a augurs_prophet::optimizer::InitialParams> for InitialParams<'a
 }
 
 /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(rename_all = "lowercase")]
 #[tsify(into_wasm_abi, type_prefix = "Prophet")]
 pub enum Algorithm {
@@ -276,6 +325,16 @@ impl From<augurs_prophet::Algorithm> for Algorithm {
             augurs_prophet::Algorithm::Newton => Self::Newton,
             augurs_prophet::Algorithm::Bfgs => Self::Bfgs,
             augurs_prophet::Algorithm::Lbfgs => Self::Lbfgs,
+        }
+    }
+}
+
+impl From<Algorithm> for augurs_prophet::Algorithm {
+    fn from(value: Algorithm) -> Self {
+        match value {
+            Algorithm::Newton => Self::Newton,
+            Algorithm::Bfgs => Self::Bfgs,
+            Algorithm::Lbfgs => Self::Lbfgs,
         }
     }
 }
@@ -442,6 +501,8 @@ impl Logs {
                         alpha0 = log.alpha0,
                         evals = log.evals,
                         notes = log.notes,
+                        "iteration {}, log_prob {:<5}, dx {:<5}, grad {:<5}, alpha {:<5}, alpha0 {:<5}, evals {:<5}, notes {}",
+                        log.iter, log.log_prob, log.dx, log.grad, log.alpha, log.alpha0, log.evals, log.notes
                     );
                 }
                 None => {
@@ -473,10 +534,10 @@ struct OptimizeOutput {
 }
 
 /// The optimal parameters found by the optimizer.
-#[derive(Debug, Clone, Deserialize, Tsify)]
+#[derive(Debug, Clone, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi, type_prefix = "Prophet")]
-struct OptimizedParams {
+#[tsify(into_wasm_abi, from_wasm_abi, type_prefix = "Prophet")]
+pub struct OptimizedParams {
     /// Base trend growth rate.
     pub k: f64,
     /// Trend offset.
@@ -498,6 +559,19 @@ struct OptimizedParams {
 impl From<OptimizedParams> for augurs_prophet::optimizer::OptimizedParams {
     fn from(x: OptimizedParams) -> Self {
         augurs_prophet::optimizer::OptimizedParams {
+            k: x.k,
+            m: x.m,
+            sigma_obs: x.sigma_obs,
+            delta: x.delta,
+            beta: x.beta,
+            trend: x.trend,
+        }
+    }
+}
+
+impl From<augurs_prophet::optimizer::OptimizedParams> for OptimizedParams {
+    fn from(x: augurs_prophet::optimizer::OptimizedParams) -> Self {
+        OptimizedParams {
             k: x.k,
             m: x.m,
             sigma_obs: x.sigma_obs,

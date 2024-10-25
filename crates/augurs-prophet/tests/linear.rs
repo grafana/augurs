@@ -5,9 +5,9 @@ use augurs_prophet::{
     SeasonalityOption, TimestampSeconds, TrainingData,
 };
 use augurs_testing::assert_all_close;
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 
-fn fit(c: &mut Criterion) {
+#[test]
+fn linear() {
     tracing_subscriber::fmt::init();
     let opts = ProphetOptions {
         yearly_seasonality: SeasonalityOption::Manual(false),
@@ -15,54 +15,26 @@ fn fit(c: &mut Criterion) {
         uncertainty_samples: 500,
         ..Default::default()
     };
-    let model = Prophet::new(opts, CmdstanOptimizer::new_embedded());
-    let training_data = TrainingData::new(TRAINING_DS.to_vec(), TRAINING_Y.to_vec()).unwrap();
-    c.bench_function("fit", |b| {
-        b.iter_batched(
-            || (model.clone(), training_data.clone()),
-            |(mut model, training_data)| {
-                model.fit(
-                    training_data,
-                    OptimizeOpts {
-                        seed: Some(100),
-                        ..Default::default()
-                    },
-                )
-            },
-            BatchSize::SmallInput,
-        );
-    });
-}
-
-fn predict(c: &mut Criterion) {
-    let opts = ProphetOptions {
-        yearly_seasonality: SeasonalityOption::Manual(false),
-        interval_width: 0.8.try_into().unwrap(),
-        uncertainty_samples: 500,
-        ..Default::default()
-    };
-    let mut model = Prophet::new(opts, CmdstanOptimizer::new_embedded());
+    let mut model = Prophet::new(
+        opts,
+        CmdstanOptimizer::with_prophet_path(
+            "/home/ben/repos/rust/augurs/crates/augurs-prophet/model/prophet",
+        )
+        .unwrap(),
+    );
     let training_data = TrainingData::new(TRAINING_DS.to_vec(), TRAINING_Y.to_vec()).unwrap();
     model
         .fit(
             training_data,
             OptimizeOpts {
                 seed: Some(100),
+                refresh: Some(1),
                 ..Default::default()
             },
         )
         .unwrap();
 
     let prediction_data = PredictionData::new(PREDICTION_DS.to_vec());
-    c.bench_function("predict", |b| {
-        b.iter_batched(
-            || prediction_data.clone(),
-            |pd| {
-                model.predict(Some(pd)).unwrap();
-            },
-            BatchSize::SmallInput,
-        );
-    });
     let predictions = model.predict(Some(prediction_data)).unwrap();
     assert_all_close(&predictions.yhat.point, EXPECTED);
 }
@@ -4139,6 +4111,3 @@ static EXPECTED: &[f64] = &[
     63.20474433898926,
     63.20474433898926,
 ];
-
-criterion_group!(benches, fit, predict);
-criterion_main!(benches);

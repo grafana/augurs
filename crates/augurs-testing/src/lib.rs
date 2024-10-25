@@ -20,7 +20,7 @@ pub fn assert_all_close(actual: &[f64], expected: &[f64]) {
         if actual.is_nan() {
             assert!(expected.is_nan());
         } else {
-            assert_approx_eq!(actual, expected, 1e-1);
+            assert_approx_eq!(actual, expected, 0.5 * 1e-1);
         }
     }
 }
