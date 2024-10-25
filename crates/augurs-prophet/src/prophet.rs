@@ -18,7 +18,7 @@ use crate::{
 };
 
 /// The Prophet time series forecasting model.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Prophet<O> {
     /// Options to be used for fitting.
     opts: ProphetOptions,

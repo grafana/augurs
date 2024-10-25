@@ -28,7 +28,7 @@ pub(super) struct Scales {
     pub(super) regressors: HashMap<String, RegressorScale>,
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct Modes {
     pub(super) additive: HashSet<ComponentName>,
     pub(super) multiplicative: HashSet<ComponentName>,

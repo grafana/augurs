@@ -28,8 +28,9 @@ zip = { version = "2.2.0", optional = true }
 augurs.workspace = true
 augurs-testing.workspace = true
 chrono.workspace = true
+criterion.workspace = true
 pretty_assertions.workspace = true
-tracing-subscriber.workspace = true
+tracing-subscriber = { workspace = true, default-features = true }
 
 [build-dependencies]
 tempfile = { version = "3.13.0", optional = true }
@@ -45,6 +46,14 @@ download = ["dep:ureq", "dep:zip"]
 # Prophet model isn't available to be compiled into the binary.
 internal-ignore-cmdstan-failure = []
 serde = ["dep:serde"]
+
+[lib]
+bench = false
+
+[[bench]]
+name = "real-life"
+harness = false
+required-features = ["cmdstan", "compile-cmdstan"]
 
 [[bin]]
 name = "download-stan-model"
