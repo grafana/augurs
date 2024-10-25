@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use iai::{black_box, main};
 
 use augurs_core::Fit;
