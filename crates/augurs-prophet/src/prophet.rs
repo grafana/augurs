@@ -150,7 +150,7 @@ impl<O> Prophet<O> {
 
         let mut trend = self.predict_trend(
             &df.t,
-            &df.cap,
+            &df.cap_scaled,
             &df.floor,
             changepoints_t,
             params,
