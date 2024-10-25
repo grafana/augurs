@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2](https://github.com/grafana/augurs/compare/augurs-v0.5.1...augurs-v0.5.2) - 2024-10-25
+
+### Other
+
+- add benchmark for Prophet ([#140](https://github.com/grafana/augurs/pull/140))
+
 ## [0.5.1](https://github.com/grafana/augurs/compare/augurs-v0.5.0...augurs-v0.5.1) - 2024-10-24
 
 ### Other
