@@ -167,34 +167,27 @@ impl<O> Prophet<O> {
         let cp_zipped = deltas.iter().zip(changepoints_t);
         let deltas_t = cp_zipped
             .cartesian_product(t)
-            .map(|((delta, cp_t), t)| if cp_t <= t { *delta } else { 0.0 })
-            .collect_vec();
-        // `k_t` is a contiguous array with the rate to apply at each time point.
-        let k_t = deltas_t
-            .iter()
-            .enumerate()
-            .fold(vec![k; t.len()], |mut acc, (i, delta)| {
-                // Add the changepoint rate to the initial rate.
-                acc[i % t.len()] += *delta;
-                acc
-            });
-        // `m_t` is a contiguous array with the offset to apply at each time point.
-        let m_t = deltas_t
-            .iter()
-            .zip(
-                // Repeat each changepoint effect `n` times so we can zip it up.
-                changepoints_t
-                    .iter()
-                    .flat_map(|x| std::iter::repeat(*x).take(t.len())),
-            )
-            .enumerate()
-            .fold(vec![m; t.len()], |mut acc, (i, (delta, cp_t))| {
-                // Add the changepoint offset to the initial offset where applicable.
-                acc[i % t.len()] += -cp_t * delta;
-                acc
-            });
+            .map(|((delta, cp_t), t)| if cp_t <= t { *delta } else { 0.0 });
 
-        izip!(t, k_t, m_t).map(|(t, k, m)| t * k + m)
+        // Repeat each changepoint effect `n` times so we can zip it up.
+        let changepoints_repeated = changepoints_t
+            .iter()
+            .flat_map(|x| std::iter::repeat(*x).take(t.len()));
+        let indexes = (0..t.len()).cycle();
+        // `k_m_t` is a contiguous array where each element contains the rate and offset to
+        // apply at each time point.
+        let k_m_t = izip!(deltas_t, changepoints_repeated, indexes).fold(
+            vec![(k, m); t.len()],
+            |mut acc, (delta, cp_t, idx)| {
+                // Add the changepoint rate to the initial rate.
+                acc[idx].0 += delta;
+                // Add the changepoint offset to the initial offset where applicable.
+                acc[idx].1 += -cp_t * delta;
+                acc
+            },
+        );
+
+        izip!(t, k_m_t).map(|(t, (k, m))| t * k + m)
     }
 
     fn piecewise_logistic<'a>(
@@ -416,9 +409,15 @@ impl<O> Prophet<O> {
                 .take(n_timestamps)
                 .collect_vec(),
         };
+        // Use temporary buffers to avoid allocating a new Vec for each
+        // call to `sample_model`.
+        let (mut yhat, mut trend) = (
+            Vec::with_capacity(n_timestamps),
+            Vec::with_capacity(n_timestamps),
+        );
         for i in 0..n_iterations {
             for _ in 0..samples_per_iter {
-                let (yhat, trend) = self.sample_model(
+                self.sample_model(
                     df,
                     features,
                     params,
@@ -427,11 +426,13 @@ impl<O> Prophet<O> {
                     &component_columns.multiplicative,
                     y_scale,
                     i,
+                    &mut yhat,
+                    &mut trend,
                 )?;
                 // We have to transpose things, unfortunately.
-                for ((i, yhat), trend) in yhat.into_iter().enumerate().zip(trend) {
-                    sim_values.yhat[i].push(yhat);
-                    sim_values.trend[i].push(trend);
+                for ((i, yhat), trend) in yhat.iter().enumerate().zip(&trend) {
+                    sim_values.yhat[i].push(*yhat);
+                    sim_values.trend[i].push(*trend);
                 }
             }
         }
@@ -452,9 +453,14 @@ impl<O> Prophet<O> {
         multiplicative: &[i32],
         y_scale: f64,
         iteration: usize,
-    ) -> Result<(Vec<f64>, Vec<f64>), Error> {
+        yhat_tmp: &mut Vec<f64>,
+        trend_tmp: &mut Vec<f64>,
+    ) -> Result<(), Error> {
+        yhat_tmp.clear();
+        trend_tmp.clear();
         let n = df.ds.len();
-        let trend = self.sample_predictive_trend(df, params, changepoints_t, y_scale, iteration)?;
+        *trend_tmp =
+            self.sample_predictive_trend(df, params, changepoints_t, y_scale, iteration)?;
         let beta = &params.beta;
         let mut xb_a = vec![0.0; n];
         for (feature, b, a) in izip!(&features.data, beta, additive) {
@@ -475,11 +481,12 @@ impl<O> Prophet<O> {
         let mut rng = thread_rng();
         let noise = (&mut rng).sample_iter(dist).take(n).map(|x| x * y_scale);
 
-        let yhat = izip!(&trend, &xb_a, &xb_m, noise)
-            .map(|(t, a, m, n)| t * (1.0 + m) + a + n)
-            .collect();
+        for yhat in izip!(trend_tmp, &xb_a, &xb_m, noise).map(|(t, a, m, n)| *t * (1.0 + m) + a + n)
+        {
+            yhat_tmp.push(yhat);
+        }
 
-        Ok((yhat, trend))
+        Ok(())
     }
 
     fn sample_predictive_trend(
