@@ -25,6 +25,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Install deps
       run: just components/install-deps
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/setup-node@v4
     - name: Run node test
       run: just components/test
