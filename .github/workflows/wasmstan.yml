@@ -21,6 +21,8 @@ jobs:
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-binstall,just,ripgrep,wasmtime
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Install deps
       run: just components/install-deps
     - uses: actions/setup-node@v4
