@@ -3853,18 +3853,18 @@ test('smoke test Prophet model', () => {
       -0.9009688679030079
     ]
   ];
-  const xTransposed = x.reduce(($, row) => row.map((_, i) => [...($[i] || []), row[i]]), []).flat();
+  const xTransposed = x.reduce(($, row) => row.map((_, i) => [...($[i] || []), row[i]]), []);
   const data = {
-    n: 480,
-    s: 25,
-    k: 6,
+    T: 480,
+    S: 25,
+    K: 6,
     tau: 0.05,
-    sigmas: new Float64Array(Array(6).fill(10.0)),
-    trendIndicator: 'linear',
-    cap: new Float64Array(Array(480).fill(0.0)),
-    sA: new Int32Array(Array(6).fill(1)),
-    sM: new Int32Array(Array(6).fill(0)),
-    y: new Float64Array([
+    sigmas: Array(6).fill(10.0),
+    trend_indicator: 0,
+    cap: Array(480).fill(0.0),
+    s_a: (Array(6).fill(1)),
+    s_m: (Array(6).fill(0)),
+    y: ([
       0.5307510759405802,
       0.4724420380397057,
       0.43037623212550324,
@@ -4346,7 +4346,7 @@ test('smoke test Prophet model', () => {
       0.8203526308482577,
       0.8290989865333889
     ]),
-    t: new Float64Array([
+    t: ([
       0.0,
       0.004297994269340974,
       0.0057306590257879654,
@@ -4828,7 +4828,7 @@ test('smoke test Prophet model', () => {
       0.998567335243553,
       1.0
     ]),
-    tChange: new Float64Array([
+    t_change: ([
       0.034383954154727794,
       0.0659025787965616,
       0.09742120343839542,
@@ -4855,9 +4855,9 @@ test('smoke test Prophet model', () => {
       0.7679083094555874,
       0.7979942693409742
     ]),
-    x: new Float64Array(xTransposed),
+    X: x,
   };
-  const { params, logs } = optimize(inits, data, { seed: 1237861298, iter: 10000, refresh: 100 });
+  const { params, logs } = optimize(inits, JSON.stringify(data), { seed: 1237861298, iter: 10000, refresh: 100 });
   console.log(logs.debug);
   console.log(logs.info);
   const expected = {

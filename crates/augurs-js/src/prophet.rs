@@ -27,12 +27,12 @@ const OPTIMIZER_FUNCTION: &'static str = r#"
  * `optimizer` export.
  *
  * @param init - The initial parameters for the optimization.
- * @param data - The data for the optimization.
+ * @param data - JSON representation of the data for the optimization.
  * @param opts - The optimization options.
  * @returns An object containing the the optimized parameters and any log
  *          messages.
  */
-type ProphetOptimizerFunction = (init: ProphetInitialParams, data: ProphetStanData, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
+type ProphetOptimizerFunction = (init: ProphetInitialParams, data: string, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
 
 /**
  * An optimizer for the Prophet model.
@@ -66,20 +66,19 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         opts: &augurs_prophet::optimizer::OptimizeOpts,
     ) -> Result<augurs_prophet::optimizer::OptimizedParams, augurs_prophet::optimizer::Error> {
         let this = JsValue::null();
-        let msg = format!("{:?}", &opts);
-        tracing::debug!("prophet: {}", &msg);
         let opts: OptimizeOptions = opts.into();
         let init: InitialParams<'_> = init.into();
-        let data: Data<'_> = data.into();
+        // let data: Data<'_> = data.into();
         let init = serde_wasm_bindgen::to_value(&init)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
-        let data = serde_wasm_bindgen::to_value(&data)
+        let data = serde_json::to_string(&data)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
+        let data_s = JsValue::from_str(&data);
         let opts = serde_wasm_bindgen::to_value(&opts)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
         let result = self
             .func
-            .call3(&this, &init, &data, &opts)
+            .call3(&this, &init, &data_s, &opts)
             .map_err(|x| augurs_prophet::optimizer::Error::string(format!("{:?}", x)))?;
         let result: OptimizeOutput = serde_wasm_bindgen::from_value(result)
             .map_err(augurs_prophet::optimizer::Error::custom)?;

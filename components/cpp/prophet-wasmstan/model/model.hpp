@@ -492,7 +492,6 @@ class model_model final : public model_base_crtp<model_model> {
   model_model(stan::io::var_context& context__, unsigned int
               random_seed__ = 0, std::ostream* pstream__ = nullptr)
       : model_base_crtp(0) {
-    data_context.print();
     int current_statement__ = 0;
     // suppress unused var warning
     (void) current_statement__;

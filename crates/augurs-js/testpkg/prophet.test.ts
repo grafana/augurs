@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { readFileSync } from "node:fs";
 
 import { Prophet, initSync } from '../pkg';
-import { optimizer } from '@bsull/augurs-prophet-wasmstan';
+import { optimizer } from '../../../components/js/prophet-wasmstan';
 
 import { describe, expect, it } from 'vitest';
 
