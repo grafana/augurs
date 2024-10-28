@@ -111,6 +111,10 @@ void augurs_prophet_wasmstan_types_data_free(augurs_prophet_wasmstan_types_data_
   prophet_wasmstan_list_f64_free(&ptr->sigmas);
 }
 
+void augurs_prophet_wasmstan_types_data_json_free(augurs_prophet_wasmstan_types_data_json_t *ptr) {
+  prophet_wasmstan_string_free(ptr);
+}
+
 void augurs_prophet_wasmstan_types_option_algorithm_free(augurs_prophet_wasmstan_types_option_algorithm_t *ptr) {
   if (ptr->is_some) {
   }
@@ -170,8 +174,8 @@ void exports_augurs_prophet_wasmstan_optimizer_inits_free(exports_augurs_prophet
   augurs_prophet_wasmstan_types_inits_free(ptr);
 }
 
-void exports_augurs_prophet_wasmstan_optimizer_data_free(exports_augurs_prophet_wasmstan_optimizer_data_t *ptr) {
-  augurs_prophet_wasmstan_types_data_free(ptr);
+void exports_augurs_prophet_wasmstan_optimizer_data_json_free(exports_augurs_prophet_wasmstan_optimizer_data_json_t *ptr) {
+  augurs_prophet_wasmstan_types_data_json_free(ptr);
 }
 
 void exports_augurs_prophet_wasmstan_optimizer_optimize_opts_free(exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *ptr) {
@@ -217,158 +221,158 @@ static uint8_t RET_AREA[96];
 __attribute__((__export_name__("augurs:prophet-wasmstan/optimizer#optimize")))
 uint8_t * __wasm_export_exports_augurs_prophet_wasmstan_optimizer_optimize(uint8_t * arg) {
   augurs_prophet_wasmstan_types_option_algorithm_t option;
-  switch ((int32_t) *((uint8_t*) (arg + 128))) {
+  switch ((int32_t) *((uint8_t*) (arg + 48))) {
     case 0: {
       option.is_some = false;
       break;
     }
     case 1: {
       option.is_some = true;
-      option.val = (int32_t) *((uint8_t*) (arg + 129));
+      option.val = (int32_t) *((uint8_t*) (arg + 49));
       break;
     }
   }
   prophet_wasmstan_option_u32_t option0;
-  switch ((int32_t) *((uint8_t*) (arg + 132))) {
+  switch ((int32_t) *((uint8_t*) (arg + 52))) {
     case 0: {
       option0.is_some = false;
       break;
     }
     case 1: {
       option0.is_some = true;
-      option0.val = (uint32_t) (*((int32_t*) (arg + 136)));
+      option0.val = (uint32_t) (*((int32_t*) (arg + 56)));
       break;
     }
   }
   prophet_wasmstan_option_u32_t option1;
-  switch ((int32_t) *((uint8_t*) (arg + 140))) {
+  switch ((int32_t) *((uint8_t*) (arg + 60))) {
     case 0: {
       option1.is_some = false;
       break;
     }
     case 1: {
       option1.is_some = true;
-      option1.val = (uint32_t) (*((int32_t*) (arg + 144)));
+      option1.val = (uint32_t) (*((int32_t*) (arg + 64)));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option2;
-  switch ((int32_t) *((uint8_t*) (arg + 152))) {
+  switch ((int32_t) *((uint8_t*) (arg + 72))) {
     case 0: {
       option2.is_some = false;
       break;
     }
     case 1: {
       option2.is_some = true;
-      option2.val = *((double*) (arg + 160));
+      option2.val = *((double*) (arg + 80));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option3;
-  switch ((int32_t) *((uint8_t*) (arg + 168))) {
+  switch ((int32_t) *((uint8_t*) (arg + 88))) {
     case 0: {
       option3.is_some = false;
       break;
     }
     case 1: {
       option3.is_some = true;
-      option3.val = *((double*) (arg + 176));
+      option3.val = *((double*) (arg + 96));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option4;
-  switch ((int32_t) *((uint8_t*) (arg + 184))) {
+  switch ((int32_t) *((uint8_t*) (arg + 104))) {
     case 0: {
       option4.is_some = false;
       break;
     }
     case 1: {
       option4.is_some = true;
-      option4.val = *((double*) (arg + 192));
+      option4.val = *((double*) (arg + 112));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option5;
-  switch ((int32_t) *((uint8_t*) (arg + 200))) {
+  switch ((int32_t) *((uint8_t*) (arg + 120))) {
     case 0: {
       option5.is_some = false;
       break;
     }
     case 1: {
       option5.is_some = true;
-      option5.val = *((double*) (arg + 208));
+      option5.val = *((double*) (arg + 128));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option6;
-  switch ((int32_t) *((uint8_t*) (arg + 216))) {
+  switch ((int32_t) *((uint8_t*) (arg + 136))) {
     case 0: {
       option6.is_some = false;
       break;
     }
     case 1: {
       option6.is_some = true;
-      option6.val = *((double*) (arg + 224));
+      option6.val = *((double*) (arg + 144));
       break;
     }
   }
   prophet_wasmstan_option_f64_t option7;
-  switch ((int32_t) *((uint8_t*) (arg + 232))) {
+  switch ((int32_t) *((uint8_t*) (arg + 152))) {
     case 0: {
       option7.is_some = false;
       break;
     }
     case 1: {
       option7.is_some = true;
-      option7.val = *((double*) (arg + 240));
+      option7.val = *((double*) (arg + 160));
       break;
     }
   }
   prophet_wasmstan_option_u32_t option8;
-  switch ((int32_t) *((uint8_t*) (arg + 248))) {
+  switch ((int32_t) *((uint8_t*) (arg + 168))) {
     case 0: {
       option8.is_some = false;
       break;
     }
     case 1: {
       option8.is_some = true;
-      option8.val = (uint32_t) (*((int32_t*) (arg + 252)));
+      option8.val = (uint32_t) (*((int32_t*) (arg + 172)));
       break;
     }
   }
   prophet_wasmstan_option_u32_t option9;
-  switch ((int32_t) *((uint8_t*) (arg + 256))) {
+  switch ((int32_t) *((uint8_t*) (arg + 176))) {
     case 0: {
       option9.is_some = false;
       break;
     }
     case 1: {
       option9.is_some = true;
-      option9.val = (uint32_t) (*((int32_t*) (arg + 260)));
+      option9.val = (uint32_t) (*((int32_t*) (arg + 180)));
       break;
     }
   }
   prophet_wasmstan_option_bool_t option10;
-  switch ((int32_t) *((uint8_t*) (arg + 264))) {
+  switch ((int32_t) *((uint8_t*) (arg + 184))) {
     case 0: {
       option10.is_some = false;
       break;
     }
     case 1: {
       option10.is_some = true;
-      option10.val = (int32_t) *((uint8_t*) (arg + 265));
+      option10.val = (int32_t) *((uint8_t*) (arg + 185));
       break;
     }
   }
   prophet_wasmstan_option_u32_t option11;
-  switch ((int32_t) *((uint8_t*) (arg + 268))) {
+  switch ((int32_t) *((uint8_t*) (arg + 188))) {
     case 0: {
       option11.is_some = false;
       break;
     }
     case 1: {
       option11.is_some = true;
-      option11.val = (uint32_t) (*((int32_t*) (arg + 272)));
+      option11.val = (uint32_t) (*((int32_t*) (arg + 192)));
       break;
     }
   }
@@ -379,21 +383,7 @@ uint8_t * __wasm_export_exports_augurs_prophet_wasmstan_optimizer_optimize(uint8
     (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 24))), (*((size_t*) (arg + 28))) },
     (double) *((double*) (arg + 32)),
   };
-  exports_augurs_prophet_wasmstan_optimizer_data_t arg13 = (augurs_prophet_wasmstan_types_data_t) {
-    (int32_t) *((int32_t*) (arg + 40)),
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 44))), (*((size_t*) (arg + 48))) },
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 52))), (*((size_t*) (arg + 56))) },
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 60))), (*((size_t*) (arg + 64))) },
-    (int32_t) *((int32_t*) (arg + 68)),
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 72))), (*((size_t*) (arg + 76))) },
-    (augurs_prophet_wasmstan_types_trend_indicator_t) (int32_t) *((uint8_t*) (arg + 80)),
-    (int32_t) *((int32_t*) (arg + 84)),
-    (prophet_wasmstan_list_s32_t) (prophet_wasmstan_list_s32_t) { (int32_t*)(*((uint8_t **) (arg + 88))), (*((size_t*) (arg + 92))) },
-    (prophet_wasmstan_list_s32_t) (prophet_wasmstan_list_s32_t) { (int32_t*)(*((uint8_t **) (arg + 96))), (*((size_t*) (arg + 100))) },
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 104))), (*((size_t*) (arg + 108))) },
-    (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 112))), (*((size_t*) (arg + 116))) },
-    (double) *((double*) (arg + 120)),
-  };
+  exports_augurs_prophet_wasmstan_optimizer_data_json_t arg13 = (prophet_wasmstan_string_t) { (uint8_t*)(*((uint8_t **) (arg + 40))), (*((size_t*) (arg + 44))) };
   exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t arg14 = (augurs_prophet_wasmstan_types_optimize_opts_t) {
     (augurs_prophet_wasmstan_types_option_algorithm_t) option,
     (prophet_wasmstan_option_u32_t) option0,

@@ -79,6 +79,11 @@ interface types {
         tau: f64,
     }
 
+    /// JSON representation of the Prophet data to pass to Stan.
+    ///
+    /// This should be a string containing a JSONified `Data`.
+    type data-json = string;
+
     /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
     enum algorithm {
         /// Use the Newton algorithm.
@@ -165,9 +170,17 @@ interface types {
     }
 }
 
+/// The Prophet optimizer interface.
+///
+/// An optimizer is a type that can take some initial parameters and data
+/// and produce some optimal parameters for those parameters using maximum
+/// likelihood estimation. This corresponds to cmdstan's `optimize`
+/// command.
 interface optimizer {
-    use types.{inits, data, optimize-opts, optimize-output};
-    optimize: func(init: inits, data: data, opts: optimize-opts) -> result<optimize-output, string>;
+    use types.{inits, data-json, optimize-opts, optimize-output};
+    /// Optimize the initial parameters given the data, returning the
+    /// optimal values under maximum likelihood estimation.
+    optimize: func(init: inits, data: data-json, opts: optimize-opts) -> result<optimize-output, string>;
 }
 
 world prophet-wasmstan {

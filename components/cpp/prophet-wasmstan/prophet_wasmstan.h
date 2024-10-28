@@ -96,6 +96,11 @@ typedef struct augurs_prophet_wasmstan_types_data_t {
   double   tau;
 } augurs_prophet_wasmstan_types_data_t;
 
+// JSON representation of the Prophet data to pass to Stan.
+// 
+// This should be a string containing a JSONified `Data`.
+typedef prophet_wasmstan_string_t augurs_prophet_wasmstan_types_data_json_t;
+
 // The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
 typedef uint8_t augurs_prophet_wasmstan_types_algorithm_t;
 
@@ -202,7 +207,7 @@ typedef struct augurs_prophet_wasmstan_types_optimize_output_t {
 
 typedef augurs_prophet_wasmstan_types_inits_t exports_augurs_prophet_wasmstan_optimizer_inits_t;
 
-typedef augurs_prophet_wasmstan_types_data_t exports_augurs_prophet_wasmstan_optimizer_data_t;
+typedef augurs_prophet_wasmstan_types_data_json_t exports_augurs_prophet_wasmstan_optimizer_data_json_t;
 
 typedef augurs_prophet_wasmstan_types_optimize_opts_t exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t;
 
@@ -217,7 +222,7 @@ typedef struct {
 } exports_augurs_prophet_wasmstan_optimizer_result_optimize_output_string_t;
 
 // Exported Functions from `augurs:prophet-wasmstan/optimizer`
-bool exports_augurs_prophet_wasmstan_optimizer_optimize(exports_augurs_prophet_wasmstan_optimizer_inits_t *init, exports_augurs_prophet_wasmstan_optimizer_data_t *data, exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *opts, exports_augurs_prophet_wasmstan_optimizer_optimize_output_t *ret, prophet_wasmstan_string_t *err);
+bool exports_augurs_prophet_wasmstan_optimizer_optimize(exports_augurs_prophet_wasmstan_optimizer_inits_t *init, exports_augurs_prophet_wasmstan_optimizer_data_json_t *data, exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *opts, exports_augurs_prophet_wasmstan_optimizer_optimize_output_t *ret, prophet_wasmstan_string_t *err);
 
 // Helper Functions
 
@@ -228,6 +233,8 @@ void augurs_prophet_wasmstan_types_inits_free(augurs_prophet_wasmstan_types_init
 void prophet_wasmstan_list_s32_free(prophet_wasmstan_list_s32_t *ptr);
 
 void augurs_prophet_wasmstan_types_data_free(augurs_prophet_wasmstan_types_data_t *ptr);
+
+void augurs_prophet_wasmstan_types_data_json_free(augurs_prophet_wasmstan_types_data_json_t *ptr);
 
 void augurs_prophet_wasmstan_types_option_algorithm_free(augurs_prophet_wasmstan_types_option_algorithm_t *ptr);
 
@@ -247,7 +254,7 @@ void augurs_prophet_wasmstan_types_optimize_output_free(augurs_prophet_wasmstan_
 
 void exports_augurs_prophet_wasmstan_optimizer_inits_free(exports_augurs_prophet_wasmstan_optimizer_inits_t *ptr);
 
-void exports_augurs_prophet_wasmstan_optimizer_data_free(exports_augurs_prophet_wasmstan_optimizer_data_t *ptr);
+void exports_augurs_prophet_wasmstan_optimizer_data_json_free(exports_augurs_prophet_wasmstan_optimizer_data_json_t *ptr);
 
 void exports_augurs_prophet_wasmstan_optimizer_optimize_opts_free(exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *ptr);
 

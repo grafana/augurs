@@ -41,6 +41,7 @@ compile: checkout-submodules generate-skeleton
     -D BOOST_DISABLE_ASSERTS \
     -D BOOST_PHOENIX_NO_VARIADIC_EXPRESSION \
     -I ./cpp/prophet-wasmstan/stan/src \
+    -I ./cpp/prophet-wasmstan/stan/lib/rapidjson_1.1.0 \
     -I ./cpp/prophet-wasmstan/stan/lib/stan_math \
     -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/eigen_3.4.0 \
     -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/boost_1.81.0 \

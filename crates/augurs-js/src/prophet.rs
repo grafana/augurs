@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num::TryFromIntError};
 
 use augurs_prophet::PositiveFloat;
-use js_sys::{Float64Array, Int32Array};
+use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -27,12 +27,12 @@ const OPTIMIZER_FUNCTION: &'static str = r#"
  * `optimizer` export.
  *
  * @param init - The initial parameters for the optimization.
- * @param data - The data for the optimization.
+ * @param data - JSON representation of the data for the optimization.
  * @param opts - The optimization options.
  * @returns An object containing the the optimized parameters and any log
  *          messages.
  */
-type ProphetOptimizerFunction = (init: ProphetInitialParams, data: ProphetStanData, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
+type ProphetOptimizerFunction = (init: ProphetInitialParams, data: ProphetStanDataJSON, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
 
 /**
  * An optimizer for the Prophet model.
@@ -68,16 +68,16 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         let this = JsValue::null();
         let opts: OptimizeOptions = opts.into();
         let init: InitialParams<'_> = init.into();
-        let data: Data<'_> = data.into();
         let init = serde_wasm_bindgen::to_value(&init)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
-        let data = serde_wasm_bindgen::to_value(&data)
-            .map_err(augurs_prophet::optimizer::Error::custom)?;
+        let data =
+            serde_json::to_string(&data).map_err(augurs_prophet::optimizer::Error::custom)?;
+        let data_s = JsValue::from_str(&data);
         let opts = serde_wasm_bindgen::to_value(&opts)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
         let result = self
             .func
-            .call3(&this, &init, &data, &opts)
+            .call3(&this, &init, &data_s, &opts)
             .map_err(|x| augurs_prophet::optimizer::Error::string(format!("{:?}", x)))?;
         let result: OptimizeOutput = serde_wasm_bindgen::from_value(result)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
@@ -138,8 +138,14 @@ impl Prophet {
 
     /// Fit the model to some training data.
     #[wasm_bindgen]
-    pub fn fit(&mut self, data: TrainingData) -> Result<(), JsError> {
-        Ok(self.inner.fit(data.try_into()?, Default::default())?)
+    pub fn fit(
+        &mut self,
+        data: TrainingData,
+        opts: Option<OptimizeOptions>,
+    ) -> Result<(), JsError> {
+        Ok(self
+            .inner
+            .fit(data.try_into()?, opts.map(Into::into).unwrap_or_default())?)
     }
 
     /// Predict using the model.
@@ -161,43 +167,76 @@ impl Prophet {
 // the 'libprophet' / 'wasmstan' optimize function expects different field names.
 
 /// Arguments for optimization.
-#[derive(Debug, Clone, Serialize, Tsify)]
+#[derive(Debug, Clone, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi, type_prefix = "Prophet")]
-struct OptimizeOptions {
+#[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
+pub struct OptimizeOptions {
     /// Algorithm to use.
+    #[tsify(optional)]
     pub algorithm: Option<Algorithm>,
     /// The random seed to use for the optimization.
+    #[tsify(optional)]
     pub seed: Option<u32>,
     /// The chain id to advance the PRNG.
+    #[tsify(optional)]
     pub chain: Option<u32>,
     /// Line search step size for first iteration.
+    #[tsify(optional)]
     pub init_alpha: Option<f64>,
     /// Convergence tolerance on changes in objective function value.
+    #[tsify(optional)]
     pub tol_obj: Option<f64>,
     /// Convergence tolerance on relative changes in objective function value.
+    #[tsify(optional)]
     pub tol_rel_obj: Option<f64>,
     /// Convergence tolerance on the norm of the gradient.
+    #[tsify(optional)]
     pub tol_grad: Option<f64>,
     /// Convergence tolerance on the relative norm of the gradient.
+    #[tsify(optional)]
     pub tol_rel_grad: Option<f64>,
     /// Convergence tolerance on changes in parameter value.
+    #[tsify(optional)]
     pub tol_param: Option<f64>,
     /// Size of the history for LBFGS Hessian approximation. The value should
     /// be less than the dimensionality of the parameter space. 5-10 usually
     /// sufficient.
+    #[tsify(optional)]
     pub history_size: Option<u32>,
     /// Total number of iterations.
+    #[tsify(optional)]
     pub iter: Option<u32>,
     /// When `true`, use the Jacobian matrix to approximate the Hessian.
     /// Default is `false`.
+    #[tsify(optional)]
     pub jacobian: Option<bool>,
     /// How frequently to emit convergence statistics, in number of iterations.
+    #[tsify(optional)]
     pub refresh: Option<u32>,
 }
 
 impl From<&augurs_prophet::optimizer::OptimizeOpts> for OptimizeOptions {
     fn from(opts: &augurs_prophet::optimizer::OptimizeOpts) -> Self {
+        Self {
+            algorithm: opts.algorithm.map(Into::into),
+            seed: opts.seed,
+            chain: opts.chain,
+            init_alpha: opts.init_alpha,
+            tol_obj: opts.tol_obj,
+            tol_rel_obj: opts.tol_rel_obj,
+            tol_grad: opts.tol_grad,
+            tol_rel_grad: opts.tol_rel_grad,
+            tol_param: opts.tol_param,
+            history_size: opts.history_size,
+            iter: opts.iter,
+            jacobian: opts.jacobian,
+            refresh: opts.refresh,
+        }
+    }
+}
+
+impl From<OptimizeOptions> for augurs_prophet::optimizer::OptimizeOpts {
+    fn from(opts: OptimizeOptions) -> Self {
         Self {
             algorithm: opts.algorithm.map(Into::into),
             seed: opts.seed,
@@ -258,7 +297,7 @@ impl<'a> From<&'a augurs_prophet::optimizer::InitialParams> for InitialParams<'a
 }
 
 /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(rename_all = "lowercase")]
 #[tsify(into_wasm_abi, type_prefix = "Prophet")]
 pub enum Algorithm {
@@ -280,8 +319,18 @@ impl From<augurs_prophet::Algorithm> for Algorithm {
     }
 }
 
+impl From<Algorithm> for augurs_prophet::Algorithm {
+    fn from(value: Algorithm) -> Self {
+        match value {
+            Algorithm::Newton => Self::Newton,
+            Algorithm::Bfgs => Self::Bfgs,
+            Algorithm::Lbfgs => Self::Lbfgs,
+        }
+    }
+}
+
 /// The type of trend to use.
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi, type_prefix = "Prophet")]
 enum TrendIndicator {
@@ -304,108 +353,166 @@ impl From<augurs_prophet::TrendIndicator> for TrendIndicator {
 }
 
 /// Data for the Prophet model.
-#[derive(Clone, Serialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+// Copy/pasted from augurs-prophet/src/optimizer.rs, only used
+// here for the generated TS definitions, and hopefully temporarily.
+#[derive(Clone, Debug, PartialEq, Serialize, Tsify)]
+#[allow(non_snake_case)]
 #[tsify(into_wasm_abi, type_prefix = "ProphetStan")]
-struct Data<'a> {
-    _phantom: std::marker::PhantomData<&'a ()>,
+pub struct Data {
     /// Number of time periods.
-    /// This is `T` in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    pub n: i32,
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
+    pub T: i32,
     /// Time series, length n.
-    pub y: Float64Array,
+    pub y: Vec<f64>,
     /// Time, length n.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
-    pub t: Float64Array,
+    pub t: Vec<f64>,
     /// Capacities for logistic trend, length n.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
-    pub cap: Float64Array,
+    pub cap: Vec<f64>,
     /// Number of changepoints.
-    /// This is 'S' in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    pub s: i32,
+    pub S: i32,
     /// Times of trend changepoints, length s.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
-    pub t_change: Float64Array,
+    pub t_change: Vec<f64>,
     /// The type of trend to use.
-    #[tsify(type = "ProphetTrendIndicator")]
-    pub trend_indicator: TrendIndicator,
+    ///
+    /// Possible values are:
+    /// - 0 for linear trend
+    /// - 1 for logistic trend
+    /// - 2 for flat trend.
+    pub trend_indicator: u8,
     /// Number of regressors.
+    ///
     /// Must be greater than or equal to 1.
-    /// This is `K` in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    pub k: i32,
+    pub K: i32,
     /// Indicator of additive features, length k.
-    /// This is `s_a` in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Int32Array")]
-    pub s_a: Int32Array,
+    pub s_a: Vec<i32>,
     /// Indicator of multiplicative features, length k.
-    /// This is `s_m` in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Int32Array")]
-    pub s_m: Int32Array,
-    /// Regressors.
-    /// This is `X` in the Prophet STAN model definition,
-    /// but WIT identifiers must be lower kebab-case.
-    /// This is passed as a flat array but should be treated as
-    /// a matrix with shape (n, k) (i.e. strides of length n).
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
-    pub x: Float64Array,
+    pub s_m: Vec<i32>,
+    /// Regressors, shape (n, k).
+    pub X: Vec<f64>,
     /// Scale on seasonality prior.
-    #[serde(with = "serde_wasm_bindgen::preserve")]
-    #[tsify(type = "Float64Array")]
-    pub sigmas: Float64Array,
+    ///
+    /// Must all be greater than zero.
+    pub sigmas: Vec<f64>,
     /// Scale on changepoints prior.
     /// Must be greater than 0.
     pub tau: f64,
 }
 
-impl<'a> From<&'a augurs_prophet::optimizer::Data> for Data<'a> {
-    fn from(data: &'a augurs_prophet::optimizer::Data) -> Self {
-        let sigmas: Vec<_> = data.sigmas.iter().map(|x| **x).collect();
-        // Be sure to use `from` instead of `view` here, as we've allocated
-        // and the vec will be dropped at the end of this function.
-        let sigmas = Float64Array::from(sigmas.as_slice());
-        // SAFETY: We're creating a view of these fields which have lifetime 'a.
-        // The view is valid as long as the `Data` is alive. Effectively
-        // we're tying the lifetime of this struct to the lifetime of the input,
-        // even though `Float64Array` doesn't have a lifetime.
-        // We also have to be careful not to allocate after this!
-        let y = unsafe { Float64Array::view(&data.y) };
-        let t = unsafe { Float64Array::view(&data.t) };
-        let cap = unsafe { Float64Array::view(&data.cap) };
-        let t_change = unsafe { Float64Array::view(&data.t_change) };
-        let s_a = unsafe { Int32Array::view(&data.s_a) };
-        let s_m = unsafe { Int32Array::view(&data.s_m) };
-        let x = unsafe { Float64Array::view(&data.X) };
-        Self {
-            _phantom: std::marker::PhantomData,
-            n: data.T,
-            y,
-            t,
-            cap,
-            s: data.S,
-            t_change,
-            trend_indicator: data.trend_indicator.into(),
-            k: data.K,
-            s_a,
-            s_m,
-            x,
-            sigmas,
-            tau: *data.tau,
-        }
-    }
-}
+/// Data for the Prophet Stan model, in JSON format.
+///
+/// The JSON should represent an object of type `ProphetStanData`.
+#[tsify_next::declare]
+#[allow(dead_code)]
+type ProphetStanDataJSON = String;
+
+// This is unused as of #145 because it's difficult to
+// use this struct correctly from C++ in the WASM component.
+// We're just passing JSON instead, which is not great at all
+// but at least works correctly. In future I'd like to reuse
+// it, hence commenting rather than deleting.
+
+// /// Data for the Prophet model.
+// #[derive(Clone, Serialize, Tsify)]
+// #[serde(rename_all = "camelCase")]
+// #[tsify(into_wasm_abi, type_prefix = "ProphetStan")]
+// struct Data<'a> {
+//     _phantom: std::marker::PhantomData<&'a ()>,
+//     /// Number of time periods.
+//     /// This is `T` in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     pub n: i32,
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     /// Time series, length n.
+//     pub y: Float64Array,
+//     /// Time, length n.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     pub t: Float64Array,
+//     /// Capacities for logistic trend, length n.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     pub cap: Float64Array,
+//     /// Number of changepoints.
+//     /// This is 'S' in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     pub s: i32,
+//     /// Times of trend changepoints, length s.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     pub t_change: Float64Array,
+//     /// The type of trend to use.
+//     #[tsify(type = "ProphetTrendIndicator")]
+//     pub trend_indicator: TrendIndicator,
+//     /// Number of regressors.
+//     /// Must be greater than or equal to 1.
+//     /// This is `K` in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     pub k: i32,
+//     /// Indicator of additive features, length k.
+//     /// This is `s_a` in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Int32Array")]
+//     pub s_a: Int32Array,
+//     /// Indicator of multiplicative features, length k.
+//     /// This is `s_m` in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Int32Array")]
+//     pub s_m: Int32Array,
+//     /// Regressors.
+//     /// This is `X` in the Prophet STAN model definition,
+//     /// but WIT identifiers must be lower kebab-case.
+//     /// This is passed as a flat array but should be treated as
+//     /// a matrix with shape (n, k) (i.e. strides of length n).
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     pub x: Float64Array,
+//     /// Scale on seasonality prior.
+//     #[serde(with = "serde_wasm_bindgen::preserve")]
+//     #[tsify(type = "Float64Array")]
+//     pub sigmas: Float64Array,
+//     /// Scale on changepoints prior.
+//     /// Must be greater than 0.
+//     pub tau: f64,
+// }
+
+// impl<'a> From<&'a augurs_prophet::optimizer::Data> for Data<'a> {
+//     fn from(data: &'a augurs_prophet::optimizer::Data) -> Self {
+//         let sigmas: Vec<_> = data.sigmas.iter().map(|x| **x).collect();
+//         // Be sure to use `from` instead of `view` here, as we've allocated
+//         // and the vec will be dropped at the end of this function.
+//         let sigmas = Float64Array::from(sigmas.as_slice());
+//         // SAFETY: We're creating a view of these fields which have lifetime 'a.
+//         // The view is valid as long as the `Data` is alive. Effectively
+//         // we're tying the lifetime of this struct to the lifetime of the input,
+//         // even though `Float64Array` doesn't have a lifetime.
+//         // We also have to be careful not to allocate after this!
+//         let y = unsafe { Float64Array::view(&data.y) };
+//         let t = unsafe { Float64Array::view(&data.t) };
+//         let cap = unsafe { Float64Array::view(&data.cap) };
+//         let t_change = unsafe { Float64Array::view(&data.t_change) };
+//         let s_a = unsafe { Int32Array::view(&data.s_a) };
+//         let s_m = unsafe { Int32Array::view(&data.s_m) };
+//         let x = unsafe { Float64Array::view(&data.X) };
+//         Self {
+//             _phantom: std::marker::PhantomData,
+//             n: data.T,
+//             y,
+//             t,
+//             cap,
+//             s: data.S,
+//             t_change,
+//             trend_indicator: data.trend_indicator.into(),
+//             k: data.K,
+//             s_a,
+//             s_m,
+//             x,
+//             sigmas,
+//             tau: *data.tau,
+//         }
+//     }
+// }
 
 /// Log messages from the optimizer.
 #[derive(Debug, Clone, Deserialize, Tsify)]
@@ -473,10 +580,10 @@ struct OptimizeOutput {
 }
 
 /// The optimal parameters found by the optimizer.
-#[derive(Debug, Clone, Deserialize, Tsify)]
+#[derive(Debug, Clone, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi, type_prefix = "Prophet")]
-struct OptimizedParams {
+#[tsify(into_wasm_abi, from_wasm_abi, type_prefix = "Prophet")]
+pub struct OptimizedParams {
     /// Base trend growth rate.
     pub k: f64,
     /// Trend offset.
@@ -498,6 +605,19 @@ struct OptimizedParams {
 impl From<OptimizedParams> for augurs_prophet::optimizer::OptimizedParams {
     fn from(x: OptimizedParams) -> Self {
         augurs_prophet::optimizer::OptimizedParams {
+            k: x.k,
+            m: x.m,
+            sigma_obs: x.sigma_obs,
+            delta: x.delta,
+            beta: x.beta,
+            trend: x.trend,
+        }
+    }
+}
+
+impl From<augurs_prophet::optimizer::OptimizedParams> for OptimizedParams {
+    fn from(x: augurs_prophet::optimizer::OptimizedParams) -> Self {
+        OptimizedParams {
             k: x.k,
             m: x.m,
             sigma_obs: x.sigma_obs,
