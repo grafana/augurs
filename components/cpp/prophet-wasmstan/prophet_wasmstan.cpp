@@ -90,6 +90,31 @@ void augurs_prophet_wasmstan_types_inits_free(augurs_prophet_wasmstan_types_init
   prophet_wasmstan_list_f64_free(&ptr->beta);
 }
 
+void prophet_wasmstan_list_s32_free(prophet_wasmstan_list_s32_t *ptr) {
+  size_t list_len = ptr->len;
+  if (list_len > 0) {
+    int32_t *list_ptr = ptr->ptr;
+    for (size_t i = 0; i < list_len; i++) {
+    }
+    free(list_ptr);
+  }
+}
+
+void augurs_prophet_wasmstan_types_data_free(augurs_prophet_wasmstan_types_data_t *ptr) {
+  prophet_wasmstan_list_f64_free(&ptr->y);
+  prophet_wasmstan_list_f64_free(&ptr->t);
+  prophet_wasmstan_list_f64_free(&ptr->cap);
+  prophet_wasmstan_list_f64_free(&ptr->t_change);
+  prophet_wasmstan_list_s32_free(&ptr->s_a);
+  prophet_wasmstan_list_s32_free(&ptr->s_m);
+  prophet_wasmstan_list_f64_free(&ptr->x);
+  prophet_wasmstan_list_f64_free(&ptr->sigmas);
+}
+
+void augurs_prophet_wasmstan_types_data_json_free(augurs_prophet_wasmstan_types_data_json_t *ptr) {
+  prophet_wasmstan_string_free(ptr);
+}
+
 void augurs_prophet_wasmstan_types_option_algorithm_free(augurs_prophet_wasmstan_types_option_algorithm_t *ptr) {
   if (ptr->is_some) {
   }
@@ -147,6 +172,10 @@ void augurs_prophet_wasmstan_types_optimize_output_free(augurs_prophet_wasmstan_
 
 void exports_augurs_prophet_wasmstan_optimizer_inits_free(exports_augurs_prophet_wasmstan_optimizer_inits_t *ptr) {
   augurs_prophet_wasmstan_types_inits_free(ptr);
+}
+
+void exports_augurs_prophet_wasmstan_optimizer_data_json_free(exports_augurs_prophet_wasmstan_optimizer_data_json_t *ptr) {
+  augurs_prophet_wasmstan_types_data_json_free(ptr);
 }
 
 void exports_augurs_prophet_wasmstan_optimizer_optimize_opts_free(exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *ptr) {
@@ -354,7 +383,7 @@ uint8_t * __wasm_export_exports_augurs_prophet_wasmstan_optimizer_optimize(uint8
     (prophet_wasmstan_list_f64_t) (prophet_wasmstan_list_f64_t) { (double*)(*((uint8_t **) (arg + 24))), (*((size_t*) (arg + 28))) },
     (double) *((double*) (arg + 32)),
   };
-  prophet_wasmstan_string_t arg13 = (prophet_wasmstan_string_t) { (uint8_t*)(*((uint8_t **) (arg + 40))), (*((size_t*) (arg + 44))) };
+  exports_augurs_prophet_wasmstan_optimizer_data_json_t arg13 = (prophet_wasmstan_string_t) { (uint8_t*)(*((uint8_t **) (arg + 40))), (*((size_t*) (arg + 44))) };
   exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t arg14 = (augurs_prophet_wasmstan_types_optimize_opts_t) {
     (augurs_prophet_wasmstan_types_option_algorithm_t) option,
     (prophet_wasmstan_option_u32_t) option0,

@@ -45,53 +45,62 @@ typedef uint8_t augurs_prophet_wasmstan_types_trend_indicator_t;
 // Flat trend.
 #define AUGURS_PROPHET_WASMSTAN_TYPES_TREND_INDICATOR_FLAT 2
 
-// Currently unused, we expect data to be passed as
-// JSON instead, as in cmdstan invocations.
-// /// Data for the Prophet model.
-// record data {
-// /// Number of time periods.
-// /// This is `T` in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// n: s32,
-// /// Time series, length n.
-// y: list<f64>,
-// /// Time, length n.
-// t: list<f64>,
-// /// Capacities for logistic trend, length n.
-// cap: list<f64>,
-// /// Number of changepoints.
-// /// This is 'S' in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// s: s32,
-// /// Times of trend changepoints, length s.
-// t-change: list<f64>,
-// /// The type of trend to use.
-// trend-indicator: trend-indicator,
-// /// Number of regressors.
-// /// Must be greater than or equal to 1.
-// /// This is `K` in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// k: s32,
-// /// Indicator of additive features, length k.
-// /// This is `s_a` in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// s-a: list<s32>,
-// /// Indicator of multiplicative features, length k.
-// /// This is `s_m` in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// s-m: list<s32>,
-// /// Regressors.
-// /// This is `X` in the Prophet STAN model definition,
-// /// but WIT identifiers must be lower kebab-case.
-// /// This is passed as a flat array but should be treated as
-// /// a matrix with shape (n, k) (i.e. strides of length n).
-// x: list<f64>,
-// /// Scale on seasonality prior.
-// sigmas: list<f64>,
-// /// Scale on changepoints prior.
-// /// Must be greater than 0.
-// tau: f64,
-// }
+typedef struct {
+  int32_t *ptr;
+  size_t len;
+} prophet_wasmstan_list_s32_t;
+
+// Data for the Prophet model.
+typedef struct augurs_prophet_wasmstan_types_data_t {
+  // Number of time periods.
+  // This is `T` in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  int32_t   n;
+  // Time series, length n.
+  prophet_wasmstan_list_f64_t   y;
+  // Time, length n.
+  prophet_wasmstan_list_f64_t   t;
+  // Capacities for logistic trend, length n.
+  prophet_wasmstan_list_f64_t   cap;
+  // Number of changepoints.
+  // This is 'S' in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  int32_t   s;
+  // Times of trend changepoints, length s.
+  prophet_wasmstan_list_f64_t   t_change;
+  // The type of trend to use.
+  augurs_prophet_wasmstan_types_trend_indicator_t   trend_indicator;
+  // Number of regressors.
+  // Must be greater than or equal to 1.
+  // This is `K` in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  int32_t   k;
+  // Indicator of additive features, length k.
+  // This is `s_a` in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  prophet_wasmstan_list_s32_t   s_a;
+  // Indicator of multiplicative features, length k.
+  // This is `s_m` in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  prophet_wasmstan_list_s32_t   s_m;
+  // Regressors.
+  // This is `X` in the Prophet STAN model definition,
+  // but WIT identifiers must be lower kebab-case.
+  // This is passed as a flat array but should be treated as
+  // a matrix with shape (n, k) (i.e. strides of length n).
+  prophet_wasmstan_list_f64_t   x;
+  // Scale on seasonality prior.
+  prophet_wasmstan_list_f64_t   sigmas;
+  // Scale on changepoints prior.
+  // Must be greater than 0.
+  double   tau;
+} augurs_prophet_wasmstan_types_data_t;
+
+// JSON representation of the Prophet data to pass to Stan.
+// 
+// This should be a string containing a JSONified `Data`.
+typedef prophet_wasmstan_string_t augurs_prophet_wasmstan_types_data_json_t;
+
 // The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
 typedef uint8_t augurs_prophet_wasmstan_types_algorithm_t;
 
@@ -198,6 +207,8 @@ typedef struct augurs_prophet_wasmstan_types_optimize_output_t {
 
 typedef augurs_prophet_wasmstan_types_inits_t exports_augurs_prophet_wasmstan_optimizer_inits_t;
 
+typedef augurs_prophet_wasmstan_types_data_json_t exports_augurs_prophet_wasmstan_optimizer_data_json_t;
+
 typedef augurs_prophet_wasmstan_types_optimize_opts_t exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t;
 
 typedef augurs_prophet_wasmstan_types_optimize_output_t exports_augurs_prophet_wasmstan_optimizer_optimize_output_t;
@@ -211,13 +222,19 @@ typedef struct {
 } exports_augurs_prophet_wasmstan_optimizer_result_optimize_output_string_t;
 
 // Exported Functions from `augurs:prophet-wasmstan/optimizer`
-bool exports_augurs_prophet_wasmstan_optimizer_optimize(exports_augurs_prophet_wasmstan_optimizer_inits_t *init, prophet_wasmstan_string_t *data, exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *opts, exports_augurs_prophet_wasmstan_optimizer_optimize_output_t *ret, prophet_wasmstan_string_t *err);
+bool exports_augurs_prophet_wasmstan_optimizer_optimize(exports_augurs_prophet_wasmstan_optimizer_inits_t *init, exports_augurs_prophet_wasmstan_optimizer_data_json_t *data, exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *opts, exports_augurs_prophet_wasmstan_optimizer_optimize_output_t *ret, prophet_wasmstan_string_t *err);
 
 // Helper Functions
 
 void prophet_wasmstan_list_f64_free(prophet_wasmstan_list_f64_t *ptr);
 
 void augurs_prophet_wasmstan_types_inits_free(augurs_prophet_wasmstan_types_inits_t *ptr);
+
+void prophet_wasmstan_list_s32_free(prophet_wasmstan_list_s32_t *ptr);
+
+void augurs_prophet_wasmstan_types_data_free(augurs_prophet_wasmstan_types_data_t *ptr);
+
+void augurs_prophet_wasmstan_types_data_json_free(augurs_prophet_wasmstan_types_data_json_t *ptr);
 
 void augurs_prophet_wasmstan_types_option_algorithm_free(augurs_prophet_wasmstan_types_option_algorithm_t *ptr);
 
@@ -236,6 +253,8 @@ void augurs_prophet_wasmstan_types_optimized_params_free(augurs_prophet_wasmstan
 void augurs_prophet_wasmstan_types_optimize_output_free(augurs_prophet_wasmstan_types_optimize_output_t *ptr);
 
 void exports_augurs_prophet_wasmstan_optimizer_inits_free(exports_augurs_prophet_wasmstan_optimizer_inits_t *ptr);
+
+void exports_augurs_prophet_wasmstan_optimizer_data_json_free(exports_augurs_prophet_wasmstan_optimizer_data_json_t *ptr);
 
 void exports_augurs_prophet_wasmstan_optimizer_optimize_opts_free(exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *ptr);
 

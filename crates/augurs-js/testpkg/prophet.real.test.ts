@@ -47,7 +47,7 @@ describe('Prophet', () => {
     const prophet = new Prophet({ optimizer });
     prophet.fit(
       { ds: TRAINING_DS, y: TRAINING_Y },
-      { refresh: 1, seed: 100 } as ProphetOptimizeOptions,
+      { seed: 100 } as ProphetOptimizeOptions,
     );
     const preds = prophet.predict({ ds: PREDICTION_DS });
     //@ts-ignore

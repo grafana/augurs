@@ -29,57 +29,60 @@ interface types {
         flat, // 2
     }
 
-    // Currently unused, we expect data to be passed as
-    // JSON instead, as in cmdstan invocations.
-    // /// Data for the Prophet model.
-    // record data {
-    //     /// Number of time periods.
-    //     /// This is `T` in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     n: s32,
-    //     /// Time series, length n.
-    //     y: list<f64>,
-    //     /// Time, length n.
-    //     t: list<f64>,
-    //     /// Capacities for logistic trend, length n.
-    //     cap: list<f64>,
+    /// Data for the Prophet model.
+    record data {
+        /// Number of time periods.
+        /// This is `T` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        n: s32,
+        /// Time series, length n.
+        y: list<f64>,
+        /// Time, length n.
+        t: list<f64>,
+        /// Capacities for logistic trend, length n.
+        cap: list<f64>,
 
-    //     /// Number of changepoints.
-    //     /// This is 'S' in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     s: s32,
-    //     /// Times of trend changepoints, length s.
-    //     t-change: list<f64>,
+        /// Number of changepoints.
+        /// This is 'S' in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s: s32,
+        /// Times of trend changepoints, length s.
+        t-change: list<f64>,
 
-    //     /// The type of trend to use.
-    //     trend-indicator: trend-indicator,
+        /// The type of trend to use.
+        trend-indicator: trend-indicator,
 
-    //     /// Number of regressors.
-    //     /// Must be greater than or equal to 1.
-    //     /// This is `K` in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     k: s32,
-    //     /// Indicator of additive features, length k.
-    //     /// This is `s_a` in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     s-a: list<s32>,
-    //     /// Indicator of multiplicative features, length k.
-    //     /// This is `s_m` in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     s-m: list<s32>,
-    //     /// Regressors.
-    //     /// This is `X` in the Prophet STAN model definition,
-    //     /// but WIT identifiers must be lower kebab-case.
-    //     /// This is passed as a flat array but should be treated as
-    //     /// a matrix with shape (n, k) (i.e. strides of length n).
-    //     x: list<f64>,
+        /// Number of regressors.
+        /// Must be greater than or equal to 1.
+        /// This is `K` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        k: s32,
+        /// Indicator of additive features, length k.
+        /// This is `s_a` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s-a: list<s32>,
+        /// Indicator of multiplicative features, length k.
+        /// This is `s_m` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        s-m: list<s32>,
+        /// Regressors.
+        /// This is `X` in the Prophet STAN model definition,
+        /// but WIT identifiers must be lower kebab-case.
+        /// This is passed as a flat array but should be treated as
+        /// a matrix with shape (n, k) (i.e. strides of length n).
+        x: list<f64>,
 
-    //     /// Scale on seasonality prior.
-    //     sigmas: list<f64>,
-    //     /// Scale on changepoints prior.
-    //     /// Must be greater than 0.
-    //     tau: f64,
-    // }
+        /// Scale on seasonality prior.
+        sigmas: list<f64>,
+        /// Scale on changepoints prior.
+        /// Must be greater than 0.
+        tau: f64,
+    }
+
+    /// JSON representation of the Prophet data to pass to Stan.
+    ///
+    /// This should be a string containing a JSONified `Data`.
+    type data-json = string;
 
     /// The algorithm to use for optimization. One of: 'BFGS', 'LBFGS', 'Newton'.
     enum algorithm {
@@ -167,9 +170,17 @@ interface types {
     }
 }
 
+/// The Prophet optimizer interface.
+///
+/// An optimizer is a type that can take some initial parameters and data
+/// and produce some optimal parameters for those parameters using maximum
+/// likelihood estimation. This corresponds to cmdstan's `optimize`
+/// command.
 interface optimizer {
-    use types.{inits, optimize-opts, optimize-output};
-    optimize: func(init: inits, data: string, opts: optimize-opts) -> result<optimize-output, string>;
+    use types.{inits, data-json, optimize-opts, optimize-output};
+    /// Optimize the initial parameters given the data, returning the
+    /// optimal values under maximum likelihood estimation.
+    optimize: func(init: inits, data: data-json, opts: optimize-opts) -> result<optimize-output, string>;
 }
 
 world prophet-wasmstan {

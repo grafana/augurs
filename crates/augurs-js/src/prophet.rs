@@ -32,7 +32,7 @@ const OPTIMIZER_FUNCTION: &'static str = r#"
  * @returns An object containing the the optimized parameters and any log
  *          messages.
  */
-type ProphetOptimizerFunction = (init: ProphetInitialParams, data: string, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
+type ProphetOptimizerFunction = (init: ProphetInitialParams, data: ProphetStanDataJSON, opts: ProphetOptimizeOptions) => ProphetOptimizeOutput;
 
 /**
  * An optimizer for the Prophet model.
@@ -68,11 +68,10 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         let this = JsValue::null();
         let opts: OptimizeOptions = opts.into();
         let init: InitialParams<'_> = init.into();
-        // let data: Data<'_> = data.into();
         let init = serde_wasm_bindgen::to_value(&init)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
-        let data = serde_json::to_string(&data)
-            .map_err(augurs_prophet::optimizer::Error::custom)?;
+        let data =
+            serde_json::to_string(&data).map_err(augurs_prophet::optimizer::Error::custom)?;
         let data_s = JsValue::from_str(&data);
         let opts = serde_wasm_bindgen::to_value(&opts)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
@@ -331,7 +330,7 @@ impl From<Algorithm> for augurs_prophet::Algorithm {
 }
 
 /// The type of trend to use.
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi, type_prefix = "Prophet")]
 enum TrendIndicator {
@@ -352,6 +351,64 @@ impl From<augurs_prophet::TrendIndicator> for TrendIndicator {
         }
     }
 }
+
+/// Data for the Prophet model.
+// Copy/pasted from augurs-prophet/src/optimizer.rs, only used
+// here for the generated TS definitions, and hopefully temporarily.
+#[derive(Clone, Debug, PartialEq, Serialize, Tsify)]
+#[allow(non_snake_case)]
+#[tsify(into_wasm_abi, type_prefix = "ProphetStan")]
+pub struct Data {
+    /// Number of time periods.
+    pub T: i32,
+    /// Time series, length n.
+    pub y: Vec<f64>,
+    /// Time, length n.
+    pub t: Vec<f64>,
+    /// Capacities for logistic trend, length n.
+    pub cap: Vec<f64>,
+    /// Number of changepoints.
+    pub S: i32,
+    /// Times of trend changepoints, length s.
+    pub t_change: Vec<f64>,
+    /// The type of trend to use.
+    ///
+    /// Possible values are:
+    /// - 0 for linear trend
+    /// - 1 for logistic trend
+    /// - 2 for flat trend.
+    pub trend_indicator: u8,
+    /// Number of regressors.
+    ///
+    /// Must be greater than or equal to 1.
+    pub K: i32,
+    /// Indicator of additive features, length k.
+    pub s_a: Vec<i32>,
+    /// Indicator of multiplicative features, length k.
+    pub s_m: Vec<i32>,
+    /// Regressors, shape (n, k).
+    pub X: Vec<f64>,
+    /// Scale on seasonality prior.
+    ///
+    /// Must all be greater than zero.
+    pub sigmas: Vec<f64>,
+    /// Scale on changepoints prior.
+    /// Must be greater than 0.
+    pub tau: f64,
+}
+
+/// Data for the Prophet Stan model, in JSON format.
+///
+/// The JSON should represent an object of type `ProphetStanData`.
+#[tsify_next::declare]
+#[allow(dead_code)]
+type ProphetStanDataJSON = String;
+
+// This is unused as of #145 because it's difficult to
+// use this struct correctly from C++ in the WASM component.
+// We're just passing JSON instead, which is not great at all
+// but at least works correctly. In future I'd like to reuse
+// it, hence commenting rather than deleting.
 
 // /// Data for the Prophet model.
 // #[derive(Clone, Serialize, Tsify)]
@@ -492,8 +549,6 @@ impl Logs {
                         alpha0 = log.alpha0,
                         evals = log.evals,
                         notes = log.notes,
-                        "iteration {}, log_prob {:<5}, dx {:<5}, grad {:<5}, alpha {:<5}, alpha0 {:<5}, evals {:<5}, notes {}",
-                        log.iter, log.log_prob, log.dx, log.grad, log.alpha, log.alpha0, log.evals, log.notes
                     );
                 }
                 None => {

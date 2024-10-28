@@ -273,7 +273,7 @@ struct membuf : std::streambuf {
 // implementation will need updating too.
 bool exports_augurs_prophet_wasmstan_optimizer_optimize(
     exports_augurs_prophet_wasmstan_optimizer_inits_t *init,
-    prophet_wasmstan_string_t *data,
+    exports_augurs_prophet_wasmstan_optimizer_data_json_t *data,
     exports_augurs_prophet_wasmstan_optimizer_optimize_opts_t *opts,
     exports_augurs_prophet_wasmstan_optimizer_optimize_output_t *ret,
     prophet_wasmstan_string_t *err) {

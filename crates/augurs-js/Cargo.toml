@@ -1,7 +1,6 @@
 [package]
 name = "augurs-js"
-# version.workspace = true
-version = "0.5.4-dev.0"
+version.workspace = true
 authors.workspace = true
 documentation.workspace = true
 repository.workspace = true
