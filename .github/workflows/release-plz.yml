@@ -22,7 +22,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: prophet-wasmstan.wasm
-          path: crates/augurs-prophet/prophet-wasmstan.wasm
+          path: crates/augurs-prophet
       - name: Checkout repository
         uses: actions/checkout@v4
         with:

@@ -35,7 +35,7 @@ test-all:
     --workspace \
     --exclude augurs-js \
     --exclude pyaugurs \
-    -E 'not (binary(/iai/) | binary(/prophet/))'
+    -E 'not (binary(/iai/) | binary(/prophet-cmdstan/))'
 
 doctest:
   # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
@@ -51,3 +51,7 @@ watch:
 # Download the Prophet Stan model.
 download-prophet-stan-model:
   cargo run --features download --bin download-stan-model
+
+build-component:
+  just components/build
+  cp components/cpp/prophet-wasmstan/prophet-wasmstan.wasm crates/augurs-prophet/prophet-wasmstan.wasm
