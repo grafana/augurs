@@ -741,14 +741,14 @@ mod test_holidays {
 
 #[cfg(test)]
 mod test_fit {
-    use augurs_testing::assert_all_close;
+    use augurs_testing::{assert_all_close, data::seasonal};
     use itertools::Itertools;
 
     use crate::{
         optimizer::{mock_optimizer::MockOptimizer, InitialParams},
         testdata::{daily_univariate_ts, train_test_splitn},
         util::FloatIterExt,
-        Prophet, ProphetOptions, TrendIndicator,
+        PredictionData, Prophet, ProphetOptions, TrainingData, TrendIndicator,
     };
 
     /// This test is extracted from the `fit_predict` test of the Python Prophet
@@ -799,6 +799,70 @@ mod test_fit {
         );
 
         assert_eq!(call.data.cap.len(), train.y.len());
+        assert_eq!(&call.data.cap, &[0.0; 480]);
+
+        assert_eq!(
+            &call.data.sigmas.iter().map(|x| **x).collect_vec(),
+            &[10.0; 6]
+        );
+        assert_eq!(&call.data.s_a, &[1; 6]);
+        assert_eq!(&call.data.s_m, &[0; 6]);
+        assert_eq!(call.data.X.len(), 6 * 480);
+        let first = &call.data.X[..6];
+        assert_all_close(
+            first,
+            &[0.781831, 0.623490, 0.974928, -0.222521, 0.433884, -0.900969],
+        );
+    }
+
+    #[test]
+    fn fit_seasonal() {
+        let opts = ProphetOptions {
+            n_changepoints: 0,
+            ..Default::default()
+        };
+        let opt = MockOptimizer::new();
+        let mut prophet = Prophet::new(opts, opt);
+        let training_data = TrainingData::new(
+            seasonal::SEASONAL_DATASET.train_ds.to_vec(),
+            seasonal::SEASONAL_DATASET.train_y.to_vec(),
+        )
+        .unwrap();
+        prophet.fit(training_data, Default::default()).unwrap();
+        // let prediction_data = PredictionData::new(seasonal::SEASONAL_DATASET.test_ds.to_vec());
+        // prophet.predict(Some(prediction_data)).unwrap();
+        let opt: &MockOptimizer = &prophet.optimizer;
+        let call = opt.take_call().unwrap();
+        assert_eq!(
+            call.init,
+            InitialParams {
+                beta: vec![0.0; 6],
+                delta: vec![0.0; 25],
+                k: 0.29834791059280863,
+                m: 0.5307510759405802,
+                sigma_obs: 1.0.try_into().unwrap(),
+            }
+        );
+        assert_eq!(call.data.T, 480);
+        assert_eq!(call.data.S, 25);
+        assert_eq!(call.data.K, 6);
+        assert_eq!(*call.data.tau, 0.05);
+        assert_eq!(call.data.trend_indicator, TrendIndicator::Linear);
+        assert_eq!(call.data.y.iter().copied().nanmax(true), 1.0);
+        assert_all_close(
+            &call.data.y[0..5],
+            &[0.530751, 0.472442, 0.430376, 0.444259, 0.458559],
+        );
+        assert_eq!(call.data.t.len(), seasonal::SEASONAL_DATASET.train_y.len());
+        assert_all_close(
+            &call.data.t[0..5],
+            &[0.0, 0.004298, 0.005731, 0.007163, 0.008596],
+        );
+
+        assert_eq!(
+            call.data.cap.len(),
+            seasonal::SEASONAL_DATASET.train_y.len()
+        );
         assert_eq!(&call.data.cap, &[0.0; 480]);
 
         assert_eq!(

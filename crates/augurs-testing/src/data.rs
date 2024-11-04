@@ -1,5 +1,7 @@
 //! Data for testing and examples.
 
+pub mod seasonal;
+
 use once_cell::sync::Lazy;
 
 /// The `VIC_ELEC` dataset from the R `forecast` package.
