@@ -59,18 +59,18 @@ compile: checkout-submodules generate-skeleton
 
 # Convert the prophet-wasmstan C++ library into a WASM component.
 build: compile
-  wasm-tools component new cpp/prophet-wasmstan/prophet-wasmstan-core.wasm --adapt {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm -o cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  wasm-tools component new cpp/prophet-wasmstan/prophet-wasmstan-core.wasm --adapt {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm -o cpp/prophet-wasmstan/prophet-wasmstan.wasm
 
 # Inspect the prophet-wasmstan WASM component.
 inspect: build
-  wasm-tools component wit cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+  wasm-tools component wit cpp/prophet-wasmstan/prophet-wasmstan.wasm
 
 transpile: build
   jco transpile \
     --name prophet-wasmstan \
     --optimize \
     --out-dir js/prophet-wasmstan \
-    cpp/prophet-wasmstan/prophet-wasmstan-component.wasm
+    cpp/prophet-wasmstan/prophet-wasmstan.wasm
   jco types \
     --name prophet-wasmstan \
     --out-dir js/prophet-wasmstan \

@@ -26,7 +26,7 @@ with the `build-lib-component` target:
 just build
 ```
 
-This will generate a `prophet-wasmstan-component.wasm` file in the `prophet-wasmstan`
+This will generate a `prophet-wasmstan.wasm` file in the `prophet-wasmstan`
 directory. This file can be used as a WASM component.
 
 ## Using the component
