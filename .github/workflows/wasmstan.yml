@@ -32,4 +32,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: prophet-wasmstan.wasm
-        path: components/cpp/prophet-wasmstan.wasm
+        path: components/cpp/prophet-wasmstan/prophet-wasmstan.wasm
