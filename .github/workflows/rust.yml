@@ -1,9 +1,11 @@
 name: Rust
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
+  workflow_run:
+    workflows:
+      - prophet-wasmstan
+    types:
+      - "completed"
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,6 +28,10 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: prophet-wasmstan.wasm
+          path: crates/augurs-prophet/prophet-wasmstan.wasm
       - name: Checkout sources
         uses: actions/checkout@v4
 

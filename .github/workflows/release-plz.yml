@@ -5,7 +5,11 @@ permissions:
   contents: write
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - prophet-wasmstan
+    types:
+      - "completed"
     branches:
       - main
 
