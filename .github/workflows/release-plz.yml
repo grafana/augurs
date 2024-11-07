@@ -5,11 +5,7 @@ permissions:
   contents: write
 
 on:
-  workflow_run:
-    workflows:
-      - prophet-wasmstan
-    types:
-      - "completed"
+  push:
     branches:
       - main
 
@@ -18,11 +14,11 @@ jobs:
     name: Release-plz
     runs-on: ubuntu-latest
     steps:
+      - uses: grafana/augurs/.github/workflows/wasmstan.yml@main
       - uses: actions/download-artifact@v4
         with:
           name: prophet-wasmstan.wasm
           path: crates/augurs-prophet/prophet-wasmstan.wasm
-          run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout repository
         uses: actions/checkout@v4

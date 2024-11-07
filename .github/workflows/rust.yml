@@ -1,11 +1,9 @@
 name: Rust
 
 on:
-  workflow_run:
-    workflows:
-      - prophet-wasmstan
-    types:
-      - "completed"
+  push:
+    branches: [ "main" ]
+  pull_request:
 
 env:
   CARGO_TERM_COLOR: always
@@ -28,6 +26,7 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
+      - uses: grafana/augurs/.github/workflows/wasmstan.yml@main
       - uses: actions/download-artifact@v4
         with:
           name: prophet-wasmstan.wasm
