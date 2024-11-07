@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,3 +29,7 @@ jobs:
     - uses: actions/setup-node@v4
     - name: Run node test
       run: just components/test
+    - uses: actions/upload-artifact@v4
+      with:
+        name: prophet-wasmstan.wasm
+        path: components/cpp/prophet-wasmstan.wasm
