@@ -32,6 +32,8 @@ jobs:
         with:
           name: prophet-wasmstan.wasm
           path: crates/augurs-prophet/prophet-wasmstan.wasm
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout sources
         uses: actions/checkout@v4
 
