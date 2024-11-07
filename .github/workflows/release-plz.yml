@@ -23,7 +23,6 @@ jobs:
         with:
           name: prophet-wasmstan.wasm
           path: crates/augurs-prophet/prophet-wasmstan.wasm
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
