@@ -61,7 +61,7 @@ analyzer = "nextest"
 command = [
   "cargo", "test", "--doc", "--color", "always",
   "--all-features", "--workspace",
-  "--exclude", "augurs-js",
+  "--exclude", "*-js",
   "--exclude", "pyaugurs",
 ]
 need_stdout = true

@@ -1,0 +1,36 @@
+[package]
+name = "augurs-mstl-js"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "JavaScript bindings for the augurs-mstl library."
+publish = false
+
+[lib]
+bench = false
+crate-type = ["cdylib", "rlib"]
+doc = false
+doctest = false
+test = false
+
+[dependencies]
+augurs-core-js.workspace = true
+augurs-ets = { workspace = true, features = ["mstl"] }
+augurs-forecaster.workspace = true
+augurs-mstl.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+tsify-next.workspace = true
+wasm-bindgen.workspace = true
+
+[package.metadata.wasm-pack.profile.release]
+# previously had just ['-O4']
+wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']
+
+[lints]
+workspace = true

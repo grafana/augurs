@@ -1,0 +1,37 @@
+[package]
+name = "augurs-prophet-js"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "JavaScript bindings for the augurs-prophet library."
+publish = false
+
+[lib]
+bench = false
+crate-type = ["cdylib", "rlib"]
+doc = false
+doctest = false
+test = false
+
+[dependencies]
+augurs-core-js.workspace = true
+augurs-prophet = { workspace = true, features = ["serde"] }
+getrandom.workspace = true
+js-sys.workspace = true
+serde.workspace = true
+serde_json = "1"
+serde-wasm-bindgen.workspace = true
+tracing.workspace = true
+tsify-next.workspace = true
+wasm-bindgen.workspace = true
+
+[package.metadata.wasm-pack.profile.release]
+# previously had just ['-O4']
+wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']
+
+[lints]
+workspace = true

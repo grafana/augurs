@@ -32,7 +32,7 @@ APIs are subject to change, and functionality may not be fully implemented.
 | [`augurs-prophet`][]     | The Prophet time series forecasting algorithm                                | alpha                                                                |
 | [`augurs-seasons`][]     | Seasonality detection using periodograms                                     | alpha - working and tested against Python in limited scenarios       |
 | [`augurs-testing`][]     | Testing data and, eventually, evaluation harness for implementations         | alpha - just data right now                                          |
-| [`augurs-js`][]          | WASM bindings to augurs                                                      | alpha                                                                |
+| [`js/*`][js-libs]        | WASM bindings to augurs                                                      | alpha                                                                |
 | [`pyaugurs`][]           | Python bindings to augurs                                                    | alpha                                                                |
 
 ## Developing
@@ -79,11 +79,11 @@ Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/
 [`augurs-dtw`]: https://crates.io/crates/augurs-dtw
 [`augurs-ets`]: https://crates.io/crates/augurs-ets
 [`augurs-mstl`]: https://crates.io/crates/augurs-mstl
-[`augurs-js`]: https://crates.io/crates/augurs-js
 [`augurs-outlier`]: https://crates.io/crates/augurs-outlier
 [`augurs-prophet`]: https://crates.io/crates/augurs-prophet
 [`augurs-seasons`]: https://crates.io/crates/augurs-seasons
 [`augurs-testing`]: https://crates.io/crates/augurs-testing
+[js-libs]: https://github.com/grafana/augurs/tree/main/js
 [`pyaugurs`]: https://crates.io/crates/pyaugurs
 [`just`]: https://just.systems/man/en/
 [`bacon`]: https://dystroy.org/bacon

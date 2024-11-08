@@ -1,21 +1,15 @@
 set ignore-comments
 
 build-augurs-js:
-  cd crates/augurs-js && \
-    rm -rf ./pkg && \
-    wasm-pack build --scope bsull --out-name augurs --release --target web -- --features parallel
+  rm -rf js/augurs/*
+  just js/build
 
 test-augurs-js: build-augurs-js
-  cd crates/augurs-js/testpkg && \
-    npm ci && \
-    npm run typecheck && \
-    npm run test:ci
+  just js/test
 
 # Build and publish the augurs JS package to npm with the @bsull scope.
 publish-augurs-js: test-augurs-js
-  cd crates/augurs-js && \
-    node prepublish && \
-    wasm-pack publish --access public
+  just js/publish
 
 test:
   cargo nextest run \
@@ -33,14 +27,19 @@ test-all:
     --all-features \
     --all-targets \
     --workspace \
-    --exclude augurs-js \
+    --exclude *-js \
     --exclude pyaugurs \
     -E 'not (binary(/iai/) | binary(/prophet-cmdstan/))'
 
 doctest:
-  # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
+  # Ignore JS and pyaugurs crates since they either won't compile with all features enabled
   # or doesn't have any meaningful doctests anyway, since they're not published.
-  cargo test --doc --all-features --workspace --exclude augurs-js --exclude pyaugurs
+  cargo test \
+    --doc \
+    --all-features \
+    --workspace \
+    --exclude *-js \
+    --exclude pyaugurs \
 
 doc:
   cargo doc --all-features --workspace --exclude augurs-js --exclude pyaugurs --open

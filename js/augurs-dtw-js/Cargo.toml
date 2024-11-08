@@ -1,0 +1,42 @@
+[package]
+name = "augurs-dtw-js"
+version.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "JavaScript bindings for the augurs-dtw library."
+publish = false
+
+[lib]
+bench = false
+crate-type = ["cdylib", "rlib"]
+doc = false
+doctest = false
+test = false
+
+[features]
+# Enable parallelism for the DTW distance matrix calculation.
+# This requires some additional build flags - see
+# https://github.com/RReverser/wasm-bindgen-rayon?tab=readme-ov-file#building-rust-code
+# for more details - and so is disabled by default.
+parallel = ["wasm-bindgen-rayon"]
+
+[dependencies]
+augurs-core-js.workspace = true
+augurs-dtw.workspace = true
+js-sys.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+tsify-next.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-rayon = { version = "1.2.1", optional = true }
+
+[package.metadata.wasm-pack.profile.release]
+# previously had just ['-O4']
+wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']
+
+[lints]
+workspace = true
