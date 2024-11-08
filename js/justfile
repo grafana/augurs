@@ -2,7 +2,7 @@ build: \
   (build-inner "changepoint") \
   (build-inner "clustering") \
   (build-inner "core") \
-  (build-inner "dtw" "--features=parallel") \
+  (build-inner "dtw") \
   (build-inner "ets") \
   (build-inner "mstl") \
   (build-inner "outlier") \
