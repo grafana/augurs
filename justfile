@@ -1,6 +1,7 @@
 set ignore-comments
 
 build-augurs-js:
+  rm -rf js/augurs/*
   just js/build
 
 test-augurs-js: build-augurs-js
