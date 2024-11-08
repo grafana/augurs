@@ -39,10 +39,11 @@ describe('dtw', () => {
         expect(dtw).toBeInstanceOf(Dtw);
       });
 
-      it('can be instantiated with a custom parallelize', () => {
-        const dtw = Dtw.euclidean({ parallelize: true });
-        expect(dtw).toBeInstanceOf(Dtw);
-      });
+      // Commented out because we compile without parallelism for now.
+      // it('can be instantiated with a custom parallelize', () => {
+      //   const dtw = Dtw.euclidean({ parallelize: true });
+      //   expect(dtw).toBeInstanceOf(Dtw);
+      // });
 
       it('can be fit with number arrays', () => {
         const dtw = Dtw.euclidean();
