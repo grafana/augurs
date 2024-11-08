@@ -26,7 +26,7 @@ serde.workspace = true
 serde-wasm-bindgen = "0.6.0"
 tracing.workspace = true
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
-wasm-bindgen = "=0.2.93"
+wasm-bindgen.workspace = true
 
 [package.metadata.wasm-pack.profile.release]
 # previously had just ['-O4']
