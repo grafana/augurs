@@ -370,7 +370,7 @@ struct OptimizeCommand<'a> {
     refresh: usize,
 }
 
-impl<'a> OptimizeCommand<'a> {
+impl OptimizeCommand<'_> {
     fn run(&self) -> Result<optimizer::OptimizedParams, Error> {
         // Set up temp dir and files.
         let tempdir = tempfile::tempdir()?;

@@ -22,6 +22,11 @@ tempfile = { version = "3.13.0", optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 ureq = { version = "2.10.1", optional = true }
+wasmtime = { version = "26", features = [
+    "runtime",
+    "component-model",
+], optional = true }
+wasmtime-wasi = { version = "26", optional = true }
 zip = { version = "2.2.0", optional = true }
 
 [dev-dependencies]
@@ -46,24 +51,40 @@ download = ["dep:ureq", "dep:zip"]
 # Prophet model isn't available to be compiled into the binary.
 internal-ignore-cmdstan-failure = []
 serde = ["dep:serde"]
+wasmstan = ["wasmstan-min"]
+wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "serde"]
 
 [lib]
 bench = false
 
 [[bench]]
-name = "prophet-linear"
+name = "prophet-cmdstan-linear"
 harness = false
 required-features = ["cmdstan", "compile-cmdstan"]
 
 [[bench]]
-name = "prophet-logistic"
+name = "prophet-cmdstan-logistic"
 harness = false
 required-features = ["cmdstan", "compile-cmdstan"]
+
+[[bench]]
+name = "prophet-wasmstan-linear"
+harness = false
+required-features = ["wasmstan"]
+
+[[bench]]
+name = "prophet-wasmstan-logistic"
+harness = false
+required-features = ["wasmstan"]
 
 [[bin]]
 name = "download-stan-model"
 path = "src/bin/main.rs"
 required-features = ["download"]
+
+[[test]]
+name = "wasmstan"
+required-features = ["wasmstan"]
 
 [lints]
 workspace = true

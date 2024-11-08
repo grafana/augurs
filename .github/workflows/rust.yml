@@ -31,10 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: wasmstan
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: prophet-wasmstan.wasm
-          path: crates/augurs-prophet/prophet-wasmstan.wasm
       - name: Checkout sources
         uses: actions/checkout@v4
 
@@ -47,6 +43,11 @@ jobs:
         # Download the Prophet Stan model since an example requires it.
         run: just download-prophet-stan-model
 
+      - name: Download Prophet WASMStan component artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prophet-wasmstan.wasm
+          path: crates/augurs-prophet
       - name: Run cargo nextest
         run: just test-all
       - name: Run doc tests

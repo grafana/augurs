@@ -13,6 +13,8 @@ mod util;
 
 #[cfg(feature = "cmdstan")]
 pub mod cmdstan;
+#[cfg(feature = "wasmstan-min")]
+pub mod wasmstan;
 
 /// A timestamp represented as seconds since the epoch.
 pub type TimestampSeconds = i64;

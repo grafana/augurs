@@ -7,7 +7,7 @@
 /// - The `STAN_PATH` environment variable to be set to the
 ///   path to the Stan installation.
 #[cfg(all(feature = "cmdstan", feature = "compile-cmdstan"))]
-fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
+fn compile_cmdstan_model() -> Result<(), Box<dyn std::error::Error>> {
     use std::{fs, path::PathBuf, process::Command};
     use tempfile::TempDir;
 
@@ -65,25 +65,21 @@ fn compile_model() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn fallback() -> Result<(), Box<dyn std::error::Error>> {
+fn create_empty_files(names: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
     std::fs::create_dir_all(&out_dir)?;
-    let prophet_path = out_dir.join("prophet");
-    let libtbb_path = out_dir.join("libtbb.so.12");
-    std::fs::File::create(&prophet_path)?;
-    std::fs::File::create(&libtbb_path)?;
-    eprintln!(
-        "Created empty files for prophet ({}) and libtbb ({})",
-        prophet_path.display(),
-        libtbb_path.display()
-    );
+    for name in names {
+        let path = out_dir.join(name);
+        std::fs::File::create(&path)?;
+        eprintln!("Created empty file for {}", path.display());
+    }
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn handle_cmdstan() -> Result<(), Box<dyn std::error::Error>> {
     let _result = Ok::<(), &'static str>(());
     #[cfg(all(feature = "cmdstan", feature = "compile-cmdstan"))]
-    let _result = compile_model();
+    let _result = compile_cmdstan_model();
     // This is a complete hack but lets us get away with still using
     // the `--all-features` flag of Cargo without everything failing
     // if there isn't a Stan installation.
@@ -94,12 +90,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // feature.
     #[cfg(feature = "internal-ignore-cmdstan-failure")]
     if _result.is_err() {
-        fallback()?;
+        create_empty_files(&["prophet", "libtbb.so.12"])?;
     }
     // Do the same thing in docs.rs builds.
     #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
     if std::env::var("DOCS_RS").is_ok() {
-        fallback()?;
+        create_empty_files(&["prophet", "libtbb.so.12"])?;
     }
 
     // If we're not in a docs.rs build and we don't have the 'ignore'
@@ -108,5 +104,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("DOCS_RS").is_err() {
         _result?;
     }
+    Ok(())
+}
+
+#[cfg(feature = "wasmstan")]
+fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
+    let prophet_path = std::path::PathBuf::from(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/prophet-wasmstan.wasm"
+    ))
+    .canonicalize()?;
+    let wasmstan_path = out_dir.join("prophet-wasmstan.wasm");
+    std::fs::copy(&prophet_path, &wasmstan_path)?;
+    eprintln!(
+        "Copied prophet-wasmstan.wasm from {} to {}",
+        prophet_path.display(),
+        wasmstan_path.display(),
+    );
+    Ok(())
+}
+
+fn handle_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "wasmstan")]
+    copy_wasmstan()?;
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    handle_cmdstan()?;
+    handle_wasmstan()?;
     Ok(())
 }

@@ -26,6 +26,11 @@ feature flags can be enabled to include only the functionality you need:
 - `mstl`: multiple seasonal trend decomposition
 - `outlier`: outlier detection
 - `parallel`: enable parallel processing of algorithms, where available
+- `prophet`: the Prophet time series forecasting model
+- `prophet-cmdstan`: the `cmdstan` optimizer for the Prophet time series forecasting model
+- `prophet-compile-cmdstan`: as above, but with the `prophet` `cmdstan` binary compiled and embedded at build-time
+- `prophet-wasmstan`: a WASM-compiled version of the Stan model used to optimize Prophet, with WASM embedded in the crate
+- `prophet-wasmstan-min`: as above, but without the embedded WASM
 - `seasons`: seasonality detection
 
 Alternatively, use the `full` feature flag to enable all of the above.
