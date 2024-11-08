@@ -68,7 +68,7 @@ impl augurs_prophet::Optimizer for JsOptimizer {
     ) -> Result<augurs_prophet::optimizer::OptimizedParams, augurs_prophet::optimizer::Error> {
         let this = JsValue::null();
         let opts: OptimizeOptions = opts.into();
-        let init: InitialParams<'_> = init.into();
+        let init: InitialParams = init.into();
         let init = serde_wasm_bindgen::to_value(&init)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
         let data =
@@ -260,8 +260,7 @@ impl From<OptimizeOptions> for augurs_prophet::optimizer::OptimizeOpts {
 #[derive(Clone, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi, type_prefix = "Prophet")]
-struct InitialParams<'a> {
-    _phantom: std::marker::PhantomData<&'a ()>,
+struct InitialParams {
     /// Base trend growth rate.
     pub k: f64,
     /// Trend offset.
@@ -278,16 +277,13 @@ struct InitialParams<'a> {
     pub sigma_obs: f64,
 }
 
-impl<'a> From<&'a augurs_prophet::optimizer::InitialParams> for InitialParams<'a> {
-    fn from(params: &'a augurs_prophet::optimizer::InitialParams) -> Self {
-        // SAFETY: We're creating a view of the `delta` field which has lifetime 'a.
-        // The view is valid as long as the `InitialParams` is alive. Effectively
-        // we're tying the lifetime of this struct to the lifetime of the input,
-        // even though `Float64Array` doesn't have a lifetime.
-        let delta = unsafe { Float64Array::view(&params.delta) };
-        let beta = unsafe { Float64Array::view(&params.beta) };
+impl From<&augurs_prophet::optimizer::InitialParams> for InitialParams {
+    fn from(params: &augurs_prophet::optimizer::InitialParams) -> Self {
+        let delta = Float64Array::new_with_length(params.delta.len() as u32);
+        delta.copy_from(&params.delta);
+        let beta = Float64Array::new_with_length(params.beta.len() as u32);
+        beta.copy_from(&params.beta);
         Self {
-            _phantom: std::marker::PhantomData,
             k: params.k,
             m: params.m,
             delta,
