@@ -30,10 +30,10 @@ jobs:
     - uses: actions/setup-node@v4
     - name: Install dependencies
       run: npm ci
-      working-directory: crates/augurs-js/testpkg
+      working-directory: js/testpkg
     - name: Run typecheck
       run: npm run typecheck
-      working-directory: crates/augurs-js/testpkg
+      working-directory: js/testpkg
     - name: Run tests
       run: npm run test:ci
-      working-directory: crates/augurs-js/testpkg
+      working-directory: js/testpkg
