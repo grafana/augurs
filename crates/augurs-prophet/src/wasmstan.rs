@@ -36,6 +36,9 @@ pub enum Error {
     /// An error occurred while compiling the WebAssembly component.
     #[error("Error compiling component: {0}")]
     Compilation(wasmtime::Error),
+    /// An error occurred while linking the WebAssembly component.
+    #[error("Error linking component: {0}")]
+    Linking(wasmtime::Error),
     /// An error occurred while instantiating the WebAssembly component.
     #[error("Error instantiating component: {0}")]
     Instantiation(wasmtime::Error),
@@ -70,6 +73,8 @@ mod gen {
 
 use gen::*;
 
+/// State required to run the WASI module. Will be stored in the `Store` while
+/// the module is running.
 struct WasiState {
     ctx: WasiCtx,
     table: ResourceTable,
@@ -84,6 +89,7 @@ impl Default for WasiState {
     }
 }
 
+/// View of the WASI state, required to call `wasmtime_wasi::add_to_linker_sync`.
 impl WasiView for WasiState {
     fn ctx(&mut self) -> &mut WasiCtx {
         &mut self.ctx
@@ -131,7 +137,7 @@ impl WasmstanOptimizer {
             std::env!("CARGO_MANIFEST_DIR"),
             "/prophet-wasmstan.wasm"
         )))
-        .expect("embedded WASM image is invalid, this is a bug")
+        .expect("embedded WASM image is invalid, this is a bug in augurs_prophet")
     }
 
     /// Create a new `WasmStanOptimizer` with a custom WebAssembly image.
@@ -161,7 +167,7 @@ impl WasmstanOptimizer {
 
         // Create a linker, which will add WASI imports to the component.
         let mut linker = Linker::new(&engine);
-        wasmtime_wasi::add_to_linker_sync(&mut linker).map_err(Error::Instantiation)?;
+        wasmtime_wasi::add_to_linker_sync(&mut linker).map_err(Error::Linking)?;
 
         // Create a pre-instantiated component.
         // This does as much work as possible here, so that `optimize` can
