@@ -32,6 +32,7 @@ test-all:
     --exclude augurs-dtw-js \
     --exclude augurs-ets-js \
     --exclude augurs-mstl-js \
+    --exclude augurs-outlier-js \
     --exclude augurs-prophet-js \
     --exclude augurs-seasons-js \
     --exclude pyaugurs \
