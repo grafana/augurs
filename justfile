@@ -40,9 +40,22 @@ test-all:
     -E 'not (binary(/iai/) | binary(/prophet-cmdstan/))'
 
 doctest:
-  # Ignore augurs-js and pyaugurs since they either won't compile with all features enabled
+  # Ignore JS and pyaugurs crates since they either won't compile with all features enabled
   # or doesn't have any meaningful doctests anyway, since they're not published.
-  cargo test --doc --all-features --workspace --exclude augurs-js --exclude pyaugurs
+  cargo test \
+    --doc \
+    --all-features \
+    --workspace \
+    --exclude augurs-changepoint-js \
+    --exclude augurs-clustering-js \
+    --exclude augurs-core-js \
+    --exclude augurs-dtw-js \
+    --exclude augurs-ets-js \
+    --exclude augurs-mstl-js \
+    --exclude augurs-outlier-js \
+    --exclude augurs-prophet-js \
+    --exclude augurs-seasons-js \
+    --exclude pyaugurs \
 
 doc:
   cargo doc --all-features --workspace --exclude augurs-js --exclude pyaugurs --open

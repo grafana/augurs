@@ -61,6 +61,15 @@ analyzer = "nextest"
 command = [
   "cargo", "test", "--doc", "--color", "always",
   "--all-features", "--workspace",
+  "--exclude", "augurs-changepoint-js",
+  "--exclude", "augurs-clustering-js",
+  "--exclude", "augurs-core-js",
+  "--exclude", "augurs-dtw-js",
+  "--exclude", "augurs-ets-js",
+  "--exclude", "augurs-mstl-js",
+  "--exclude", "augurs-outlier-js",
+  "--exclude", "augurs-prophet-js",
+  "--exclude", "augurs-seasons-js",
   "--exclude", "augurs-js",
   "--exclude", "pyaugurs",
 ]
