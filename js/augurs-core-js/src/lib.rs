@@ -124,7 +124,6 @@ impl VecVecF64 {
 /// This is intentionally opaque; it should only be passed back to `augurs` for further processing,
 /// e.g. to calculate nearest neighbors or perform clustering.
 #[derive(Debug)]
-#[wasm_bindgen]
 pub struct DistanceMatrix {
     inner: augurs_core::DistanceMatrix,
 }
@@ -136,26 +135,22 @@ impl DistanceMatrix {
     }
 }
 
-#[wasm_bindgen]
 impl DistanceMatrix {
     /// Create a new `DistanceMatrix` from a raw distance matrix.
     #[allow(non_snake_case)]
-    #[wasm_bindgen(constructor)]
-    pub fn new(distanceMatrix: VecVecF64) -> Result<DistanceMatrix, JsError> {
+    pub fn new(distance_matrix: VecVecF64) -> Result<DistanceMatrix, JsError> {
         Ok(Self {
-            inner: augurs_core::DistanceMatrix::try_from_square(distanceMatrix.convert()?)?,
+            inner: augurs_core::DistanceMatrix::try_from_square(distance_matrix.convert()?)?,
         })
     }
 
     /// Get the shape of the distance matrix.
-    #[wasm_bindgen(js_name = shape)]
     pub fn shape(&self) -> Vec<usize> {
         let (m, n) = self.inner.shape();
         vec![m, n]
     }
 
     /// Get the distance matrix as an array of arrays.
-    #[wasm_bindgen(js_name = toArray)]
     pub fn to_array(&self) -> Vec<Float64Array> {
         self.inner
             .clone()

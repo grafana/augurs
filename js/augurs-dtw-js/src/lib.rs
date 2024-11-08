@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use js_sys::Float64Array;
 use serde::Deserialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -170,10 +171,10 @@ impl Dtw {
     ///
     /// The series do not all have to be the same length.
     #[wasm_bindgen(js_name = distanceMatrix)]
-    pub fn distance_matrix(&self, series: VecVecF64) -> Result<DistanceMatrix, JsError> {
+    pub fn distance_matrix(&self, series: VecVecF64) -> Result<Vec<Float64Array>, JsError> {
         let vecs = series.convert()?;
         let slices = vecs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        Ok(self.inner.distance_matrix(&slices))
+        Ok(self.inner.distance_matrix(&slices).to_array())
     }
 }
 

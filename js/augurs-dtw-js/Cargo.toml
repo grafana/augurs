@@ -27,6 +27,7 @@ parallel = ["wasm-bindgen-rayon"]
 [dependencies]
 augurs-core-js.workspace = true
 augurs-dtw.workspace = true
+js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 tsify-next.workspace = true

@@ -113,28 +113,24 @@ describe('dtw', () => {
       const dtw = Dtw.euclidean();
       const series = [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]];
       const dists = dtw.distanceMatrix(series);
-      expect(dists.shape()).toEqual(new Uint32Array([3, 3]));
-      const distsArray = dists.toArray();
-      expect(distsArray).toHaveLength(3);
-      expect(distsArray[0]).toHaveLength(3);
-      expect(distsArray[0][0]).toBeCloseTo(0.0);
-      expect(distsArray[0][1]).toBeCloseTo(5.0990195135927845);
-      expect(distsArray[0][2]).toBeCloseTo(10.392304845413264);
+      expect(dists).toHaveLength(3);
+      expect(dists[0]).toHaveLength(3);
+      expect(dists[0][0]).toBeCloseTo(0.0);
+      expect(dists[0][1]).toBeCloseTo(5.0990195135927845);
+      expect(dists[0][2]).toBeCloseTo(10.392304845413264);
     });
 
     it('can be fit with typed arrays', () => {
       const dtw = Dtw.euclidean();
       const series = [new Float64Array([0.0, 1.0, 2.0]), new Float64Array([3.0, 4.0, 5.0]), new Float64Array([6.0, 7.0, 8.0])];
       const dists = dtw.distanceMatrix(series);
-      expect(dists.shape()).toEqual(new Uint32Array([3, 3]));
-      const distsArray = dists.toArray();
-      expect(distsArray).toBeInstanceOf(Array);
-      expect(distsArray).toHaveLength(3);
-      expect(distsArray[0]).toBeInstanceOf(Float64Array);
-      expect(distsArray[0]).toHaveLength(3);
-      expect(distsArray[0][0]).toBeCloseTo(0.0);
-      expect(distsArray[0][1]).toBeCloseTo(5.0990195135927845);
-      expect(distsArray[0][2]).toBeCloseTo(10.392304845413264);
+      expect(dists).toBeInstanceOf(Array);
+      expect(dists).toHaveLength(3);
+      expect(dists[0]).toBeInstanceOf(Float64Array);
+      expect(dists[0]).toHaveLength(3);
+      expect(dists[0][0]).toBeCloseTo(0.0);
+      expect(dists[0][1]).toBeCloseTo(5.0990195135927845);
+      expect(dists[0][2]).toBeCloseTo(10.392304845413264);
     });
 
     it('gives a useful error when passed the wrong kind of data', () => {

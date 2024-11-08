@@ -4,7 +4,7 @@ use serde::Deserialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
-use augurs_core_js::DistanceMatrix;
+use augurs_core_js::{DistanceMatrix, VecVecF64};
 
 /// Options for the dynamic time warping calculation.
 #[derive(Clone, Debug, Default, Deserialize, Tsify)]
@@ -44,7 +44,7 @@ impl DbscanClusterer {
     /// The return value is an `Int32Array` of cluster IDs, with `-1` indicating noise.
     #[wasm_bindgen]
     #[allow(non_snake_case)]
-    pub fn fit(&self, distanceMatrix: &DistanceMatrix) -> Vec<isize> {
-        self.inner.fit(distanceMatrix.inner())
+    pub fn fit(&self, distanceMatrix: VecVecF64) -> Result<Vec<isize>, JsError> {
+        Ok(self.inner.fit(&DistanceMatrix::new(distanceMatrix)?.into()))
     }
 }

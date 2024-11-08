@@ -8,12 +8,7 @@ build: \
   (build-inner "outlier") \
   (build-inner "prophet") \
   (build-inner "seasons")
-  #!/usr/bin/env bash
-  set -euxo pipefail
-  cp package.json.tmpl augurs/package.json
-  VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select (.name == "augurs") | .version')
-  jq < augurs/package.json ". | .version = \"$VERSION\"" > augurs/package.json.tmp
-  mv augurs/package.json.tmp augurs/package.json
+  just fix-package-json
 
 build-inner target args='':
   cd augurs-{{target}}-js && \
@@ -26,6 +21,14 @@ build-inner target args='':
       --no-pack \
       --out-dir ../augurs \
       -- {{args}}
+
+fix-package-json:
+  #!/usr/bin/env bash
+  set -euxo pipefail
+  cp package.json.tmpl augurs/package.json
+  VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select (.name == "augurs") | .version')
+  jq < augurs/package.json ". | .version = \"$VERSION\"" > augurs/package.json.tmp
+  mv augurs/package.json.tmp augurs/package.json
 
 test:
   cd testpkg && \
