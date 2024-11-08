@@ -42,7 +42,6 @@ augurs-seasons = { version = "0.5.3", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
 augurs-core-js = { path = "js/augurs-core-js" }
-augurs-prophet-js = { path = "js/augurs-prophet-js" }
 
 anyhow = "1.0.89"
 bytemuck = "1.18.0"
