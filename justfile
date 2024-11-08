@@ -27,15 +27,7 @@ test-all:
     --all-features \
     --all-targets \
     --workspace \
-    --exclude augurs-changepoint-js \
-    --exclude augurs-clustering-js \
-    --exclude augurs-core-js \
-    --exclude augurs-dtw-js \
-    --exclude augurs-ets-js \
-    --exclude augurs-mstl-js \
-    --exclude augurs-outlier-js \
-    --exclude augurs-prophet-js \
-    --exclude augurs-seasons-js \
+    --exclude *-js \
     --exclude pyaugurs \
     -E 'not (binary(/iai/) | binary(/prophet-cmdstan/))'
 
@@ -46,15 +38,7 @@ doctest:
     --doc \
     --all-features \
     --workspace \
-    --exclude augurs-changepoint-js \
-    --exclude augurs-clustering-js \
-    --exclude augurs-core-js \
-    --exclude augurs-dtw-js \
-    --exclude augurs-ets-js \
-    --exclude augurs-mstl-js \
-    --exclude augurs-outlier-js \
-    --exclude augurs-prophet-js \
-    --exclude augurs-seasons-js \
+    --exclude *-js \
     --exclude pyaugurs \
 
 doc:
