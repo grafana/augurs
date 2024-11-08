@@ -38,6 +38,5 @@ test:
 
 publish:
   cd augurs && \
-    node prepublish && \
     npm publish --access public
 
