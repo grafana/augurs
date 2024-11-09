@@ -49,13 +49,29 @@ fn compile_cmdstan_model() -> Result<(), Box<dyn std::error::Error>> {
 
     // Copy the executable to the final location.
     let dest_exe_path = build_dir.join("prophet");
-    std::fs::copy(tmp_exe_path, &dest_exe_path)?;
+    std::fs::copy(&tmp_exe_path, &dest_exe_path).map_err(|e| {
+        eprintln!(
+            "error copying prophet binary from {} to {}: {}",
+            tmp_exe_path.display(),
+            dest_exe_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!("Copied prophet exe to {}", dest_exe_path.display());
 
     // Copy libtbb to the final location.
     let libtbb_path = stan_path.join("lib/libtbb.so.12");
     let dest_libtbb_path = build_dir.join("libtbb.so.12");
-    std::fs::copy(&libtbb_path, &dest_libtbb_path)?;
+    std::fs::copy(&libtbb_path, &dest_libtbb_path).map_err(|e| {
+        eprintln!(
+            "error copying libtbb from {} to {}: {}",
+            libtbb_path.display(),
+            dest_libtbb_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!(
         "Copied libtbb.so from {} to {}",
         libtbb_path.display(),
@@ -109,6 +125,8 @@ fn handle_cmdstan() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(feature = "wasmstan")]
 fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo::rerun-if-changed=prophet-wasmstan.wasm");
+
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
     let prophet_path = std::path::PathBuf::from(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -116,7 +134,15 @@ fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
     ))
     .canonicalize()?;
     let wasmstan_path = out_dir.join("prophet-wasmstan.wasm");
-    std::fs::copy(&prophet_path, &wasmstan_path)?;
+    std::fs::copy(&prophet_path, &wasmstan_path).map_err(|e| {
+        eprintln!(
+            "error copying prophet-wasmstan from {} to {}: {}",
+            prophet_path.display(),
+            wasmstan_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!(
         "Copied prophet-wasmstan.wasm from {} to {}",
         prophet_path.display(),
