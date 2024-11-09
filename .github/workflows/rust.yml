@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 env:
@@ -37,7 +37,9 @@ jobs:
       - name: Install Rust toolchain
         uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest,just
+          bins: cargo-nextest,just,mdbook
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Prophet Stan model
         # Download the Prophet Stan model since an example requires it.
@@ -52,6 +54,8 @@ jobs:
         run: just test-all
       - name: Run doc tests
         run: just doctest
+      - name: Run book tests
+        run: just book/test
 
   fmt:
     name: Rustfmt

@@ -12,22 +12,23 @@
 - [Time Series Clustering](./tutorials/clustering.md)
 
 # How-To Guides
-- [Forecasting](./how-to/forecasting.md)
-- [Outlier Detection](./how-to/outliers.md)
-- [Clustering](./how-to/clustering.md)
-- [Seasonality Analysis](./how-to/seasonality.md)
-- [Changepoint Detection](./how-to/changepoints.md)
+- [Forecasting]()
+- [Outlier Detection]()
+- [Clustering]()
+- [Seasonality Analysis]()
+- [Changepoint Detection]()
 
 # Technical Explanations
-- [Architecture](./explanations/architecture.md)
-- [Algorithm Deep Dives](./explanations/algorithms/index.md)
-  - [Forecasting Methods](./explanations/algorithms/forecasting.md)
-  - [Outlier Detection Methods](./explanations/algorithms/outliers.md)
-  - [Clustering Methods](./explanations/algorithms/clustering.md)
-- [Performance Considerations](./explanations/performance.md)
-- [Best Practices](./explanations/best-practices.md)
+- [Architecture]()
+- [Algorithm Deep Dives]()
+  - [Forecasting Methods]()
+  - [Outlier Detection Methods]()
+  - [Clustering Methods]()
+- [Performance Considerations]()
+- [Best Practices]()
 
 # API Reference
 - [API Documentation](./api/index.md)
 
 # Contributing
+- [Contributing](./contributing.md)

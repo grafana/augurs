@@ -11,3 +11,5 @@
 Built with a focus on performance and ease of use, `augurs` offers both high-level APIs for common tasks and low-level components for custom implementations. The library supports Python and JavaScript bindings, making it accessible across different programming environments.
 
 Whether you're building a production forecasting system or analyzing seasonal patterns in data, `augurs` provides the tools you need for robust time series analysis.
+
+These docs are a work-in-progress; the missing pages will hopefully be added soon.
