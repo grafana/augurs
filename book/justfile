@@ -1,0 +1,8 @@
+serve:
+    mdbook serve
+
+build:
+    mdbook build
+
+test:
+    mdbook test -L ../target/debug/deps

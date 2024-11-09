@@ -11,17 +11,15 @@ test-augurs-js: build-augurs-js
 publish-augurs-js: test-augurs-js
   just js/publish
 
+# Run unit tests
 test:
   cargo nextest run \
     --all-features \
     --workspace \
-    --exclude augurs-js \
+    --exclude *-js \
     --exclude pyaugurs
 
-# Run all unit and integration tests, plus examples and benchmarks,
-# except for those which require `iai` (which isn't available on
-# all platforms) and the Prophet benchmarks which require a STAN
-# installation.
+# Run all unit and integration tests, plus examples and benchmarks, except for those which require `iai` (which isn't available on all platforms) and the Prophet benchmarks which require a STAN installation.
 test-all:
   cargo nextest run \
     --all-features \
