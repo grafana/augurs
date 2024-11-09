@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.0...augurs-prophet-v0.6.1) - 2024-11-09
+
+### Fixed
+
+- fix build script to work in docs.rs builds ([#150](https://github.com/grafana/augurs/pull/150))
+
 ## [0.6.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.5.4...augurs-prophet-v0.6.0) - 2024-11-08
 
 ### Added
