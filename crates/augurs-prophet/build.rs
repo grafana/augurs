@@ -126,8 +126,18 @@ fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn handle_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
+    let _result = Ok::<(), Box<dyn std::error::Error>>(());
     #[cfg(feature = "wasmstan")]
-    copy_wasmstan()?;
+    let _result = copy_wasmstan();
+
+    if std::env::var("DOCS_RS").is_ok() {
+        // In docs.rs we won't have (or need) the wasmstan file in the current directory,
+        // so we should just create an empty one so the build doesn't fail.
+        create_empty_files(&["prophet-wasmstan.wasm"])?;
+    } else {
+        // Otherwise, fail the build if there was an error.
+        _result?;
+    }
     Ok(())
 }
 
