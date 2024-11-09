@@ -1,1 +1,0 @@
-# Seasonality Detection
