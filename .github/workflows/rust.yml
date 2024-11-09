@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 env:
@@ -39,15 +39,17 @@ jobs:
         with:
           bins: cargo-nextest,just
 
+      # Download the Prophet Stan model since an example requires it.
       - name: Download Prophet Stan model
-        # Download the Prophet Stan model since an example requires it.
         run: just download-prophet-stan-model
 
+      # Download the Prophet wasmstan module since an example and some doctests require it.
       - name: Download Prophet WASMStan component artifact
         uses: actions/download-artifact@v4
         with:
           name: prophet-wasmstan.wasm
           path: crates/augurs-prophet
+
       - name: Run cargo nextest
         run: just test-all
       - name: Run doc tests
