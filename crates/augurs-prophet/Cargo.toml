@@ -45,14 +45,15 @@ bytemuck = ["dep:bytemuck"]
 cmdstan = ["dep:tempfile", "dep:serde_json", "serde"]
 compile-cmdstan = ["cmdstan", "dep:tempfile"]
 download = ["dep:ureq", "dep:zip"]
-# Ignore cmdstan compilation in the build script.
-# This should only be used for developing the library, not by
-# end users, or you may end up with a broken build where the
-# Prophet model isn't available to be compiled into the binary.
-internal-ignore-cmdstan-failure = []
 serde = ["dep:serde"]
 wasmstan = ["wasmstan-min"]
 wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "serde"]
+
+# Ignore cmdstan compilation or wasmstan copying in the build script.
+# This should only be used for developing the library, not by
+# end users, or you may end up with a broken build where the
+# Prophet model isn't available to be compiled into the binary.
+internal-ignore-build-failures = []
 
 [lib]
 bench = false
