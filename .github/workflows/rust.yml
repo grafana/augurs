@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 env:
@@ -20,7 +20,7 @@ jobs:
         uses: moonrepo/setup-rust@v1
 
       - name: Run cargo check
-        run: cargo check --all-targets
+        run: cargo check --all-targets --all-features
 
   wasmstan:
     name: Prophet WASMStan component
@@ -39,15 +39,17 @@ jobs:
         with:
           bins: cargo-nextest,just
 
-      - name: Download Prophet Stan model
-        # Download the Prophet Stan model since an example requires it.
-        run: just download-prophet-stan-model
-
+      # Download the Prophet wasmstan module since an example and some doctests require it.
       - name: Download Prophet WASMStan component artifact
         uses: actions/download-artifact@v4
         with:
           name: prophet-wasmstan.wasm
           path: crates/augurs-prophet
+
+      # Download the Prophet Stan model since an example requires it.
+      - name: Download Prophet Stan model
+        run: just download-prophet-stan-model
+
       - name: Run cargo nextest
         run: just test-all
       - name: Run doc tests
@@ -81,4 +83,4 @@ jobs:
           components: clippy
 
       - name: Run cargo clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-features --all-targets -- -D warnings

@@ -11,6 +11,14 @@ keywords.workspace = true
 publish = false
 
 [dependencies]
-augurs = { workspace = true, features = ["ets", "mstl", "forecaster", "prophet", "prophet-cmdstan", "seasons"] }
+augurs = { workspace = true, features = [
+    "ets",
+    "mstl",
+    "forecaster",
+    "prophet",
+    "prophet-cmdstan",
+    "prophet-wasmstan",
+    "seasons",
+] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, default-features = true }

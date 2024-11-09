@@ -49,13 +49,29 @@ fn compile_cmdstan_model() -> Result<(), Box<dyn std::error::Error>> {
 
     // Copy the executable to the final location.
     let dest_exe_path = build_dir.join("prophet");
-    std::fs::copy(tmp_exe_path, &dest_exe_path)?;
+    std::fs::copy(&tmp_exe_path, &dest_exe_path).map_err(|e| {
+        eprintln!(
+            "error copying prophet binary from {} to {}: {}",
+            tmp_exe_path.display(),
+            dest_exe_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!("Copied prophet exe to {}", dest_exe_path.display());
 
     // Copy libtbb to the final location.
     let libtbb_path = stan_path.join("lib/libtbb.so.12");
     let dest_libtbb_path = build_dir.join("libtbb.so.12");
-    std::fs::copy(&libtbb_path, &dest_libtbb_path)?;
+    std::fs::copy(&libtbb_path, &dest_libtbb_path).map_err(|e| {
+        eprintln!(
+            "error copying libtbb from {} to {}: {}",
+            libtbb_path.display(),
+            dest_libtbb_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!(
         "Copied libtbb.so from {} to {}",
         libtbb_path.display(),
@@ -88,19 +104,19 @@ fn handle_cmdstan() -> Result<(), Box<dyn std::error::Error>> {
     // This will cause things to fail at runtime if there isn't a Stan
     // installation, but that's okay because no-one should ever use this
     // feature.
-    #[cfg(feature = "internal-ignore-cmdstan-failure")]
+    #[cfg(feature = "internal-ignore-build-failures")]
     if _result.is_err() {
         create_empty_files(&["prophet", "libtbb.so.12"])?;
     }
     // Do the same thing in docs.rs builds.
-    #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
+    #[cfg(not(feature = "internal-ignore-build-failures"))]
     if std::env::var("DOCS_RS").is_ok() {
         create_empty_files(&["prophet", "libtbb.so.12"])?;
     }
 
     // If we're not in a docs.rs build and we don't have the 'ignore'
     // feature enabled, then we should fail if there's an error.
-    #[cfg(not(feature = "internal-ignore-cmdstan-failure"))]
+    #[cfg(not(feature = "internal-ignore-build-failures"))]
     if std::env::var("DOCS_RS").is_err() {
         _result?;
     }
@@ -109,6 +125,8 @@ fn handle_cmdstan() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(feature = "wasmstan")]
 fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo::rerun-if-changed=prophet-wasmstan.wasm");
+
     let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR")?);
     let prophet_path = std::path::PathBuf::from(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -116,7 +134,15 @@ fn copy_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
     ))
     .canonicalize()?;
     let wasmstan_path = out_dir.join("prophet-wasmstan.wasm");
-    std::fs::copy(&prophet_path, &wasmstan_path)?;
+    std::fs::copy(&prophet_path, &wasmstan_path).map_err(|e| {
+        eprintln!(
+            "error copying prophet-wasmstan from {} to {}: {}",
+            prophet_path.display(),
+            wasmstan_path.display(),
+            e
+        );
+        e
+    })?;
     eprintln!(
         "Copied prophet-wasmstan.wasm from {} to {}",
         prophet_path.display(),
@@ -129,13 +155,28 @@ fn handle_wasmstan() -> Result<(), Box<dyn std::error::Error>> {
     let _result = Ok::<(), Box<dyn std::error::Error>>(());
     #[cfg(feature = "wasmstan")]
     let _result = copy_wasmstan();
-
-    if std::env::var("DOCS_RS").is_ok() {
-        // In docs.rs we won't have (or need) the wasmstan file in the current directory,
-        // so we should just create an empty one so the build doesn't fail.
+    // This is a complete hack but lets us get away with still using
+    // the `--all-features` flag of Cargo without everything failing
+    // if there isn't a WASM module built, which takes a while in CI
+    // and isn't available in docs.rs.
+    // Basically, if have this feature enabled, skip any failures in
+    // the build process and just create some empty files.
+    // This will cause things to fail at runtime if there isn't a WASM module
+    // present, but that's okay because no-one should ever use this feature.
+    #[cfg(feature = "internal-ignore-build-failures")]
+    if _result.is_err() {
         create_empty_files(&["prophet-wasmstan.wasm"])?;
-    } else {
-        // Otherwise, fail the build if there was an error.
+    }
+    // Do the same thing in docs.rs builds.
+    #[cfg(not(feature = "internal-ignore-build-failures"))]
+    if std::env::var("DOCS_RS").is_ok() {
+        create_empty_files(&["prophet-wasmstan.wasm"])?;
+    }
+
+    // If we're not in a docs.rs build and we don't have the 'ignore'
+    // feature enabled, then we should fail if there's an error.
+    #[cfg(not(feature = "internal-ignore-build-failures"))]
+    if std::env::var("DOCS_RS").is_err() {
         _result?;
     }
     Ok(())
