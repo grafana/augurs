@@ -20,7 +20,7 @@ jobs:
         uses: moonrepo/setup-rust@v1
 
       - name: Run cargo check
-        run: cargo check --all-targets
+        run: cargo check --all-targets --all-features
 
   wasmstan:
     name: Prophet WASMStan component
@@ -83,4 +83,4 @@ jobs:
           components: clippy
 
       - name: Run cargo clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-features --all-targets -- -D warnings
