@@ -8,6 +8,23 @@ version.workspace = true
 edition.workspace = true
 keywords.workspace = true
 description = "Prophet: time-series forecasting at scale, in Rust."
+include = [
+    ".gitignore",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "CHANGELOG.md",
+    "build.rs",
+    "data",
+    "src/**/*",
+    "examples",
+    "tests",
+    "benches",
+    "prophet-wasmstan.wit",
+    "prophet-wasmstan.wasm",
+    "prophet.stan",
+]
 
 [dependencies]
 anyhow.workspace = true
