@@ -134,7 +134,7 @@ impl WasmstanOptimizer {
     #[cfg(feature = "wasmstan")]
     pub fn new() -> Self {
         Self::with_custom_image(include_bytes!(concat!(
-            std::env!("CARGO_MANIFEST_DIR"),
+            env!("OUT_DIR"),
             "/prophet-wasmstan.wasm"
         )))
         .expect("embedded WASM image is invalid, this is a bug in augurs_prophet")
