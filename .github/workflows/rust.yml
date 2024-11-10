@@ -60,7 +60,7 @@ jobs:
         run: just doctest
 
   test-book:
-    name: Tests
+    name: Test Book
     runs-on: ubuntu-latest
     needs: wasmstan
     steps:
