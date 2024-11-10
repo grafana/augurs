@@ -37,7 +37,7 @@ jobs:
       - name: Install Rust toolchain
         uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest,just,mdbook
+          bins: cargo-nextest,just
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -56,10 +56,43 @@ jobs:
         run: just test-all
       # Run book tests before doc tests because otherwise there are multiple
       # 'augurs' rlibs that the book could use as its augurs dependency.
-      - name: Run book tests
-        run: just book/test
       - name: Run doc tests
         run: just doctest
+
+  test-book:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: wasmstan
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: cargo-nextest,just,mdbook
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Download the Prophet wasmstan module since an example and some doctests require it.
+      - name: Download Prophet WASMStan component artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prophet-wasmstan.wasm
+          path: crates/augurs-prophet
+
+      # The book tests require the augurs library to be built. In CI, we cache the result
+      # of the build so that we don't have to rebuild it every time, but this can result
+      # in multiple 'augurs' rlibs being present in the book's target directory. This
+      # causes the book tests to fail because they don't know which to link against.
+      # Remove the old cached augurs libraries before rebuilding so that there is
+      # only one augurs library present.
+      - name: Remove old cached augurs libraries
+        run: rm -rf target/debug/deps/libaugurs*
+      - name: Run cargo build
+        run: cargo build
+      - name: Run book tests
+        run: just book/test
 
   fmt:
     name: Rustfmt
