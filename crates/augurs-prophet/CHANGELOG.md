@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.1...augurs-prophet-v0.6.2) - 2024-11-10
+
+### Fixed
+
+- use OUT_DIR instead of CARGO_MANIFEST_DIR
+
+### Other
+
+- Add Prophet WASM example ([#152](https://github.com/grafana/augurs/pull/152))
+
 ## [0.6.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.0...augurs-prophet-v0.6.1) - 2024-11-09
 
 ### Fixed
