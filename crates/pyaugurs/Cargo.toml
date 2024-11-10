@@ -26,8 +26,8 @@ augurs-ets = { workspace = true, features = ["mstl"] }
 augurs-forecaster.workspace = true
 augurs-mstl.workspace = true
 augurs-seasons.workspace = true
-numpy = "0.21.0"
-pyo3 = { version = "0.21.0", features = ["extension-module"] }
+numpy = "0.23.0"
+pyo3 = { version = "0.23.3", features = ["extension-module"] }
 tracing = { version = "0.1.37", features = ["log"] }
 
 [lints]

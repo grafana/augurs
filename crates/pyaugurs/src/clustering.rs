@@ -84,10 +84,6 @@ impl Dbscan {
         distance_matrix: InputDistanceMatrix<'_>,
     ) -> PyResult<Py<PyArray1<isize>>> {
         let distance_matrix = distance_matrix.try_into()?;
-        Ok(self
-            .inner
-            .fit(&distance_matrix)
-            .into_pyarray_bound(py)
-            .into())
+        Ok(self.inner.fit(&distance_matrix).into_pyarray(py).into())
     }
 }
