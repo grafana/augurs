@@ -19,21 +19,21 @@ APIs are subject to change, and functionality may not be fully implemented.
 
 ## Crate descriptions
 
-| Name                     | Purpose                                                                      | Status                                                               |
-| ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`augurs`]               | Wrapper crate exposing functionality of all main crates behind feature flags | alpha                                                                |
-| [`augurs-changepoint`][] | Changepoint detection for time series                                        | alpha                                                                |
-| [`augurs-clustering`][]  | Time series clustering algorithms                                            | beta                                                                 |
-| [`augurs-core`][]        | Common structs and traits                                                    | alpha - API is flexible right now                                    |
-| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)                                                   | beta                                                                 |
-| [`augurs-ets`][]         | Automatic exponential smoothing models                                       | alpha - non-seasonal models working and tested against statsforecast |
-| [`augurs-mstl`][]        | Multiple Seasonal Trend Decomposition using LOESS (MSTL)                     | beta - working and tested against R                                  |
-| [`augurs-outlier`][]     | Outlier detection for time series                                            | alpha                                                                |
-| [`augurs-prophet`][]     | The Prophet time series forecasting algorithm                                | alpha                                                                |
-| [`augurs-seasons`][]     | Seasonality detection using periodograms                                     | alpha - working and tested against Python in limited scenarios       |
-| [`augurs-testing`][]     | Testing data and, eventually, evaluation harness for implementations         | alpha - just data right now                                          |
-| [`js/*`][js-libs]        | WASM bindings to augurs                                                      | alpha                                                                |
-| [`pyaugurs`][]           | Python bindings to augurs                                                    | alpha                                                                |
+| Name                     | Purpose                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| [`augurs`]               | Wrapper crate exposing functionality of all main crates behind feature flags |
+| [`augurs-changepoint`][] | Changepoint detection for time series                                        |
+| [`augurs-clustering`][]  | Time series clustering algorithms                                            |
+| [`augurs-core`][]        | Common structs and traits                                                    |
+| [`augurs-dtw`][]         | Dynamic Time Warping (DTW)                                                   |
+| [`augurs-ets`][]         | Automatic exponential smoothing models                                       |
+| [`augurs-mstl`][]        | Multiple Seasonal Trend Decomposition using LOESS (MSTL)                     |
+| [`augurs-outlier`][]     | Outlier detection for time series                                            |
+| [`augurs-prophet`][]     | The Prophet time series forecasting algorithm                                |
+| [`augurs-seasons`][]     | Seasonality detection using periodograms                                     |
+| [`augurs-testing`][]     | Testing data and, eventually, evaluation harness for implementations         |
+| [`js/*`][js-libs]        | WASM bindings to augurs                                                      |
+| [`pyaugurs`][]           | Python bindings to augurs                                                    |
 
 ## Developing
 
