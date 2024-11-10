@@ -49,9 +49,12 @@ impl MSTL {
     pub fn custom_trend(
         _cls: &Bound<'_, PyType>,
         periods: Vec<usize>,
-        trend_model: PyTrendModel,
+        trend_model: Py<PyTrendModel>,
     ) -> Self {
-        let trend_model_name = trend_model.name().to_string();
+        let trend_model_name = Python::with_gil(|py| {
+            let trend_model = trend_model.borrow(py);
+            trend_model.name().to_string()
+        });
         Self {
             forecaster: Forecaster::new(MSTLModel::new(periods, Box::new(trend_model))),
             trend_model_name,
@@ -72,6 +75,7 @@ impl MSTL {
     /// intervals at the given level.
     ///
     /// If provided, `level` must be a float between 0 and 1.
+    #[pyo3(signature = (horizon, level=None))]
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> PyResult<Forecast> {
         self.forecaster
             .predict(horizon, level)
@@ -83,6 +87,7 @@ impl MSTL {
     /// intervals at the given level.
     ///
     /// If provided, `level` must be a float between 0 and 1.
+    #[pyo3(signature = (level=None))]
     pub fn predict_in_sample(&self, level: Option<f64>) -> PyResult<Forecast> {
         self.forecaster
             .predict_in_sample(level)

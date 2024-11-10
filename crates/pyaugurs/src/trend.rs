@@ -28,7 +28,7 @@ use crate::Forecast;
 /// - `predict(self, horizon: int, level: float | None = None) -> augurs.Forecast`
 /// - `predict_in_sample(self, level: float | None = None) -> augurs.Forecast`
 #[pyclass(name = "TrendModel")]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PyTrendModel {
     model: Py<PyAny>,
 }
@@ -56,7 +56,7 @@ impl TrendModel for PyTrendModel {
                 .bind(py)
                 .get_type()
                 .name()
-                .map(|s| s.into_owned().into())
+                .map(|s| s.to_string().into())
         })
         .unwrap_or_else(|_| "unknown Python class".into())
     }
@@ -68,15 +68,12 @@ impl TrendModel for PyTrendModel {
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,
     > {
-        // TODO - `fitted` should be a `PyFittedTrendModel`
-        // which should implement `Fit` and `FittedTrendModel`
-        Python::with_gil(|py| {
+        let model = Python::with_gil(|py| {
             let np = y.to_pyarray_bound(py);
-            self.model.call_method1(py, "fit", (np,))
+            self.model.call_method1(py, "fit", (np,))?;
+            Ok::<_, PyErr>(self.model.clone_ref(py))
         })?;
-        Ok(Box::new(PyFittedTrendModel {
-            model: self.model.clone(),
-        }) as _)
+        Ok(Box::new(PyFittedTrendModel { model }) as _)
     }
 }
 

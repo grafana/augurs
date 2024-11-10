@@ -38,6 +38,7 @@ impl From<Forecast> for augurs_core::Forecast {
 #[pymethods]
 impl Forecast {
     #[new]
+    #[pyo3(signature = (point, level=None, lower=None, upper=None))]
     fn new(
         py: Python<'_>,
         point: Py<PyArray1<f64>>,
