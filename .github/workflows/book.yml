@@ -1,8 +1,8 @@
 name: Deploy book
 on:
   push:
-    tags:
-      - "augurs-v*"
+    branches:
+      - main
 
 jobs:
   deploy:
