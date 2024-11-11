@@ -10,7 +10,7 @@
 //! To use the optimizer, simply enable the `wasmstan` feature of this crate and
 //! create a new `WasmstanOptimizer` instance using [`WasmstanOptimizer::new`].
 //! This can be passed as the `optimizer` argument when creating a new
-//! [`Prophet`](augurs_prophet::Prophet) instance.
+//! [`Prophet`](crate::Prophet) instance.
 //!
 //! Note that this optimizer runs rather slowly in debug mode, but benchmarks show
 //! it to be competitive with `cmdstan` in release mode.
