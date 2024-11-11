@@ -13,8 +13,8 @@ use prep::{ComponentColumns, Modes, Preprocessed, Scales};
 
 use crate::{
     optimizer::{InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
-    Error, EstimationMode, FeaturePrediction, IncludeHistory, PredictionData, Predictions,
-    Regressor, Seasonality, TimestampSeconds, TrainingData,
+    Error, EstimationMode, FeaturePrediction, IncludeHistory, IntervalWidth, PredictionData,
+    Predictions, Regressor, Seasonality, TimestampSeconds, TrainingData,
 };
 
 /// The Prophet time series forecasting model.
@@ -231,6 +231,15 @@ impl<O> Prophet<O> {
             dates.collect()
         };
         Ok(PredictionData::new(ds))
+    }
+
+    /// Set the width of the uncertainty intervals.
+    ///
+    /// The interval width does not affect training, only predictions,
+    /// so this can be called after fitting the model to obtain predictions
+    /// with different levels of uncertainty.
+    pub fn set_interval_width(&mut self, interval_width: IntervalWidth) {
+        self.opts.interval_width = interval_width;
     }
 
     fn infer_freq(history_dates: &[TimestampSeconds]) -> Result<TimestampSeconds, Error> {
