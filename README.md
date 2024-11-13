@@ -14,8 +14,10 @@ and more. Most algorithms are based on existing R or Python implementations.
 As well as the core Rust library, augurs will provide bindings to other
 languages such as Python and Javascript (via WASM).
 
-*Status*: please note that this repository is very much in progress.
-APIs are subject to change, and functionality may not be fully implemented.
+> [!IMPORTANT]
+> Please note that this is not an official Grafana project, so
+> maintenance may be a bit slower than usual. It's still early days too
+> so expect some rough edges and changes to APIs!
 
 ## Crate descriptions
 
