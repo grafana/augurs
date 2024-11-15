@@ -1259,7 +1259,7 @@ function run() {
       start = performance.now();
       worker.postMessage(df);
     } else {
-      const elapsed = performance.now() - start;
+      const elapsed = (performance.now() - start).toFixed(0);
       data.push(e.data.yhat.point);
       if (e.data.yhat.intervals) {
         data.push(e.data.yhat.intervals.lower);

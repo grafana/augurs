@@ -938,7 +938,7 @@ function run() {
       worker.postMessage(df);
     } else {
       const changepoints = e.data;
-      const elapsed = performance.now() - start;
+      const elapsed = (performance.now() - start).toFixed(0);
       const uPlotOpts = {
         series: [
           {},

@@ -41,7 +41,7 @@ worker.onmessage = async (e) => {
     const series = data.data.slice(1).map((arr) => new Float64Array(arr));
     worker.postMessage({ opts, data: series });
   } else {
-    const elapsed = performance.now() - start;
+    const elapsed = (performance.now() - start).toFixed(0);
     const outliers = e.data;
     const outlyingSeries = new Set(outliers.outlyingSeries);
     setUpPlot(data.data, outlyingSeries);
