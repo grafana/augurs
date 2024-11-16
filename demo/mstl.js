@@ -1222,11 +1222,39 @@ const df = {
   ],
 };
 
-const worker = new Worker("./mstl.worker.js", {
-  type: "module",
-});
+class MSTLWorker {
+  constructor() {
+    this.worker = new Worker("./mstl.worker.js", {
+      type: "module",
+    });
+  }
 
-function run() {
+  static create = () => {
+    return new Promise((resolve, reject) => {
+      const worker = new MSTLWorker();
+      worker.worker.onmessage = (e) => {
+        if (e.data === "ready") {
+          resolve(worker);
+        } else {
+          reject();
+        }
+      }
+    })
+  }
+
+  fitPredict = async (data, opts) => {
+    return new Promise((resolve, reject) => {
+      const start = performance.now();
+      this.worker.postMessage({ data, opts });
+      this.worker.onmessage = (e) => {
+        const elapsed = (performance.now() - start);
+        resolve({ predictions: e.data, elapsed });
+      }
+    })
+  }
+}
+
+async function main() {
   const uPlotOpts = {
     series: [
       {},
@@ -1239,7 +1267,7 @@ function run() {
     plugins: [legendAsTooltipPlugin()],
   };
 
-  const data = [df.ds, df.y];
+  let data = [df.ds, df.y];
   const u = new uPlot(
     { ...uPlotOpts, ...getSize() },
     data,
@@ -1249,19 +1277,20 @@ function run() {
     u.setSize(getSize());
   });
 
+  const worker = await MSTLWorker.create();
+
   let start;
 
-  worker.onmessage = (e) => {
-    if (e.data === "ready") {
-      start = performance.now();
-      worker.postMessage(df);
-    } else {
-      const elapsed = (performance.now() - start).toFixed(0);
-      data.push(e.data.point);
-      if (e.data.intervals) {
-        data.push(e.data.intervals.lower);
-        data.push(e.data.intervals.upper);
-      }
+  async function runMSTL(opts) {
+    const { predictions, elapsed } = await worker.fitPredict(df, opts);
+    if (data.length > 2) {
+      data = data.slice(0, 2);
+    }
+    data.push(predictions.point)
+    if (predictions.intervals) {
+      data.push(predictions.intervals.lower, predictions.intervals.upper);
+    }
+    if (u.series.length === 2) {
       const newSeries = [
         {
           label: "yhat",
@@ -1288,11 +1317,17 @@ function run() {
 
       newSeries.forEach((s, i) => u.addSeries(s, i + 2));
       u.addBand(band);
-      u.setData(data);
-      document.getElementById("mstl-title").innerText =
-        `Forecasting with MSTL - done in ${elapsed}ms`;
     }
-  };
+    u.setData(data);
+    document.getElementById("mstl-title").innerText =
+      `Forecasting with MSTL - done in ${elapsed}ms`;
+  }
+  runMSTL(undefined);
+  document.getElementById("mstl-interval-width").addEventListener("change", function() {
+    const intervalWidth = parseFloat(this.value);
+    runMSTL({ intervalWidth });
+  })
 }
 
-export default run;
+
+export default main;

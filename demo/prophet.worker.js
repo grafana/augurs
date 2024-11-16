@@ -7,14 +7,16 @@ import { optimizer } from "./dist/@bsull/augurs-prophet-wasmstan/prophet-wasmsta
 await initProphet();
 
 self.onmessage = (e) => {
+  const { data, opts } = e.data;
   const df = {
-    ds: e.data.ds,
-    y: e.data.y,
+    ds: data.ds,
+    y: data.y,
   };
   const prophet = new Prophet({
     optimizer,
     uncertaintySamples: 500,
     intervalWidth: 0.8,
+    ...(opts ?? {})
   });
   prophet.fit(df);
   const predictions = prophet.predict();

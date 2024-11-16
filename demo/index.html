@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>augurs demo</title>
-        <script type="importmap">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>augurs demo</title>
+  <script type="importmap">
             {
                 "imports": {
                     "@bytecodealliance/preview2-shim/cli": "./dist/@bytecodealliance/preview2-shim/lib/browser/cli.js",
@@ -18,68 +19,99 @@
                 }
             }
         </script>
-        <script type="module" src="./index.js"></script>
-        <style>
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin: 2rem 0;
-            font-size: 2.5rem;
-            font-weight: 700;
-        }
+  <script type="module" src="./index.js"></script>
+  <style>
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin: 2rem 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            background-color: #f5f6fa;
-        }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 20px;
+      background-color: #f5f6fa;
+    }
 
-        #app {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-            padding: 2rem 0;
-        }
+    #app {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
 
-        .center {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    .center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-        .plot {
-            height: calc(100vh / 4);
-            background-color: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1rem;
-            width: 95%;
-        }
+    .plot {
+      height: calc(100vh / 4);
+      background-color: white;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      width: 95%;
+    }
 
-        h2 {
-            color: #34495e;
-            margin: 1rem 0;
-            font-size: 1.5rem;
-        }
+    h2 {
+      color: #34495e;
+      margin: 1rem 0;
+      font-size: 1.5rem;
+    }
 
-        p {
-            color: #666;
-            margin-bottom: 1.5rem;
-        }
+    p {
+      color: #666;
+    }
 
-        code {
-            background-color: #f8f9fa;
-            padding: 0.2rem 0.4rem;
-            border-radius: 3px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
-            color: #c71f66;
-        }
-/*
+    code {
+      background-color: #f8f9fa;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9em;
+      color: #c71f66;
+    }
+
+    .params {
+      display: flex;
+      flex-direction: row;
+      margin: 1rem 0;
+    }
+
+    .param {
+      margin: 0 2rem;
+    }
+
+    label {
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    datalist {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 210px;
+      font-size: 0.9em;
+    }
+
+    option {
+      padding: 0;
+    }
+
+    input[type="range"] {
+      min-width: 200px;
+      margin: 0;
+    }
+
+    /*
         div[id$="-plot"] {
             transition: transform 0.1s ease;
         }
@@ -87,87 +119,166 @@
         div[id$="-plot"]:hover {
             transform: scale(1.002);
         } */
-        </style>
-        <link rel="stylesheet" href="./dist/uPlot/uPlot.min.css" />
-    </head>
+  </style>
+  <link rel="stylesheet" href="./dist/uPlot/uPlot.min.css" />
+</head>
 
-    <body>
-        <h1>augurs demo</h1>
-        <header>
-            <p>
-                augurs is a time series analysis library for Rust with bindings for JavaScript. It provides a set of tools for analyzing time series data, including clustering, outlier detection, forecasting, and changepoint detection.
-            </p>
-            <p>
-                Visit the <a href="https://docs.augu.rs">documentation</a> for more information.
-            </p>
-        </header>
-        <div id="app">
+<body>
+  <h1>augurs demo</h1>
+  <header>
+    <p>
+      augurs is a time series analysis library for Rust with bindings for JavaScript. It provides a set of tools for
+      analyzing time series data, including clustering, outlier detection, forecasting, and changepoint detection.
+    </p>
+    <p>
+      Visit the <a href="https://docs.augu.rs">documentation</a> for more information.
+      Alternatively, give augurs a star on <a href="https://github.com/grafana/augurs">GitHub</a>!
+    </p>
+  </header>
+  <div id="app">
 
-            <!-- Demo of clustering -->
-            <div id="clustering">
-                <h2 id="clustering-title">
-                    Clustering with DBSCAN - calculating...
-                </h2>
-                <p>
-                    augurs can be used to identify groups of series that behave similarly through time. This can be slow for large number of series but can be parallelized!
-                </p>
-                <!-- <div>
-                    <label for="clustering-k">Number of clusters:</label>
-                    <input type="number" id="clustering-k" value="3" />
-                </div> -->
-                <div id="clustering-plot" class="center plot" />
-            </div>
-
-            <!-- Demo of outlier detection -->
-            <div id="outlier-detection">
-                <h2 id="outlier-title">
-                    Outlier detection with DBSCAN - calculating...
-                </h2>
-                <p>
-                    A similar but easier problem is to identify series that are outliers: those which behave differently to the majority of series. There are several algorithms; this demo shows the DBSCAN algorithm.
-                </p>
-                <!-- <div>
-                    <label for="outlier-sensitivity">Sensitivity:</label>
-                    <input type="number" id="outlier-sensitivity" value="0.5" />
-                </div> -->
-                <div id="outlier-plot" class="center plot" />
-            </div>
-
-            <!-- Demo of MSTL -->
-            <div id="mstl">
-                <h2 id="mstl-title">Forecasting with MSTL - calculating...</h2>
-                <p>
-                    augurs contains several forecasting algorithms, including <a href="https://robjhyndman.com/publications/mstl/">MSTL</a>, which is a seasonal-trend decomposition procedure for modelling multiple seasonalities, based on LOESS.
-                </p>
-                <div id="mstl-plot" class="center plot" />
-            </div>
-
-            <!-- Demo of Prophet -->
-            <div id="prophet">
-                <h2 id="prophet-title">
-                    Forecasting with Prophet - calculating...
-                </h2>
-                <p>
-                    augurs also contains an implementation of the <a href="https://facebook.github.io/prophet/">Prophet</a> forecasting algorithm, which is a decomposable time series model with three main components: trend, seasonality, and holidays.
-                </p>
-                <div id="prophet-plot" class="center plot" />
-            </div>
-
-            <!-- Demo of changepoint detection -->
-            <div id="changepoint">
-                <h2 id="changepoint-title">
-                    Changepoint detection with a Bayesian Normal Gamma - calculating...
-                </h2>
-                <p>
-                    augurs also exposes functionality from the excellent <a href="https://crates.io/crates/changepoint"><code>changepoint</code></a> crate, which provides a Bayesian approach to detecting changepoints in time series data.
-                    Here, each changepoint is highlighted in the plot.
-                </p>
-                <div id="changepoint-plot" class="center plot" />
+    <!-- Demo of clustering -->
+    <div id="clustering">
+      <h2 id="clustering-title">
+        Clustering with DBSCAN - calculating...
+      </h2>
+      <p>
+        augurs can be used to identify groups of series that behave similarly through time. This can be slow for large
+        number of series but can be parallelized!
+      </p>
+      <div id="clustering-params" class="params">
+        <div class="param">
+          <label for="clustering-dtw-window">DTW window</label><br />
+          <input class="slider" type="range" id="clustering-dtw-window" min="2" max="10" step="1" value="2"
+            list="clustering-dtw-window-markers" />
+          <datalist id="clustering-dtw-window-markers">
+            <option value="2" label="2" />
+            <option value="10" label="10" />
+          </datalist>
         </div>
-        <footer>
-            <p>
-                Give augurs a star on <a href="https://github.com/grafana/augurs">GitHub</a>!
-            </p>
-        </footer>
-    </body>
+
+        <div class="param">
+          <label for="clustering-dbscan-epsilon">DBSCAN epsilon</label><br />
+          <input class="slider" type="range" id="clustering-dbscan-epsilon" min="1000" max="20000" step="1000"
+            value="5000" list="clustering-dbscan-epsilon-markers" />
+          <datalist id="clustering-dbscan-epsilon-markers">
+            <option value="1000" label="1000" />
+            <option value="5000" label="5000" />
+            <option value="10000" label="10000" />
+            <option value="15000" label="15000" />
+            <option value="20000" label="20000" />
+          </datalist>
+        </div>
+
+        <div class="param">
+          <label for="clustering-dbscan-min-cluster-size">DBSCAN minimum cluster size</label><br />
+          <input class="slider" type="range" id="clustering-dbscan-min-cluster-size" min="2" max="5" step="1" value="2"
+            list="clustering-dbscan-min-cluster-size-markers" />
+          <datalist id="clustering-min-cluster-size-markers">
+            <option value="2" label="2" />
+            <option value="5" label="5" />
+          </datalist>
+        </div>
+      </div>
+      <div id="clustering-plot" class="center plot"> </div>
+    </div>
+
+    <!-- Demo of outlier detection -->
+    <div id="outlier-detection">
+      <h2 id="outlier-title">
+        Outlier detection with DBSCAN - calculating...
+      </h2>
+      <p>
+        A similar but easier problem is to identify series that are outliers: those which behave differently to the
+        majority of series. There are several algorithms; this demo shows the DBSCAN algorithm.
+      </p>
+      <div id="outlier-params" class="params">
+        <div class="param">
+          <label for="outlier-sensitivity">Sensitivity</label><br>
+          <input class="slider" type="range" id="outlier-sensitivity" min="0.01" max="0.99" step="0.01" value="0.8"
+            list="outlier-sensitivity-markers" />
+          <datalist id="outlier-sensitivity-markers">
+            <option value="0.01" label="0.01" />
+            <option value="0.25" label="0.25" />
+            <option value="0.5" label="0.5" />
+            <option value="0.75" label="0.75" />
+            <option value="0.99" label="0.99" />
+          </datalist>
+        </div>
+      </div>
+      <div id="outlier-plot" class="center plot"> </div>
+    </div>
+
+    <!-- Demo of MSTL -->
+    <div id="mstl">
+      <h2 id="mstl-title">Forecasting with MSTL - calculating...</h2>
+      <p>
+        augurs contains several forecasting algorithms, including <a
+          href="https://robjhyndman.com/publications/mstl/">MSTL</a>, which is a seasonal-trend decomposition
+        procedure
+        for modelling multiple seasonalities, based on LOESS.
+      </p>
+      <div id="mstl-params" class="params">
+        <div class="param">
+          <label for="mstl-interval-width" name="interval width">Interval width</label><br />
+          <input class="slider" type="range" id="mstl-interval-width" min="0.5" max="0.99" step="0.01" value="0.8"
+            list="mstl-interval-width-markers" />
+          <datalist id="mstl-interval-width-markers">
+            <option value="0.5" label="50%" />
+            <option value="0.6" label="60%" />
+            <option value="0.7" label="70%" />
+            <option value="0.8" label="80%" />
+            <option value="0.9" label="90%" />
+            <option value="0.99" label="99%" />
+          </datalist>
+        </div>
+      </div>
+      <div id="mstl-plot" class="center plot"> </div>
+    </div>
+
+    <!-- Demo of Prophet -->
+    <div id="prophet">
+      <h2 id="prophet-title">
+        Forecasting with Prophet - calculating...
+      </h2>
+      <p>
+        augurs also contains an implementation of the <a href="https://facebook.github.io/prophet/">Prophet</a>
+        forecasting algorithm, which is a decomposable time series model with three main components: trend,
+        seasonality,
+        and holidays.
+      </p>
+      <div id="prophet-params" class="params">
+        <div class="param">
+          <label for="prophet-interval-width" name="interval width">Interval width</label><br />
+          <input class="slider" type="range" id="prophet-interval-width" min="0.5" max="0.99" step="0.01" value="0.8"
+            list="prophet-interval-width-markers" />
+          <datalist id="prophet-interval-width-markers">
+            <option value="0.5" label="50%" />
+            <option value="0.6" label="60%" />
+            <option value="0.7" label="70%" />
+            <option value="0.8" label="80%" />
+            <option value="0.9" label="90%" />
+            <option value="0.99" label="99%" />
+          </datalist>
+        </div>
+      </div>
+      <div id="prophet-plot" class="center plot"> </div>
+    </div>
+
+    <!-- Demo of changepoint detection -->
+    <div id="changepoint">
+      <h2 id="changepoint-title">
+        Changepoint detection with a Bayesian Normal Gamma - calculating...
+      </h2>
+      <p>
+        augurs also exposes functionality from the excellent <a
+          href="https://crates.io/crates/changepoint"><code>changepoint</code></a> crate, which provides a Bayesian
+        approach to detecting changepoints in time series data.
+        Here, each changepoint is highlighted in the plot.
+      </p>
+      <div id="changepoint-plot" class="center plot"></div>
+    </div>
+  </div>
+</body>
+
 </html>

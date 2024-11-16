@@ -1223,16 +1223,37 @@ const df = {
   ],
 };
 
-const worker = new Worker("./prophet.worker.js", {
-  type: "module",
-});
+class ProphetWorker {
+  constructor() {
+    this.worker = new Worker("./prophet.worker.js", { type: "module" });
+  }
 
-function sliceData(data, pct) {
-  const end = Math.max(1, Math.floor(data[0].length * pct));
-  return data.map((x) => x.slice(0, end));
+  static create = () => {
+    return new Promise((resolve, reject) => {
+      const worker = new ProphetWorker();
+      worker.worker.onmessage = (e) => {
+        if (e.data === "ready") {
+          resolve(worker);
+        } else {
+          reject();
+        }
+      }
+    })
+  }
+
+  fitPredict = async (data, opts) => {
+    return new Promise((resolve, reject) => {
+      const start = performance.now();
+      this.worker.postMessage({ data, opts });
+      this.worker.onmessage = (e) => {
+        const elapsed = (performance.now() - start);
+        resolve({ predictions: e.data, elapsed });
+      };
+    });
+  }
 }
 
-function run() {
+async function main() {
   const uPlotOpts = {
     series: [
       {},
@@ -1246,25 +1267,24 @@ function run() {
     ...getSize(),
   };
 
-  const data = [df.ds, df.y];
+  let data = [df.ds, df.y];
   const u = new uPlot(uPlotOpts, data, document.getElementById("prophet-plot"));
   window.addEventListener("resize", () => {
     u.setSize(getSize());
   });
 
-  let start;
+  const worker = await ProphetWorker.create();
 
-  worker.onmessage = (e) => {
-    if (e.data === "ready") {
-      start = performance.now();
-      worker.postMessage(df);
-    } else {
-      const elapsed = (performance.now() - start).toFixed(0);
-      data.push(e.data.yhat.point);
-      if (e.data.yhat.intervals) {
-        data.push(e.data.yhat.intervals.lower);
-        data.push(e.data.yhat.intervals.upper);
-      }
+  async function runProphet(opts) {
+    const { predictions, elapsed } = await worker.fitPredict(df, opts);
+    if (data.length > 2) {
+      data = data.slice(0, 2);
+    }
+    data.push(predictions.yhat.point);
+    if (predictions.yhat.intervals) {
+      data.push(predictions.yhat.intervals.lower, predictions.yhat.intervals.upper);
+    }
+    if (u.series.length === 2) {
       const newSeries = [
         {
           label: "yhat",
@@ -1291,11 +1311,16 @@ function run() {
 
       newSeries.forEach((s, i) => u.addSeries(s, i + 2));
       u.addBand(band);
-      u.setData(data);
+    }
+    u.setData(data);
       document.getElementById("prophet-title").innerText =
         `Forecasting with Prophet - done in ${elapsed}ms`;
-    }
-  };
+  }
+  runProphet(undefined)
+  document.getElementById("prophet-interval-width").addEventListener("change", function() {
+    const intervalWidth = parseFloat(this.value);
+    runProphet({ intervalWidth });
+  })
 }
 
-export default run;
+export default main;

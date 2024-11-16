@@ -6,11 +6,12 @@ import initSeasonality, {
 await Promise.all([initMstl(), initSeasonality()]);
 
 self.onmessage = (e) => {
-  const { ds, y } = e.data;
+  const { data, opts } = e.data;
+  const { ds, y } = data;
   const seasons = seasonalities(ds);
   const mstl = MSTL.ets(seasons);
-  mstl.fit(e.data.y);
-  const predictions = mstl.predictInSample(0.8);
+  mstl.fit(y);
+  const predictions = mstl.predictInSample(opts?.intervalWidth ?? 0.8);
   self.postMessage(predictions);
 };
 self.postMessage("ready");
