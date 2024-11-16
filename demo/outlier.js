@@ -33,7 +33,7 @@ class OutlierWorker {
         data: this.data.slice(1).map(arr => new Float64Array(arr)),
       });
       this.worker.onmessage = (e) => {
-        const elapsed = (performance.now() - start);
+        const elapsed = (performance.now() - start).toFixed(0);
         resolve({ outliers: e.data, elapsed });
       };
     });

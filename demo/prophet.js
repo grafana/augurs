@@ -1246,7 +1246,7 @@ class ProphetWorker {
       const start = performance.now();
       this.worker.postMessage({ data, opts });
       this.worker.onmessage = (e) => {
-        const elapsed = (performance.now() - start);
+        const elapsed = (performance.now() - start).toFixed(0);
         resolve({ predictions: e.data, elapsed });
       };
     });
