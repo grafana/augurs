@@ -88,6 +88,9 @@ impl MSTL {
     /// If provided, `level` must be a float between 0 and 1.
     #[pyo3(signature = (horizon, level=None))]
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> PyResult<Forecast> {
+        if horizon == 0 {
+            return Err(PyException::new_err("horizon must be greater than 0"));
+        }
         self.forecaster
             .predict(horizon, level)
             .map(Forecast::from)
