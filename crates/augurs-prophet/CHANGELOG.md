@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.2...augurs-prophet-v0.6.3) - 2024-11-20
+
+### Fixed
+
+- correctly set holiday feature to 1 for all holiday dates ([#175](https://github.com/grafana/augurs/pull/175))
+
+### Other
+
+- Fix broken intra-doc link in wasmstan module
+
 ## [0.6.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.1...augurs-prophet-v0.6.2) - 2024-11-10
 
 ### Fixed
