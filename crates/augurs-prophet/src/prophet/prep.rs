@@ -687,11 +687,11 @@ impl<O> Prophet<O> {
                     };
                     let mut col = vec![0.0; ds.len()];
 
-                    // Get the index of the adjusted date in the original data, if it exists.
-                    // Set the value of the holiday column 1.0 for that date.
-                    if let Some(loc) = ds
+                    // Get the indices of the ds column that are 'on holiday'.
+                    // Set the value of the holiday column 1.0 for those dates.
+                    for loc in ds
                         .iter()
-                        .position(|x| (x - (x % ONE_DAY_IN_SECONDS_INT)) == occurrence)
+                        .positions(|x| (x - (x % ONE_DAY_IN_SECONDS_INT)) == occurrence)
                     {
                         col[loc] = 1.0;
                     }
