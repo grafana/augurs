@@ -1,7 +1,9 @@
 //! Features used by Prophet, such as seasonality, regressors and holidays.
 use std::num::NonZeroU32;
 
-use crate::{positive_float::PositiveFloat, Error, TimestampSeconds};
+use crate::{
+    positive_float::PositiveFloat, prophet::prep::ONE_DAY_IN_SECONDS_INT, Error, TimestampSeconds,
+};
 
 /// The mode of a seasonality, regressor, or holiday.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -20,6 +22,7 @@ pub struct Holiday {
     pub(crate) lower_window: Option<Vec<u32>>,
     pub(crate) upper_window: Option<Vec<u32>>,
     pub(crate) prior_scale: Option<PositiveFloat>,
+    pub(crate) utc_offset: TimestampSeconds,
 }
 
 impl Holiday {
@@ -30,6 +33,7 @@ impl Holiday {
             lower_window: None,
             upper_window: None,
             prior_scale: None,
+            utc_offset: 0,
         }
     }
 
@@ -75,6 +79,25 @@ impl Holiday {
     pub fn with_prior_scale(mut self, prior_scale: PositiveFloat) -> Self {
         self.prior_scale = Some(prior_scale);
         self
+    }
+
+    /// Set the UTC offset for the holiday, in seconds.
+    ///
+    /// The UTC offset is used when deciding whether a timestamp is
+    /// on the holiday.
+    ///
+    /// Defaults to 0.
+    pub fn with_utc_offset(mut self, utc_offset: TimestampSeconds) -> Self {
+        self.utc_offset = utc_offset;
+        self
+    }
+
+    /// Return the Unix timestamp of the given date, rounded down to the nearest day,
+    /// adjusted by the holiday's UTC offset.
+    pub(crate) fn floor_day(&self, ds: TimestampSeconds) -> TimestampSeconds {
+        let remainder = (ds + self.utc_offset) % ONE_DAY_IN_SECONDS_INT;
+        // Adjust the date to the holiday's UTC offset.
+        ds - remainder
     }
 }
 
@@ -230,5 +253,33 @@ impl Seasonality {
     pub fn with_condition(mut self, condition_name: String) -> Self {
         self.condition_name = Some(condition_name);
         self
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::features::Holiday;
+
+    #[test]
+    fn holiday_floor_day_no_offset() {
+        let holiday = Holiday::new(vec![]);
+        assert_eq!(holiday.floor_day(1732147200), 1732147200);
+        assert_eq!(holiday.floor_day(1732189701), 1732147200);
+    }
+
+    #[test]
+    fn holiday_floor_day_positive_offset() {
+        let offset = 60 * 60 * 4;
+        let holiday = Holiday::new(vec![]).with_utc_offset(offset);
+        assert_eq!(holiday.floor_day(1732132800), 1732132800);
+        assert_eq!(holiday.floor_day(1732132801), 1732132800);
+    }
+
+    #[test]
+    fn holiday_floor_day_negative_offset() {
+        let offset = -60 * 60 * 3;
+        let holiday = Holiday::new(vec![]).with_utc_offset(offset);
+        assert_eq!(holiday.floor_day(1732158000), 1732158000);
+        assert_eq!(holiday.floor_day(1732165200), 1732158000);
     }
 }

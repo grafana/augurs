@@ -1247,6 +1247,14 @@ pub struct Holiday {
     /// The prior scale for the holiday.
     #[tsify(optional)]
     pub prior_scale: Option<f64>,
+
+    /// The UTC offset for the holiday, in seconds.
+    ///
+    /// The UTC offset is used when deciding whether a timestamp is
+    /// on the holiday.
+    #[tsify(optional)]
+    #[tsify(type = "TimestampSeconds | undefined")]
+    pub utc_offset_seconds: Option<TimestampSeconds>,
 }
 
 impl TryFrom<Holiday> for augurs_prophet::Holiday {
@@ -1262,6 +1270,9 @@ impl TryFrom<Holiday> for augurs_prophet::Holiday {
         }
         if let Some(prior_scale) = value.prior_scale {
             holiday = holiday.with_prior_scale(prior_scale.try_into()?);
+        }
+        if let Some(utc_offset_seconds) = value.utc_offset_seconds {
+            holiday = holiday.with_utc_offset(utc_offset_seconds);
         }
         Ok(holiday)
     }
