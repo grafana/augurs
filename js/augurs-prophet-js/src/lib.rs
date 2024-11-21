@@ -1230,10 +1230,10 @@ pub struct Holiday {
     ///
     /// The lower window is the number of days before the holiday
     /// that it is observed. For example, if the holiday is on
-    /// 2023-01-01 and the lower window is -1, then the holiday will
+    /// 2023-01-01 and the lower window is 1, then the holiday will
     /// _also_ be observed on 2022-12-31.
     #[tsify(optional)]
-    pub lower_window: Option<Vec<i32>>,
+    pub lower_window: Option<Vec<u32>>,
 
     /// The upper window for the holiday.
     ///
@@ -1242,7 +1242,7 @@ pub struct Holiday {
     /// 2023-01-01 and the upper window is 1, then the holiday will
     /// _also_ be observed on 2023-01-02.
     #[tsify(optional)]
-    pub upper_window: Option<Vec<i32>>,
+    pub upper_window: Option<Vec<u32>>,
 
     /// The prior scale for the holiday.
     #[tsify(optional)]

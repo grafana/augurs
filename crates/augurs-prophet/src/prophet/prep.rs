@@ -664,12 +664,16 @@ impl<O> Prophet<O> {
             let lower = holiday
                 .lower_window
                 .as_ref()
-                .map(|x| Box::new(x.iter().copied()) as Box<dyn Iterator<Item = i32>>)
+                .map(|x| {
+                    Box::new(x.iter().copied().map(|x| x as i32)) as Box<dyn Iterator<Item = i32>>
+                })
                 .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
             let upper = holiday
                 .upper_window
                 .as_ref()
-                .map(|x| Box::new(x.iter().copied()) as Box<dyn Iterator<Item = i32>>)
+                .map(|x| {
+                    Box::new(x.iter().copied().map(|x| x as i32)) as Box<dyn Iterator<Item = i32>>
+                })
                 .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
 
             for (dt, lower, upper) in izip!(holiday.ds, lower, upper) {
@@ -678,7 +682,9 @@ impl<O> Prophet<O> {
                 let dt_date = dt - remainder;
 
                 // Check each of the possible offsets allowed by the lower/upper windows.
-                for offset in lower..=upper {
+                // We know that the lower window is always positive since it was originally
+                // a u32, so we can use `-lower..upper` here.
+                for offset in -lower..=upper {
                     let offset_seconds = offset as i64 * ONE_DAY_IN_SECONDS as i64;
                     let occurrence = dt_date + offset_seconds;
                     let col_name = FeatureName::Holiday {
