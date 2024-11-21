@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { readFileSync } from "node:fs";
 
-import { Prophet, initSync } from '@bsull/augurs/prophet';
+import { Prophet, ProphetHoliday, ProphetHolidayOccurrence, initSync } from '@bsull/augurs/prophet';
 import { optimizer } from '@bsull/augurs-prophet-wasmstan';
 
 import { describe, expect, it } from 'vitest';
@@ -54,4 +54,16 @@ describe('Prophet', () => {
     expect(preds.yhat.point).toHaveLength(y.length);
     expect(preds.yhat.point).toBeInstanceOf(Array);
   });
+
+  describe('holidays', () => {
+    it('can be set', () => {
+      const occurrences: ProphetHolidayOccurrence[] = [
+        { start: new Date('2024-12-25').getTime() / 1000, end: new Date('2024-12-26').getTime() / 1000 },
+      ]
+      const holidays: Map<string, ProphetHoliday> = new Map([
+        ["Christmas", { occurrences }],
+      ]);
+      new Prophet({ optimizer, holidays });
+    });
+  })
 });

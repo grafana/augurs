@@ -524,7 +524,7 @@ mod test_custom_seasonal {
         optimizer::mock_optimizer::MockOptimizer,
         prophet::prep::{FeatureName, Features},
         testdata::daily_univariate_ts,
-        FeatureMode, Holiday, ProphetOptions, Seasonality, SeasonalityOption,
+        FeatureMode, Holiday, HolidayOccurrence, ProphetOptions, Seasonality, SeasonalityOption,
     };
 
     use super::Prophet;
@@ -534,12 +534,14 @@ mod test_custom_seasonal {
         let holiday_dates = ["2017-01-02"]
             .iter()
             .map(|s| {
-                s.parse::<NaiveDate>()
-                    .unwrap()
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-                    .and_utc()
-                    .timestamp()
+                HolidayOccurrence::for_day(
+                    s.parse::<NaiveDate>()
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
+                        .and_utc()
+                        .timestamp(),
+                )
             })
             .collect();
 
@@ -703,8 +705,8 @@ mod test_holidays {
     use chrono::NaiveDate;
 
     use crate::{
-        optimizer::mock_optimizer::MockOptimizer, testdata::daily_univariate_ts, Holiday, Prophet,
-        ProphetOptions,
+        optimizer::mock_optimizer::MockOptimizer, testdata::daily_univariate_ts, Holiday,
+        HolidayOccurrence, Prophet, ProphetOptions,
     };
 
     #[test]
@@ -712,24 +714,18 @@ mod test_holidays {
         let holiday_dates = ["2012-10-09", "2013-10-09"]
             .iter()
             .map(|s| {
-                s.parse::<NaiveDate>()
-                    .unwrap()
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-                    .and_utc()
-                    .timestamp()
+                HolidayOccurrence::for_day(
+                    s.parse::<NaiveDate>()
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
+                        .and_utc()
+                        .timestamp(),
+                )
             })
             .collect();
         let opts = ProphetOptions {
-            holidays: [(
-                "bens-bday".to_string(),
-                Holiday::new(holiday_dates)
-                    .with_lower_window(vec![0, 0])
-                    .unwrap()
-                    .with_upper_window(vec![1, 1])
-                    .unwrap(),
-            )]
-            .into(),
+            holidays: [("bens-bday".to_string(), Holiday::new(holiday_dates))].into(),
             ..Default::default()
         };
         let data = daily_univariate_ts();
