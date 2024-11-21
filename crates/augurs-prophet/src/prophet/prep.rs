@@ -660,12 +660,10 @@ impl<O> Prophet<O> {
     ) -> HashSet<String> {
         let mut holiday_names = HashSet::with_capacity(holidays.len());
         for (name, holiday) in holidays {
-            // Keep track of holiday columns here. Use a Vec and a HashMap to
-            // preserve order.
+            // Keep track of holiday columns here.
             // For each day surrounding the holiday (decided by the lower and upper windows),
             // plus the holiday itself, we want to create a new feature which is 0.0 for all
             // days except that day, and 1.0 for that day.
-            let mut this_holiday_feature_names = Vec::new();
             let mut this_holiday_features: HashMap<FeatureName, Vec<f64>> = HashMap::new();
 
             // Default to a window of 0 days either side.
@@ -701,10 +699,7 @@ impl<O> Prophet<O> {
                     };
                     let col = this_holiday_features
                         .entry(col_name.clone())
-                        .or_insert_with(|| {
-                            this_holiday_feature_names.push(col_name);
-                            vec![0.0; ds.len()]
-                        });
+                        .or_insert_with(|| vec![0.0; ds.len()]);
 
                     // Get the indices of the ds column that are 'on holiday'.
                     // Set the value of the holiday column 1.0 for those dates.
@@ -718,11 +713,8 @@ impl<O> Prophet<O> {
             }
             // Add the holiday column to the features frame, and add a corresponding
             // prior scale.
-            for col_name in this_holiday_feature_names {
-                features.push(
-                    col_name.clone(),
-                    this_holiday_features.remove(&col_name).unwrap(),
-                );
+            for (col_name, col) in this_holiday_features.drain() {
+                features.push(col_name, col);
                 prior_scales.push(
                     holiday
                         .prior_scale
