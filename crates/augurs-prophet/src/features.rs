@@ -83,8 +83,12 @@ impl Holiday {
 
     /// Set the UTC offset for the holiday, in seconds.
     ///
-    /// The UTC offset is used when deciding whether a timestamp is
-    /// on the holiday.
+    /// Timestamps of a holiday's occurrences are rounded down to the nearest day,
+    /// but since we're using Unix timestamps rather than timezone-aware dates,
+    /// holidays default to assuming the 'day' was for 24h from midnight UTC.
+    ///
+    /// If instead the holiday should be from midnight in a different timezone,
+    /// use this method to set the offset from UTC of the desired timezone.
     ///
     /// Defaults to 0.
     pub fn with_utc_offset(mut self, utc_offset: TimestampSeconds) -> Self {
