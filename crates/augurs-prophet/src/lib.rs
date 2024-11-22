@@ -23,7 +23,7 @@ pub type TimestampSeconds = i64;
 // navigate the module hierarchy.
 pub use data::{PredictionData, TrainingData};
 pub use error::Error;
-pub use features::{FeatureMode, Holiday, Regressor, Seasonality, Standardize};
+pub use features::{FeatureMode, Holiday, HolidayOccurrence, Regressor, Seasonality, Standardize};
 pub use optimizer::{Algorithm, Optimizer, TrendIndicator};
 pub use positive_float::{PositiveFloat, TryFromFloatError};
 pub use prophet::{

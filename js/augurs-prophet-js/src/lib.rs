@@ -1217,32 +1217,43 @@ impl From<FeatureMode> for augurs_prophet::FeatureMode {
     }
 }
 
+/// An occurrence of a holiday.
+///
+/// Each occurrence has a start and end time represented as
+/// a Unix timestamp. Holiday occurrences are therefore
+/// timestamp-unaware and can therefore span multiple days
+/// or even sub-daily periods.
+///
+/// This differs from the Python and R Prophet implementations,
+/// which require all holidays to be day-long events.
+///
+/// The caller is responsible for ensuring that the start
+/// and end time provided are in the correct timezone.
+#[derive(Clone, Debug, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
+pub struct HolidayOccurrence {
+    /// The start of the holiday, as a Unix timestamp in seconds.
+    #[tsify(type = "TimestampSeconds")]
+    pub start: TimestampSeconds,
+    /// The end of the holiday, as a Unix timestamp in seconds.
+    #[tsify(type = "TimestampSeconds")]
+    pub end: TimestampSeconds,
+}
+
+impl From<HolidayOccurrence> for augurs_prophet::HolidayOccurrence {
+    fn from(value: HolidayOccurrence) -> Self {
+        Self::new(value.start, value.end)
+    }
+}
+
 /// A holiday to be considered by the Prophet model.
 #[derive(Clone, Debug, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct Holiday {
-    /// The dates of the holiday.
-    #[tsify(type = "TimestampSeconds[]")]
-    pub ds: Vec<TimestampSeconds>,
-
-    /// The lower window for the holiday.
-    ///
-    /// The lower window is the number of days before the holiday
-    /// that it is observed. For example, if the holiday is on
-    /// 2023-01-01 and the lower window is 1, then the holiday will
-    /// _also_ be observed on 2022-12-31.
-    #[tsify(optional)]
-    pub lower_window: Option<Vec<u32>>,
-
-    /// The upper window for the holiday.
-    ///
-    /// The upper window is the number of days after the holiday
-    /// that it is observed. For example, if the holiday is on
-    /// 2023-01-01 and the upper window is 1, then the holiday will
-    /// _also_ be observed on 2023-01-02.
-    #[tsify(optional)]
-    pub upper_window: Option<Vec<u32>>,
+    /// The occurrences of the holiday.
+    pub occurrences: Vec<HolidayOccurrence>,
 
     /// The prior scale for the holiday.
     #[tsify(optional)]
@@ -1253,13 +1264,7 @@ impl TryFrom<Holiday> for augurs_prophet::Holiday {
     type Error = JsError;
 
     fn try_from(value: Holiday) -> Result<Self, Self::Error> {
-        let mut holiday = Self::new(value.ds);
-        if let Some(lower_window) = value.lower_window {
-            holiday = holiday.with_lower_window(lower_window)?;
-        }
-        if let Some(upper_window) = value.upper_window {
-            holiday = holiday.with_upper_window(upper_window)?;
-        }
+        let mut holiday = Self::new(value.occurrences.into_iter().map(|x| x.into()).collect());
         if let Some(prior_scale) = value.prior_scale {
             holiday = holiday.with_prior_scale(prior_scale.try_into()?);
         }
