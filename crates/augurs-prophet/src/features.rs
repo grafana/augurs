@@ -73,7 +73,13 @@ impl HolidayOccurrence {
 
     /// Create a new holiday encompassing midnight on the day
     /// of the given timestamp to midnight on the following day,
-    /// in a timezone represented by the `utc_offset`.
+    /// in a timezone represented by the `utc_offset_seconds`.
+    ///
+    /// The UTC offset can be calculated using, for example,
+    /// [`chrono::FixedOffset::local_minus_utc`]. Alternatively
+    /// it's the number of seconds to add to convert from the
+    /// local time to UTC, so UTC+1 is represented by `3600`
+    /// and UTC-5 by `-18000`.
     ///
     /// This is a convenience method to reproduce the behaviour
     /// of the Python and R Prophet implementations, which require
@@ -85,8 +91,8 @@ impl HolidayOccurrence {
     /// end times, e.g. by calculating them using [`chrono`].
     ///
     /// [`chrono`]: https://docs.rs/chrono/latest/chrono
-    pub fn for_day_in_tz(day: TimestampSeconds, utc_offset: i32) -> Self {
-        let day = floor_day(day, utc_offset);
+    pub fn for_day_in_tz(day: TimestampSeconds, utc_offset_seconds: i32) -> Self {
+        let day = floor_day(day, utc_offset_seconds);
         Self {
             start: day,
             end: day + ONE_DAY_IN_SECONDS_INT,
