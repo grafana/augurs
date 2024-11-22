@@ -3,7 +3,7 @@ use std::{
     num::NonZeroU32,
 };
 
-use itertools::{izip, Either, Itertools, MinMaxResult};
+use itertools::{Either, Itertools, MinMaxResult};
 
 use crate::{
     features::RegressorScale,
@@ -138,9 +138,6 @@ pub(super) enum FeatureName {
     Holiday {
         /// The name of the holiday.
         name: String,
-        /// The offset from the holiday date, as permitted
-        /// by the lower or upper window.
-        _offset: i32,
     },
     Dummy,
 }
@@ -666,45 +663,17 @@ impl<O> Prophet<O> {
             // days except that day, and 1.0 for that day.
             let mut this_holiday_features: HashMap<FeatureName, Vec<f64>> = HashMap::new();
 
-            // Default to a window of 0 days either side.
-            let lower = holiday
-                .lower_window
-                .as_ref()
-                .map(|x| {
-                    Box::new(x.iter().copied().map(|x| x as i32)) as Box<dyn Iterator<Item = i32>>
-                })
-                .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
-            let upper = holiday
-                .upper_window
-                .as_ref()
-                .map(|x| {
-                    Box::new(x.iter().copied().map(|x| x as i32)) as Box<dyn Iterator<Item = i32>>
-                })
-                .unwrap_or_else(|| Box::new(std::iter::repeat(0)));
+            for occurrence in holiday.occurrences {
+                let col_name = FeatureName::Holiday { name: name.clone() };
 
-            for (dt, lower, upper) in izip!(&holiday.ds, lower, upper) {
-                // Round down the original timestamps to the nearest day.
-                let dt_date = holiday.floor_day(*dt);
+                let col = this_holiday_features
+                    .entry(col_name.clone())
+                    .or_insert_with(|| vec![0.0; ds.len()]);
 
-                // Check each of the possible offsets allowed by the lower/upper windows.
-                // We know that the lower window is always positive since it was originally
-                // a u32, so we can use `-lower..upper` here.
-                for offset in -lower..=upper {
-                    let offset_seconds = offset as i64 * ONE_DAY_IN_SECONDS as i64;
-                    let occurrence = dt_date + offset_seconds;
-                    let col_name = FeatureName::Holiday {
-                        name: name.clone(),
-                        _offset: offset,
-                    };
-                    let col = this_holiday_features
-                        .entry(col_name.clone())
-                        .or_insert_with(|| vec![0.0; ds.len()]);
-
-                    // Get the indices of the ds column that are 'on holiday'.
-                    // Set the value of the holiday column to 1.0 for those dates.
-                    for loc in ds.iter().positions(|&x| holiday.floor_day(x) == occurrence) {
-                        col[loc] = 1.0;
-                    }
+                // Get the indices of the ds column that are 'on holiday'.
+                // Set the value of the holiday column to 1.0 for those dates.
+                for loc in ds.iter().positions(|&x| occurrence.contains(x)) {
+                    col[loc] = 1.0;
                 }
             }
             // Add the holiday column to the features frame, and add a corresponding
@@ -1082,6 +1051,7 @@ impl Preprocessed {
 #[cfg(test)]
 mod test {
     use crate::{
+        features::HolidayOccurrence,
         optimizer::mock_optimizer::MockOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
         util::FloatIterExt,
@@ -1090,7 +1060,7 @@ mod test {
 
     use super::*;
     use augurs_testing::assert_approx_eq;
-    use chrono::{FixedOffset, NaiveDate, TimeZone, Utc};
+    use chrono::{Days, FixedOffset, NaiveDate, TimeZone, Utc};
     use pretty_assertions::assert_eq;
 
     macro_rules! concat_all {
@@ -1240,56 +1210,48 @@ mod test {
             (
                 "UTC holiday".to_string(),
                 Holiday::new(vec![
-                    Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    Utc.with_ymd_and_hms(2024, 1, 2, 12, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    Utc.with_ymd_and_hms(2024, 1, 4, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
+                    HolidayOccurrence::for_day(
+                        Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                    ),
+                    HolidayOccurrence::for_day(
+                        Utc.with_ymd_and_hms(2024, 1, 2, 12, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                    ),
+                    HolidayOccurrence::for_day(
+                        Utc.with_ymd_and_hms(2024, 1, 4, 0, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                    ),
                 ]),
             ),
             (
                 "Non-UTC holiday".to_string(),
                 Holiday::new(vec![
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 2, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 2, 12, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 4, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                ])
-                .with_utc_offset(-3 * 3600),
-            ),
-            (
-                "Non-UTC holiday with windows".to_string(),
-                Holiday::new(vec![
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 2, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 2, 12, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                    non_utc_tz
-                        .with_ymd_and_hms(2024, 1, 4, 0, 0, 0)
-                        .unwrap()
-                        .timestamp(),
-                ])
-                .with_lower_window(vec![1; 3])
-                .unwrap()
-                .with_upper_window(vec![1; 3])
-                .unwrap()
-                .with_utc_offset(-3 * 3600),
+                    HolidayOccurrence::for_day_in_tz(
+                        non_utc_tz
+                            .with_ymd_and_hms(2024, 1, 2, 0, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                        -3 * 3600,
+                    ),
+                    HolidayOccurrence::for_day_in_tz(
+                        non_utc_tz
+                            .with_ymd_and_hms(2024, 1, 2, 12, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                        -3 * 3600,
+                    ),
+                    HolidayOccurrence::for_day_in_tz(
+                        non_utc_tz
+                            .with_ymd_and_hms(2024, 1, 4, 0, 0, 0)
+                            .unwrap()
+                            .timestamp(),
+                        -3 * 3600,
+                    ),
+                ]),
             ),
         ]
         .into();
@@ -1311,18 +1273,14 @@ mod test {
         );
         assert_eq!(
             holiday_names,
-            HashSet::from([
-                "UTC holiday".to_string(),
-                "Non-UTC holiday".to_string(),
-                "Non-UTC holiday with windows".to_string()
-            ])
+            HashSet::from(["UTC holiday".to_string(), "Non-UTC holiday".to_string(),])
         );
 
-        assert_eq!(features_frame.names.len(), 5);
+        assert_eq!(features_frame.names.len(), 2);
         let utc_idx = features_frame
             .names
             .iter()
-            .position(|x| matches!(x, FeatureName::Holiday { name, .. } if name == "UTC holiday"))
+            .position(|x| matches!(x, FeatureName::Holiday { name } if name == "UTC holiday"))
             .unwrap();
         assert_eq!(
             features_frame.data[utc_idx],
@@ -1337,9 +1295,7 @@ mod test {
         let non_utc_idx = features_frame
             .names
             .iter()
-            .position(
-                |x| matches!(x, FeatureName::Holiday { name, .. } if name == "Non-UTC holiday"),
-            )
+            .position(|x| matches!(x, FeatureName::Holiday { name } if name == "Non-UTC holiday"))
             .unwrap();
         assert_eq!(
             features_frame.data[non_utc_idx],
@@ -1352,49 +1308,37 @@ mod test {
                 &[0.0; 21 + 24],
             ),
         );
-
-        let non_utc_lower_window_idx = features_frame
-            .names
-            .iter()
-            .position(
-                |x| matches!(x, FeatureName::Holiday { name, _offset: -1 } if name == "Non-UTC holiday with windows"),
-            )
-            .unwrap();
-        assert_eq!(
-            features_frame.data[non_utc_lower_window_idx],
-            concat_all!(
-                &[0.0; 3],  // first 3 hours of 2024-01-01 in UTC - off holiday
-                &[1.0; 24], // rest of 2024-01-01 and start of 2024-01-02 are on holiday
-                &[0.0; 24], // continue the cycle
-                &[1.0; 24],
-                &[0.0; 21 + 48],
-            ),
-        );
     }
 
     #[test]
     fn regressor_column_matrix() {
         let holiday_dates = ["2012-10-09", "2013-10-09"]
             .iter()
-            .map(|s| {
-                s.parse::<NaiveDate>()
-                    .unwrap()
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-                    .and_utc()
-                    .timestamp()
+            .flat_map(|s| {
+                [
+                    HolidayOccurrence::for_day(
+                        s.parse::<NaiveDate>()
+                            .unwrap()
+                            .and_hms_opt(0, 0, 0)
+                            .unwrap()
+                            .and_utc()
+                            .timestamp(),
+                    ),
+                    HolidayOccurrence::for_day(
+                        s.parse::<NaiveDate>()
+                            .unwrap()
+                            .and_hms_opt(0, 0, 0)
+                            .unwrap()
+                            .and_utc()
+                            .checked_add_days(Days::new(1))
+                            .unwrap()
+                            .timestamp(),
+                    ),
+                ]
             })
             .collect();
         let opts = ProphetOptions {
-            holidays: [(
-                "bens-bday".to_string(),
-                Holiday::new(holiday_dates)
-                    .with_lower_window(vec![0, 0])
-                    .unwrap()
-                    .with_upper_window(vec![1, 1])
-                    .unwrap(),
-            )]
-            .into(),
+            holidays: [("bens-bday".to_string(), Holiday::new(holiday_dates))].into(),
             ..Default::default()
         };
         let mut prophet = Prophet::new(opts, MockOptimizer::new());
@@ -1455,11 +1399,6 @@ mod test {
                 },
                 FeatureName::Holiday {
                     name: "bens-bday".to_string(),
-                    _offset: 0,
-                },
-                FeatureName::Holiday {
-                    name: "bens-bday".to_string(),
-                    _offset: 1,
                 },
                 FeatureName::Regressor("binary_feature".to_string()),
                 FeatureName::Regressor("numeric_feature".to_string()),
@@ -1469,46 +1408,43 @@ mod test {
             &["bens-bday".to_string()].into_iter().collect(),
             &mut modes,
         );
-        assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1]);
-        assert_eq!(
-            cols.multiplicative,
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
-        );
-        assert_eq!(cols.all_holidays, vec![0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
+        assert_eq!(cols.additive, vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1]);
+        assert_eq!(cols.multiplicative, vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]);
+        assert_eq!(cols.all_holidays, vec![0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
         assert_eq!(
             cols.regressors_additive,
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
+            vec![0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1]
         );
         assert_eq!(
             cols.regressors_multiplicative,
-            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(cols.seasonalities.len(), 1);
         assert_eq!(
             cols.seasonalities["weekly"],
-            &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+            &[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
         );
         assert_eq!(cols.holidays.len(), 1);
         assert_eq!(
             cols.holidays["bens-bday"],
-            &[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
+            &[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
         );
         assert_eq!(cols.regressors.len(), 4);
         assert_eq!(
             cols.regressors["binary_feature"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
         );
         assert_eq!(
             cols.regressors["numeric_feature"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
         );
         assert_eq!(
             cols.regressors["numeric_feature2"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
         );
         assert_eq!(
             cols.regressors["binary_feature2"],
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         );
         assert_eq!(
             modes,

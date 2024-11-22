@@ -40,7 +40,7 @@ doctest:
     --exclude pyaugurs \
 
 doc:
-  cargo doc --all-features --workspace --exclude augurs-js --exclude pyaugurs --open
+  cargo doc --all-features --workspace --exclude *-js --exclude pyaugurs --open
 
 watch:
   bacon

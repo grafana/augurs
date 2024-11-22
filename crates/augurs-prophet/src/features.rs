@@ -2,7 +2,7 @@
 use std::num::NonZeroU32;
 
 use crate::{
-    positive_float::PositiveFloat, prophet::prep::ONE_DAY_IN_SECONDS_INT, Error, TimestampSeconds,
+    positive_float::PositiveFloat, prophet::prep::ONE_DAY_IN_SECONDS_INT, TimestampSeconds,
 };
 
 /// The mode of a seasonality, regressor, or holiday.
@@ -15,94 +15,117 @@ pub enum FeatureMode {
     Multiplicative,
 }
 
+/// An occurrence of a holiday.
+///
+/// Each occurrence has a start and end time represented as
+/// a Unix timestamp. Holiday occurrences are therefore
+/// timestamp-unaware and can therefore span multiple days
+/// or even sub-daily periods.
+///
+/// This differs from the Python and R Prophet implementations,
+/// which require all holidays to be day-long events. Some
+/// convenience methods are provided to create day-long
+/// occurrences: see [`HolidayOccurrence::for_day`] and
+/// [`HolidayOccurrence::for_day_in_tz`].
+///
+/// The caller is responsible for ensuring that the start
+/// and end time provided are in the correct timezone.
+/// One way to do this is to use [`chrono::FixedOffset`][fo]
+/// to create an offset representing the time zone,
+/// [`FixedOffset::with_ymd_and_hms`][wyah] to create a
+/// [`DateTime`][dt] in that time zone, then [`DateTime::timestamp`][ts]
+/// to get the Unix timestamp.
+///
+/// [fo]: https://docs.rs/chrono/latest/chrono/struct.FixedOffset.html
+/// [wyah]: https://docs.rs/chrono/latest/chrono/struct.FixedOffset.html#method.with_ymd_and_hms
+/// [dt]: https://docs.rs/chrono/latest/chrono/struct.DateTime.html
+/// [ts]: https://docs.rs/chrono/latest/chrono/struct.DateTime.html#method.timestamp
+#[derive(Debug, Clone)]
+pub struct HolidayOccurrence {
+    pub(crate) start: TimestampSeconds,
+    pub(crate) end: TimestampSeconds,
+}
+
+impl HolidayOccurrence {
+    /// Create a new holiday occurrence with the given
+    /// start and end timestamp.
+    pub fn new(start: TimestampSeconds, end: TimestampSeconds) -> Self {
+        Self { start, end }
+    }
+
+    /// Create a new holiday encompassing midnight on the day
+    /// of the given timestamp to midnight on the following day,
+    /// in UTC.
+    ///
+    /// This is a convenience method to reproduce the behaviour
+    /// of the Python and R Prophet implementations, which require
+    /// all holidays to be day-long events.
+    ///
+    /// Note that this will _not_ handle daylight saving time
+    /// transitions correctly. To handle this correctly, use
+    /// [`HolidayOccurrence::new`] with the correct start and
+    /// end times, e.g. by calculating them using [`chrono`].
+    ///
+    /// [`chrono`]: https://docs.rs/chrono/latest/chrono
+    pub fn for_day(day: TimestampSeconds) -> Self {
+        Self::for_day_in_tz(day, 0)
+    }
+
+    /// Create a new holiday encompassing midnight on the day
+    /// of the given timestamp to midnight on the following day,
+    /// in a timezone represented by the `utc_offset`.
+    ///
+    /// This is a convenience method to reproduce the behaviour
+    /// of the Python and R Prophet implementations, which require
+    /// all holidays to be day-long events.
+    ///
+    /// Note that this will _not_ handle daylight saving time
+    /// transitions correctly. To handle this correctly, use
+    /// [`HolidayOccurrence::new`] with the correct start and
+    /// end times, e.g. by calculating them using [`chrono`].
+    ///
+    /// [`chrono`]: https://docs.rs/chrono/latest/chrono
+    pub fn for_day_in_tz(day: TimestampSeconds, utc_offset: i32) -> Self {
+        let day = floor_day(day, utc_offset);
+        Self {
+            start: day,
+            end: day + ONE_DAY_IN_SECONDS_INT,
+        }
+    }
+
+    /// Check if the given timestamp is within this occurrence.
+    pub(crate) fn contains(&self, ds: TimestampSeconds) -> bool {
+        self.start <= ds && ds < self.end
+    }
+}
+
 /// A holiday to be considered by the Prophet model.
 #[derive(Debug, Clone)]
 pub struct Holiday {
-    pub(crate) ds: Vec<TimestampSeconds>,
-    pub(crate) lower_window: Option<Vec<u32>>,
-    pub(crate) upper_window: Option<Vec<u32>>,
+    pub(crate) occurrences: Vec<HolidayOccurrence>,
     pub(crate) prior_scale: Option<PositiveFloat>,
-    pub(crate) utc_offset: TimestampSeconds,
 }
 
 impl Holiday {
-    /// Create a new holiday.
-    pub fn new(ds: Vec<TimestampSeconds>) -> Self {
+    /// Create a new holiday with the given occurrences.
+    pub fn new(occurrences: Vec<HolidayOccurrence>) -> Self {
         Self {
-            ds,
-            lower_window: None,
-            upper_window: None,
+            occurrences,
             prior_scale: None,
-            utc_offset: 0,
         }
     }
 
-    /// Set the lower window for the holiday.
-    ///
-    /// The lower window is the number of days before the holiday
-    /// that it is observed. For example, if the holiday is on
-    /// 2023-01-01 and the lower window is 1, then the holiday will
-    /// _also_ be observed on 2022-12-31.
-    pub fn with_lower_window(mut self, lower_window: Vec<u32>) -> Result<Self, Error> {
-        if self.ds.len() != lower_window.len() {
-            return Err(Error::MismatchedLengths {
-                a_name: "ds".to_string(),
-                a: self.ds.len(),
-                b_name: "lower_window".to_string(),
-                b: lower_window.len(),
-            });
-        }
-        self.lower_window = Some(lower_window);
-        Ok(self)
-    }
-
-    /// Set the upper window for the holiday.
-    ///
-    /// The upper window is the number of days after the holiday
-    /// that it is observed. For example, if the holiday is on
-    /// 2023-01-01 and the upper window is 1, then the holiday will
-    /// _also_ be observed on 2023-01-02.
-    pub fn with_upper_window(mut self, upper_window: Vec<u32>) -> Result<Self, Error> {
-        if self.ds.len() != upper_window.len() {
-            return Err(Error::MismatchedLengths {
-                a_name: "ds".to_string(),
-                a: self.ds.len(),
-                b_name: "upper_window".to_string(),
-                b: upper_window.len(),
-            });
-        }
-        self.upper_window = Some(upper_window);
-        Ok(self)
-    }
-
-    /// Add a prior scale for the holiday.
+    /// Set the prior scale for the holiday.
     pub fn with_prior_scale(mut self, prior_scale: PositiveFloat) -> Self {
         self.prior_scale = Some(prior_scale);
         self
     }
+}
 
-    /// Set the UTC offset for the holiday, in seconds.
-    ///
-    /// Timestamps of a holiday's occurrences are rounded down to the nearest day,
-    /// but since we're using Unix timestamps rather than timezone-aware dates,
-    /// holidays default to assuming the 'day' was for 24h from midnight UTC.
-    ///
-    /// If instead the holiday should be from midnight in a different timezone,
-    /// use this method to set the offset from UTC of the desired timezone.
-    ///
-    /// Defaults to 0.
-    pub fn with_utc_offset(mut self, utc_offset: TimestampSeconds) -> Self {
-        self.utc_offset = utc_offset;
-        self
-    }
-
-    /// Return the Unix timestamp of the given date, rounded down to the nearest day,
-    /// adjusted by the holiday's UTC offset.
-    pub(crate) fn floor_day(&self, ds: TimestampSeconds) -> TimestampSeconds {
-        let remainder = (ds + self.utc_offset) % ONE_DAY_IN_SECONDS_INT;
-        // Adjust the date to the holiday's UTC offset.
-        ds - remainder
-    }
+fn floor_day(ds: TimestampSeconds, offset: i32) -> TimestampSeconds {
+    let remainder = (ds + offset as TimestampSeconds) % ONE_DAY_IN_SECONDS_INT;
+    // Adjust the date to the holiday's UTC offset.
+    ds - remainder
 }
 
 /// Whether or not to standardize a regressor.
@@ -264,72 +287,72 @@ impl Seasonality {
 mod test {
     use chrono::{FixedOffset, TimeZone, Utc};
 
-    use crate::features::Holiday;
+    use crate::features::floor_day;
 
     #[test]
-    fn holiday_floor_day_no_offset() {
-        let holiday = Holiday::new(vec![]);
+    fn floor_day_no_offset() {
         let offset = Utc;
         let expected = offset
             .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
             .unwrap()
             .timestamp();
-        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(floor_day(expected, 0), expected);
         assert_eq!(
-            holiday.floor_day(
+            floor_day(
                 offset
                     .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
                     .unwrap()
-                    .timestamp()
+                    .timestamp(),
+                0
             ),
             expected
         );
     }
 
     #[test]
-    fn holiday_floor_day_positive_offset() {
+    fn floor_day_positive_offset() {
         let offset = FixedOffset::east_opt(60 * 60 * 4).unwrap();
         let expected = offset
             .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
             .unwrap()
             .timestamp();
 
-        let holiday = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
-        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(floor_day(expected, offset.local_minus_utc()), expected);
         assert_eq!(
-            holiday.floor_day(
+            floor_day(
                 offset
                     .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
                     .unwrap()
-                    .timestamp()
+                    .timestamp(),
+                offset.local_minus_utc()
             ),
             expected
         );
     }
 
     #[test]
-    fn holiday_floor_day_negative_offset() {
+    fn floor_day_negative_offset() {
         let offset = FixedOffset::west_opt(60 * 60 * 3).unwrap();
         let expected = offset
             .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
             .unwrap()
             .timestamp();
 
-        let holiday = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
-        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(floor_day(expected, offset.local_minus_utc()), expected);
         assert_eq!(
-            holiday.floor_day(
+            floor_day(
                 offset
                     .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
                     .unwrap()
-                    .timestamp()
+                    .timestamp(),
+                offset.local_minus_utc()
             ),
             expected
         );
     }
 
     #[test]
-    fn holiday_floor_day_edge_cases() {
+    fn floor_day_edge_cases() {
         // Test maximum valid offset (UTC+14)
         let max_offset = 14 * 60 * 60;
         let offset = FixedOffset::east_opt(max_offset).unwrap();
@@ -337,13 +360,13 @@ mod test {
             .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
             .unwrap()
             .timestamp();
-        let holiday_max = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
         assert_eq!(
-            holiday_max.floor_day(
+            floor_day(
                 offset
                     .with_ymd_and_hms(2024, 11, 21, 12, 0, 0)
                     .unwrap()
-                    .timestamp()
+                    .timestamp(),
+                offset.local_minus_utc()
             ),
             expected
         );
@@ -354,15 +377,13 @@ mod test {
             .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
             .unwrap()
             .timestamp();
-        let holiday_near = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
         assert_eq!(
-            holiday_near.floor_day(
-                holiday_max.floor_day(
-                    offset
-                        .with_ymd_and_hms(2024, 11, 21, 23, 59, 59)
-                        .unwrap()
-                        .timestamp()
-                ),
+            floor_day(
+                offset
+                    .with_ymd_and_hms(2024, 11, 21, 23, 59, 59)
+                    .unwrap()
+                    .timestamp(),
+                offset.local_minus_utc()
             ),
             expected
         );
