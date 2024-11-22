@@ -123,7 +123,9 @@ impl Holiday {
 }
 
 fn floor_day(ds: TimestampSeconds, offset: i32) -> TimestampSeconds {
-    let remainder = (ds + offset as TimestampSeconds) % ONE_DAY_IN_SECONDS_INT;
+    let adjusted_ds = ds + offset as TimestampSeconds;
+    let remainder =
+        ((adjusted_ds % ONE_DAY_IN_SECONDS_INT) + ONE_DAY_IN_SECONDS_INT) % ONE_DAY_IN_SECONDS_INT;
     // Adjust the date to the holiday's UTC offset.
     ds - remainder
 }
@@ -381,6 +383,23 @@ mod test {
             floor_day(
                 offset
                     .with_ymd_and_hms(2024, 11, 21, 23, 59, 59)
+                    .unwrap()
+                    .timestamp(),
+                offset.local_minus_utc()
+            ),
+            expected
+        );
+
+        // Test when the day is before the epoch.
+        let offset = FixedOffset::west_opt(3600).unwrap();
+        let expected = offset
+            .with_ymd_and_hms(1969, 1, 1, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+        assert_eq!(
+            floor_day(
+                offset
+                    .with_ymd_and_hms(1969, 1, 1, 0, 30, 0)
                     .unwrap()
                     .timestamp(),
                 offset.local_minus_utc()
