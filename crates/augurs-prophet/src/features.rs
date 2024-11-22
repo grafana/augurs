@@ -262,28 +262,109 @@ impl Seasonality {
 
 #[cfg(test)]
 mod test {
+    use chrono::{FixedOffset, TimeZone, Utc};
+
     use crate::features::Holiday;
 
     #[test]
     fn holiday_floor_day_no_offset() {
         let holiday = Holiday::new(vec![]);
-        assert_eq!(holiday.floor_day(1732147200), 1732147200);
-        assert_eq!(holiday.floor_day(1732189701), 1732147200);
+        let offset = Utc;
+        let expected = offset
+            .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(
+            holiday.floor_day(
+                offset
+                    .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
+                    .unwrap()
+                    .timestamp()
+            ),
+            expected
+        );
     }
 
     #[test]
     fn holiday_floor_day_positive_offset() {
-        let offset = 60 * 60 * 4;
-        let holiday = Holiday::new(vec![]).with_utc_offset(offset);
-        assert_eq!(holiday.floor_day(1732132800), 1732132800);
-        assert_eq!(holiday.floor_day(1732132801), 1732132800);
+        let offset = FixedOffset::east_opt(60 * 60 * 4).unwrap();
+        let expected = offset
+            .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+
+        let holiday = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
+        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(
+            holiday.floor_day(
+                offset
+                    .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
+                    .unwrap()
+                    .timestamp()
+            ),
+            expected
+        );
     }
 
     #[test]
     fn holiday_floor_day_negative_offset() {
-        let offset = -60 * 60 * 3;
-        let holiday = Holiday::new(vec![]).with_utc_offset(offset);
-        assert_eq!(holiday.floor_day(1732158000), 1732158000);
-        assert_eq!(holiday.floor_day(1732165200), 1732158000);
+        let offset = FixedOffset::west_opt(60 * 60 * 3).unwrap();
+        let expected = offset
+            .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+
+        let holiday = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
+        assert_eq!(holiday.floor_day(expected), expected);
+        assert_eq!(
+            holiday.floor_day(
+                offset
+                    .with_ymd_and_hms(2024, 11, 21, 15, 3, 12)
+                    .unwrap()
+                    .timestamp()
+            ),
+            expected
+        );
+    }
+
+    #[test]
+    fn holiday_floor_day_edge_cases() {
+        // Test maximum valid offset (UTC+14)
+        let max_offset = 14 * 60 * 60;
+        let offset = FixedOffset::east_opt(max_offset).unwrap();
+        let expected = offset
+            .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+        let holiday_max = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
+        assert_eq!(
+            holiday_max.floor_day(
+                offset
+                    .with_ymd_and_hms(2024, 11, 21, 12, 0, 0)
+                    .unwrap()
+                    .timestamp()
+            ),
+            expected
+        );
+
+        // Test near day boundary
+        let offset = FixedOffset::east_opt(60).unwrap();
+        let expected = offset
+            .with_ymd_and_hms(2024, 11, 21, 0, 0, 0)
+            .unwrap()
+            .timestamp();
+        let holiday_near = Holiday::new(vec![]).with_utc_offset(offset.local_minus_utc() as i64);
+        assert_eq!(
+            holiday_near.floor_day(
+                holiday_max.floor_day(
+                    offset
+                        .with_ymd_and_hms(2024, 11, 21, 23, 59, 59)
+                        .unwrap()
+                        .timestamp()
+                ),
+            ),
+            expected
+        );
     }
 }
