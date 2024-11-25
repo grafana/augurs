@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.3...augurs-prophet-v0.7.0) - 2024-11-25
+
+### Added
+
+- feat!(prophet): support sub-daily & non-UTC holidays ([#181](https://github.com/grafana/augurs/pull/181))
+
+### Fixed
+
+- add a separate feature for each holiday's lower/upper windows ([#179](https://github.com/grafana/augurs/pull/179))
+
+### Other
+
+- *(deps)* update thiserror requirement from 1.0.40 to 2.0.3 ([#164](https://github.com/grafana/augurs/pull/164))
+- *(deps)* update wasmtime requirement from 26 to 27 ([#183](https://github.com/grafana/augurs/pull/183))
+- use u32 instead of i32 for lower/upper windows ([#177](https://github.com/grafana/augurs/pull/177))
+
 ## [0.6.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.2...augurs-prophet-v0.6.3) - 2024-11-20
 
 ### Fixed

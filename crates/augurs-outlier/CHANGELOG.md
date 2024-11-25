@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/grafana/augurs/compare/augurs-outlier-v0.6.3...augurs-outlier-v0.7.0) - 2024-11-25
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.5.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.5.0...augurs-outlier-v0.5.1) - 2024-10-24
 
 ### Other
