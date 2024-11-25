@@ -28,7 +28,7 @@ pub enum Error {
     #[error("Invalid interval width: {0}; must be between 0.0 and 1.0")]
     InvalidIntervalWidth(f64),
     /// Too many data points were provided, overflowing an `i32`.
-    #[error("Too many data points: {0}, max is {}", i32::MAX)]
+    #[error("Too many data points: {got}, max is {max}", got = .0, max = i32::MAX)]
     TooManyDataPoints(usize),
     /// The timestamps provided are constant.
     #[error("Timestamps are constant: {0}")]
