@@ -2,6 +2,7 @@
 mod data;
 mod error;
 mod features;
+pub mod forecaster;
 // Export the optimizer module so that users can implement their own
 // optimizers.
 pub mod optimizer;

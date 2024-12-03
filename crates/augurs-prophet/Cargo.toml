@@ -28,6 +28,7 @@ include = [
 
 [dependencies]
 anyhow.workspace = true
+augurs-core.workspace = true
 bytemuck = { workspace = true, features = ["derive"], optional = true }
 itertools.workspace = true
 num-traits.workspace = true

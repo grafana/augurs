@@ -82,4 +82,9 @@ pub enum Error {
     /// there is no frequency that appears more often than others.
     #[error("Unable to infer frequency from dates: {0:?}")]
     UnableToInferFrequency(Vec<TimestampSeconds>),
+    /// The provided horizon was invalid.
+    ///
+    /// The horizon must be greater than 0.
+    #[error("Horizon must be > 0, got {0}")]
+    InvalidHorizon(usize),
 }
