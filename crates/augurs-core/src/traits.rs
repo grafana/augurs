@@ -1,7 +1,99 @@
 use crate::{Forecast, ModelError};
 
+/// Trait for data that can be used as an input to [`Fit`].
+///
+/// This trait is implemented for a number of types including slices, arrays, and
+/// vectors. It is also implemented for references to these types.
+pub trait Data {
+    /// Return the data as a slice of `f64`.
+    fn as_slice(&self) -> &[f64];
+}
+
+impl<const N: usize> Data for [f64; N] {
+    fn as_slice(&self) -> &[f64] {
+        self
+    }
+}
+
+impl Data for &[f64] {
+    fn as_slice(&self) -> &[f64] {
+        self
+    }
+}
+
+impl Data for &mut [f64] {
+    fn as_slice(&self) -> &[f64] {
+        self
+    }
+}
+
+impl Data for Vec<f64> {
+    fn as_slice(&self) -> &[f64] {
+        self.as_slice()
+    }
+}
+
+impl<T> Data for &T
+where
+    T: Data,
+{
+    fn as_slice(&self) -> &[f64] {
+        (**self).as_slice()
+    }
+}
+
+impl<T> Data for &mut T
+where
+    T: Data,
+{
+    fn as_slice(&self) -> &[f64] {
+        (**self).as_slice()
+    }
+}
+
+/// Trait for data that can be used in the forecaster.
+///
+/// This trait is implemented for a number of types including slices, arrays, and
+/// vectors. It is also implemented for references to these types.
+pub trait MutableData: Data {
+    /// Update the `y` values to those in the provided slice.
+    fn set(&mut self, y: Vec<f64>);
+}
+
+impl<const N: usize> MutableData for [f64; N] {
+    fn set(&mut self, y: Vec<f64>) {
+        self.copy_from_slice(y.as_slice());
+    }
+}
+
+impl MutableData for &mut [f64] {
+    fn set(&mut self, y: Vec<f64>) {
+        self.copy_from_slice(y.as_slice());
+    }
+}
+
+impl MutableData for Vec<f64> {
+    fn set(&mut self, y: Vec<f64>) {
+        self.copy_from_slice(y.as_slice());
+    }
+}
+
+impl<T> MutableData for &mut T
+where
+    T: MutableData,
+{
+    fn set(&mut self, y: Vec<f64>) {
+        (**self).set(y);
+    }
+}
+
 /// A new, unfitted time series forecasting model.
 pub trait Fit {
+    /// The type of the training data used to fit the model.
+    type TrainingData<'a>: Data
+    where
+        Self: 'a;
+
     /// The type of the fitted model produced by the `fit` method.
     type Fitted: Predict;
 
@@ -9,19 +101,21 @@ pub trait Fit {
     type Error: ModelError;
 
     /// Fit the model to the training data.
-    fn fit(&self, y: &[f64]) -> Result<Self::Fitted, Self::Error>;
+    fn fit<'a, 'b: 'a>(&'b self, y: Self::TrainingData<'a>) -> Result<Self::Fitted, Self::Error>;
 }
 
-impl<F> Fit for Box<F>
-where
-    F: Fit,
-{
-    type Fitted = F::Fitted;
-    type Error = F::Error;
-    fn fit(&self, y: &[f64]) -> Result<Self::Fitted, Self::Error> {
-        (**self).fit(y)
-    }
-}
+// impl<'a, F, TD> Fit for Box<F>
+// where
+//     F: Fit<TrainingData<'a> = TD>,
+//     TD: Data,
+// {
+//     type TrainingData = TD;
+//     type Fitted = F::Fitted;
+//     type Error = F::Error;
+//     fn fit(&self, y: Self::TrainingData<'a>) -> Result<Self::Fitted, Self::Error> {
+//         (**self).fit(y)
+//     }
+// }
 
 /// A fitted time series forecasting model.
 pub trait Predict {
