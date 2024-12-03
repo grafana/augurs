@@ -105,14 +105,14 @@ impl<T: TrendModel> MSTLModel<T> {
         // Determine the differencing term for the trend component.
         let trend = fit.trend();
         let residual = fit.remainder();
-        let deseasonalised = trend
+        let mut deseasonalised = trend
             .iter()
             .zip(residual)
             .map(|(t, r)| (t + r) as f64)
             .collect::<Vec<_>>();
         let fitted_trend_model = self
             .trend_model
-            .fit(&deseasonalised)
+            .fit(&mut deseasonalised)
             .map_err(Error::TrendModel)?;
         tracing::trace!(
             trend_model = ?self.trend_model,
@@ -234,9 +234,13 @@ impl FittedMSTLModel {
 impl ModelError for Error {}
 
 impl<T: TrendModel> augurs_core::Fit for MSTLModel<T> {
+    type TrainingData<'a> = &'a mut [f64] where T: 'a;
     type Fitted = FittedMSTLModel;
     type Error = Error;
-    fn fit(&self, y: &[f64]) -> Result<Self::Fitted> {
+    fn fit<'a, 'b: 'a>(&self, y: Self::TrainingData<'a>) -> Result<Self::Fitted>
+    where
+        T: 'a,
+    {
         self.fit_impl(y)
     }
 }
@@ -271,7 +275,7 @@ mod tests {
 
     #[test]
     fn results_match_r() {
-        let y = VIC_ELEC.clone();
+        let mut y = VIC_ELEC.clone();
 
         let mut stl_params = stlrs::params();
         stl_params
@@ -287,7 +291,7 @@ mod tests {
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
         let mstl = MSTLModel::new(periods, trend_model).mstl_params(mstl_params);
-        let fit = mstl.fit(&y).unwrap();
+        let fit = mstl.fit(&mut y).unwrap();
 
         let in_sample = fit.predict_in_sample(0.95).unwrap();
         // The first 12 values from R.
@@ -332,7 +336,7 @@ mod tests {
 
     #[test]
     fn predict_zero_horizon() {
-        let y = VIC_ELEC.clone();
+        let mut y = VIC_ELEC.clone();
 
         let mut stl_params = stlrs::params();
         stl_params
@@ -348,7 +352,7 @@ mod tests {
         let periods = vec![24, 24 * 7];
         let trend_model = NaiveTrend::new();
         let mstl = MSTLModel::new(periods, trend_model).mstl_params(mstl_params);
-        let fit = mstl.fit(&y).unwrap();
+        let fit = mstl.fit(&mut y).unwrap();
         let forecast = fit.predict(0, 0.95).unwrap();
         assert!(forecast.point.is_empty());
         let ForecastIntervals { lower, upper, .. } = forecast.intervals.unwrap();

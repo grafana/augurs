@@ -56,7 +56,7 @@ impl MSTL {
     #[wasm_bindgen]
     pub fn fit(&mut self, y: VecF64) -> Result<(), JsValue> {
         self.forecaster
-            .fit(y.convert()?)
+            .fit(&mut y.convert()?)
             .map_err(|e| e.to_string())?;
         Ok(())
     }

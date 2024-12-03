@@ -28,7 +28,7 @@ pub trait TrendModel: Debug {
     /// Implementations should store any state required for prediction in the struct itself.
     fn fit(
         &self,
-        y: &[f64],
+        y: &mut [f64],
     ) -> Result<
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,
@@ -121,7 +121,7 @@ impl<T: TrendModel + ?Sized> TrendModel for Box<T> {
 
     fn fit(
         &self,
-        y: &[f64],
+        y: &mut [f64],
     ) -> Result<
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,
@@ -196,7 +196,7 @@ impl TrendModel for NaiveTrend {
 
     fn fit(
         &self,
-        y: &[f64],
+        y: &mut [f64],
     ) -> Result<
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,

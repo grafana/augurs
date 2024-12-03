@@ -64,7 +64,7 @@ impl TrendModel for PyTrendModel {
 
     fn fit(
         &self,
-        y: &[f64],
+        y: &mut [f64],
     ) -> Result<
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,

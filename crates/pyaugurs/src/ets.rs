@@ -1,6 +1,6 @@
 //! Bindings for AutoETS model search.
 use augurs_core::{Fit, Predict};
-use numpy::PyReadonlyArrayDyn;
+use numpy::PyReadwriteArrayDyn;
 use pyo3::{exceptions::PyException, prelude::*};
 
 use crate::Forecast;
@@ -48,9 +48,9 @@ impl AutoETS {
     ///
     /// If no model can be found, or if any parameters are invalid, this function
     /// returns an error.
-    pub fn fit(&mut self, y: PyReadonlyArrayDyn<'_, f64>) -> PyResult<()> {
+    pub fn fit(&mut self, mut y: PyReadwriteArrayDyn<'_, f64>) -> PyResult<()> {
         self.inner
-            .fit(y.as_slice()?)
+            .fit(y.as_slice_mut()?)
             .map_err(|e| PyException::new_err(e.to_string()))?;
         Ok(())
     }

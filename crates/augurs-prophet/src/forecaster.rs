@@ -1,7 +1,7 @@
 //! [`Fit`] and [`Predict`] implementations for the Prophet algorithm.
 use std::{cell::RefCell, num::NonZeroU32, sync::Arc};
 
-use augurs_core::{Fit, ModelError, Predict};
+use augurs_core::{Data, Fit, ModelError, MutableData, Predict};
 
 use crate::{
     optimizer::OptimizeOpts, Error, IncludeHistory, Optimizer, Prophet, ProphetOptions,
@@ -48,18 +48,32 @@ impl ProphetForecaster {
     }
 }
 
+impl Data for TrainingData {
+    fn as_slice(&self) -> &[f64] {
+        self.y.as_slice()
+    }
+}
+impl MutableData for TrainingData {
+    fn set(&mut self, y: Vec<f64>) {
+        self.y = y;
+    }
+}
+
 impl Fit for ProphetForecaster {
+    type TrainingData<'a> = TrainingData;
     type Fitted = FittedProphetForecaster;
     type Error = Error;
 
-    fn fit(&self, y: &[f64]) -> Result<Self::Fitted, Self::Error> {
-        let ds = vec![];
-        let training_data = TrainingData::new(ds, y.to_vec())?;
+    fn fit<'a, 'b: 'a>(
+        &'b self,
+        training_data: Self::TrainingData<'b>,
+    ) -> Result<Self::Fitted, Self::Error> {
+        let training_n = training_data.y.len();
         let mut model = Prophet::new(self.opts.clone(), self.optimizer.clone());
         model.fit(training_data, self.optimize_opts.clone())?;
         Ok(FittedProphetForecaster {
             model: RefCell::new(model),
-            training_n: y.len(),
+            training_n,
         })
     }
 }
@@ -120,7 +134,7 @@ impl Predict for FittedProphetForecaster {
         let predictions = {
             let model = self.model.borrow();
             let prediction_data = model.make_future_dataframe(
-                NonZeroU32::try_from(horizon as u32).expect("horizon should be > 0"),
+                NonZeroU32::try_from(horizon as u32).map_err(|_| Error::InvalidHorizon(horizon))?,
                 IncludeHistory::No,
             )?;
             model.predict(prediction_data)?

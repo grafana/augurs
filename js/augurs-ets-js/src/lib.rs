@@ -42,7 +42,7 @@ impl AutoETS {
     /// returns an error.
     #[wasm_bindgen]
     pub fn fit(&mut self, y: VecF64) -> Result<(), JsError> {
-        self.fitted = Some(self.inner.fit(&y.convert()?)?);
+        self.fitted = Some(self.inner.fit(&mut y.convert()?)?);
         Ok(())
     }
 
