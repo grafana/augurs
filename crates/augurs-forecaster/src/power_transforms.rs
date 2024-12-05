@@ -1,6 +1,6 @@
 use argmin::core::*;
-use argmin::solver::brent::BrentRoot;
-use crate::box_cox;
+use argmin::solver::brent::BrentOpt;
+use crate::transforms::box_cox;
 
 fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> f64 {
     let n = data.len() as f64;
@@ -32,11 +32,32 @@ impl CostFunction for BoxCoxProblem {
 pub fn optimize_lambda(data: &[f64]) -> f64 {
     let cost = BoxCoxProblem { data: data.to_vec() };
     let init_param = 0.5;
-    let solver = BrentRoot::new(-5.0, 5.0, 1e-10);
+    let solver = BrentOpt::new(-2.0, 2.0);
 
     let res = Executor::new(cost, solver)
         .configure(|state| state.param(init_param).max_iters(100))
         .run()
         .unwrap();
     return res.state.best_param.unwrap();
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use augurs_testing::assert_approx_eq;
+
+    #[test]
+    fn correct_optimal_lambda() {
+        let data = &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+        let got = optimize_lambda(data);
+        assert_approx_eq!(got, 0.7123778635679304);
+    }
+
+    #[test]
+    fn test_boxcox_llf() {
+        let data = &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+        let lambda = 1.0;
+        let got = box_cox_log_likelihood(data, lambda);
+        assert_approx_eq!(got, 11.266065387038703);
+    }
 }

@@ -16,9 +16,10 @@ bench = false
 augurs-core.workspace = true
 itertools.workspace = true
 thiserror.workspace = true
+argmin = "0.10.0"
 
 [dev-dependencies]
-augurs.workspace = true
+augurs = { workspace = true, features = ["mstl", "ets", "forecaster"]}
 augurs-testing.workspace = true
 
 [lints]
