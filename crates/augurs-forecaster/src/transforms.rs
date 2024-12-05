@@ -8,7 +8,7 @@ use augurs_core::{
 };
 
 /// Transforms and Transform implementations.
-/// 
+///
 /// The `Transforms` struct is a collection of `Transform` instances that can be applied to a time series.
 /// The `Transform` enum represents a single transformation that can be applied to a time series.
 #[derive(Debug, Default)]
@@ -90,9 +90,8 @@ impl Transform {
         Self::Log
     }
 
-
     /// Create a new Box-Cox transform.
-    /// 
+    ///
     /// This transform applies the Box-Cox transformation to each item.
     pub fn boxcox(lambda: f64) -> Self {
         Self::BoxCox(lambda)
@@ -393,7 +392,6 @@ trait ExpExt: Iterator<Item = f64> {
 
 impl<T> ExpExt for T where T: Iterator<Item = f64> {}
 
-
 /// Returns the Box-Cox transformation of the given value.
 /// Assumes x > 0.
 pub fn box_cox(x: f64, lambda: f64) -> f64 {
@@ -426,7 +424,10 @@ trait BoxCoxExt: Iterator<Item = f64> {
     where
         Self: Sized,
     {
-        BoxCox { inner: self, lambda }
+        BoxCox {
+            inner: self,
+            lambda,
+        }
     }
 }
 
@@ -463,12 +464,14 @@ trait InverseBoxCoxExt: Iterator<Item = f64> {
     where
         Self: Sized,
     {
-        InverseBoxCox { inner: self, lambda }
+        InverseBoxCox {
+            inner: self,
+            lambda,
+        }
     }
 }
 
 impl<T> InverseBoxCoxExt for T where T: Iterator<Item = f64> {}
-
 
 #[cfg(test)]
 mod test {

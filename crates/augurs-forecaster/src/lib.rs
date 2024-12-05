@@ -9,9 +9,8 @@ pub mod transforms;
 pub use data::Data;
 pub use error::Error;
 pub use forecaster::Forecaster;
+pub use power_transforms::optimize_lambda;
 pub use transforms::Transform;
 pub use transforms::Transforms;
-pub use power_transforms::optimize_lambda;
-
 
 type Result<T> = std::result::Result<T, Error>;
