@@ -395,6 +395,9 @@ impl<T> ExpExt for T where T: Iterator<Item = f64> {}
 /// Returns the Box-Cox transformation of the given value.
 /// Assumes x > 0.
 pub fn box_cox(x: f64, lambda: f64) -> f64 {
+    if x <= 0.0 {
+        panic!("Input x must be positive for Box-Cox transformation.");
+    }
     if lambda == 0.0 {
         x.ln()
     } else {
