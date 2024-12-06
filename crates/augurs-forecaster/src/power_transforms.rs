@@ -35,18 +35,21 @@ impl CostFunction for BoxCoxProblem {
 }
 
 /// Optimize the lambda parameter for the Box-Cox transformation
-pub fn optimize_lambda(data: &[f64]) -> f64 {
+pub fn optimize_lambda(data: &[f64]) -> f64{
     let cost = BoxCoxProblem {
         data: data.to_vec(),
     };
     let init_param = 0.5;
     let solver = BrentOpt::new(-2.0, 2.0);
 
-    let res = Executor::new(cost, solver)
+    let result = Executor::new(cost, solver)
         .configure(|state| state.param(init_param).max_iters(100))
-        .run()
-        .unwrap();
-    res.state.best_param.unwrap()
+        .run();
+
+    match result {
+        Ok(result) => result.state().best_param.unwrap(),
+        Err(error) => panic!("Optimization failed: {}", error),
+    }
 }
 
 #[cfg(test)]
