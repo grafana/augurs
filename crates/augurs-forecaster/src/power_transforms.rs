@@ -20,11 +20,11 @@ fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> f64 {
 }
 
 #[derive(Clone)]
-struct BoxCoxProblem {
-    data: Vec<f64>,
+struct BoxCoxProblem<'a> {
+    data: &'a [f64],
 }
 
-impl CostFunction for BoxCoxProblem {
+impl CostFunction for BoxCoxProblem<'_> {
     type Param = f64;
     type Output = f64;
 
@@ -37,7 +37,7 @@ impl CostFunction for BoxCoxProblem {
 /// Optimize the lambda parameter for the Box-Cox transformation
 pub fn optimize_lambda(data: &[f64]) -> f64{
     let cost = BoxCoxProblem {
-        data: data.to_vec(),
+        data: data,
     };
     let init_param = 0.5;
     let solver = BrentOpt::new(-2.0, 2.0);
