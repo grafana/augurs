@@ -54,7 +54,12 @@ pub enum Transform {
     /// Log transform.
     Log,
     /// Box-Cox transform.
-    BoxCox(f64),
+    BoxCox{
+        /// The lambda parameter for the Box-Cox transformation.
+        /// If lambda == 0, the transformation is equivalent to the natural logarithm.
+        /// Otherwise, the transformation is (x^lambda - 1) / lambda.
+        lambda: f64,
+    },
 }
 
 impl Transform {
@@ -93,8 +98,11 @@ impl Transform {
     /// Create a new Box-Cox transform.
     ///
     /// This transform applies the Box-Cox transformation to each item.
+    /// The Box-Cox transformation is defined as:
+    /// - if lambda == 0: x.ln()
+    /// - otherwise: (x^lambda - 1) / lambda
     pub fn boxcox(lambda: f64) -> Self {
-        Self::BoxCox(lambda)
+        Self::BoxCox { lambda }
     }
 
     /// Apply the transformation to the given time series.
@@ -107,7 +115,7 @@ impl Transform {
             Self::MinMaxScaler(params) => Box::new(input.min_max_scale(params.clone())),
             Self::Logit => Box::new(input.logit()),
             Self::Log => Box::new(input.log()),
-            Self::BoxCox(lambda) => Box::new(input.boxcox(*lambda)),
+            Self::BoxCox{lambda} => Box::new(input.boxcox(*lambda)),
         }
     }
 
@@ -121,7 +129,7 @@ impl Transform {
             Self::MinMaxScaler(params) => Box::new(input.inverse_min_max_scale(params.clone())),
             Self::Logit => Box::new(input.logistic()),
             Self::Log => Box::new(input.exp()),
-            Self::BoxCox(lambda) => Box::new(input.inverse_boxcox(*lambda)),
+            Self::BoxCox{lambda} => Box::new(input.inverse_boxcox(*lambda)),
         }
     }
 
