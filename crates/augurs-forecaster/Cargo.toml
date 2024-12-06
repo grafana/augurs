@@ -13,10 +13,10 @@ description = "A high-level API for the augurs forecasting library."
 bench = false
 
 [dependencies]
+argmin = "0.10.0"
 augurs-core.workspace = true
 itertools.workspace = true
 thiserror.workspace = true
-argmin = "0.10.0"
 
 [dev-dependencies]
 augurs = { workspace = true, features = ["mstl", "ets", "forecaster"]}
