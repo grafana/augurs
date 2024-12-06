@@ -4,6 +4,7 @@ use argmin::solver::brent::BrentOpt;
 
 fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> f64 {
     let n = data.len() as f64;
+    assert!(n > 0.0, "Data must not be empty");
     let transformed_data: Vec<f64> = data.iter().map(|&x| box_cox(x, lambda)).collect();
     let mean_transformed: f64 = transformed_data.iter().copied().sum::<f64>() / n;
     let variance: f64 = transformed_data
