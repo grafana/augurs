@@ -7,6 +7,8 @@ use augurs_core::{
     Forecast,
 };
 
+use crate::optimize_lambda;
+
 /// Transforms and Transform implementations.
 ///
 /// The `Transforms` struct is a collection of `Transform` instances that can be applied to a time series.
@@ -102,6 +104,16 @@ impl Transform {
     /// - if lambda == 0: x.ln()
     /// - otherwise: (x^lambda - 1) / lambda
     pub fn boxcox(lambda: f64) -> Self {
+        Self::BoxCox { lambda }
+    }
+
+    /// Create the power transform that optimizes the lambda parameter for the Box-Cox transformation.
+    /// 
+    /// This transform applies the Power transformation to each item.
+    /// The Power transformation is defined as:
+    ///
+    pub fn power_transform(data: &[f64]) -> Self {
+        let lambda = optimize_lambda(data);
         Self::BoxCox { lambda }
     }
 
