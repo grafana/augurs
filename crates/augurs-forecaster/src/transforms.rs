@@ -14,7 +14,7 @@ use crate::power_transforms::optimize_lambda;
 /// The `Transforms` struct is a collection of `Transform` instances that can be applied to a time series.
 /// The `Transform` enum represents a single transformation that can be applied to a time series.
 #[derive(Debug, Default)]
-pub (crate) struct Transforms(Vec<Transform>);
+pub(crate) struct Transforms(Vec<Transform>);
 
 impl Transforms {
     /// create a new `Transforms` instance with the given transforms.
@@ -56,7 +56,7 @@ pub enum Transform {
     /// Log transform.
     Log,
     /// Box-Cox transform.
-    BoxCox{
+    BoxCox {
         /// The lambda parameter for the Box-Cox transformation.
         /// If lambda == 0, the transformation is equivalent to the natural logarithm.
         /// Otherwise, the transformation is (x^lambda - 1) / lambda.
@@ -108,7 +108,7 @@ impl Transform {
     }
 
     /// Create the power transform that optimizes the lambda parameter for the Box-Cox transformation.
-    /// 
+    ///
     /// This transform applies the Power transformation to each item.
     /// The Power transformation is defined as:
     ///
@@ -127,7 +127,7 @@ impl Transform {
             Self::MinMaxScaler(params) => Box::new(input.min_max_scale(params.clone())),
             Self::Logit => Box::new(input.logit()),
             Self::Log => Box::new(input.log()),
-            Self::BoxCox{lambda} => Box::new(input.boxcox(*lambda)),
+            Self::BoxCox { lambda } => Box::new(input.box_cox(*lambda)),
         }
     }
 
@@ -141,7 +141,7 @@ impl Transform {
             Self::MinMaxScaler(params) => Box::new(input.inverse_min_max_scale(params.clone())),
             Self::Logit => Box::new(input.logistic()),
             Self::Log => Box::new(input.exp()),
-            Self::BoxCox{lambda} => Box::new(input.inverse_boxcox(*lambda)),
+            Self::BoxCox { lambda } => Box::new(input.inverse_box_cox(*lambda)),
         }
     }
 
@@ -415,7 +415,10 @@ impl<T> ExpExt for T where T: Iterator<Item = f64> {}
 /// Returns the Box-Cox transformation of the given value.
 /// Assumes x > 0.
 pub fn box_cox(x: f64, lambda: f64) -> f64 {
-    assert!(x > 0.0, "Input x must be positive for Box-Cox transformation.");
+    assert!(
+        x > 0.0,
+        "Input x must be positive for Box-Cox transformation."
+    );
     if lambda == 0.0 {
         x.ln()
     } else {

@@ -35,10 +35,8 @@ impl CostFunction for BoxCoxProblem<'_> {
 }
 
 /// Optimize the lambda parameter for the Box-Cox transformation
-pub fn optimize_lambda(data: &[f64]) -> f64{
-    let cost = BoxCoxProblem {
-        data: data,
-    };
+pub fn optimize_lambda(data: &[f64]) -> f64 {
+    let cost = BoxCoxProblem { data: data };
     let init_param = 0.5;
     let solver = BrentOpt::new(-2.0, 2.0);
 
