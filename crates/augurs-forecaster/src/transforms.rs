@@ -441,7 +441,7 @@ where
 }
 
 trait BoxCoxExt: Iterator<Item = f64> {
-    fn boxcox(self, lambda: f64) -> BoxCox<Self>
+    fn box_cox(self, lambda: f64) -> BoxCox<Self>
     where
         Self: Sized,
     {
@@ -481,7 +481,7 @@ where
 }
 
 trait InverseBoxCoxExt: Iterator<Item = f64> {
-    fn inverse_boxcox(self, lambda: f64) -> InverseBoxCox<Self>
+    fn inverse_box_cox(self, lambda: f64) -> InverseBoxCox<Self>
     where
         Self: Sized,
     {
