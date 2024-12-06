@@ -7,23 +7,23 @@ use augurs_core::{
     Forecast,
 };
 
-use crate::optimize_lambda;
+use crate::power_transforms::optimize_lambda;
 
 /// Transforms and Transform implementations.
 ///
 /// The `Transforms` struct is a collection of `Transform` instances that can be applied to a time series.
 /// The `Transform` enum represents a single transformation that can be applied to a time series.
 #[derive(Debug, Default)]
-pub struct Transforms(Vec<Transform>);
+pub (crate) struct Transforms(Vec<Transform>);
 
 impl Transforms {
     /// create a new `Transforms` instance with the given transforms.
-    pub fn new(transforms: Vec<Transform>) -> Self {
+    pub(crate) fn new(transforms: Vec<Transform>) -> Self {
         Self(transforms)
     }
 
     /// Apply the transformations to the given time series.
-    pub fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
+    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
@@ -33,7 +33,7 @@ impl Transforms {
     }
 
     /// Apply the inverse transformations to the given forecast.
-    pub fn inverse_transform(&self, forecast: Forecast) -> Forecast {
+    pub(crate) fn inverse_transform(&self, forecast: Forecast) -> Forecast {
         self.0
             .iter()
             .rev()
