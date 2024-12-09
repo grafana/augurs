@@ -113,7 +113,7 @@ impl Transform {
     /// The Power transformation is defined as:
     ///
     pub fn power_transform(data: &[f64]) -> Self {
-        let lambda = optimize_lambda(data);
+        let lambda = optimize_lambda(data).unwrap_or_else(|_| 0.0);
         Self::BoxCox { lambda }
     }
 
