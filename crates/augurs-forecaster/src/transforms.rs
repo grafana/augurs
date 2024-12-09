@@ -114,7 +114,6 @@ impl Transform {
         Self::BoxCox { lambda }
     }
 
-
     /// Create a new Yeo-Johnson transform.
     /// This transform applies the Yeo-Johnson transformation to each item.
     /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that supports negative values.
@@ -134,10 +133,12 @@ impl Transform {
     ///
     pub fn power_transform(data: &[f64]) -> Self {
         if data.iter().all(|&x| x > 0.0) {
-            let lambda = optimize_box_cox_lambda(data).expect("Failed to optimize lambda (box-cox)");
+            let lambda =
+                optimize_box_cox_lambda(data).expect("Failed to optimize lambda (box-cox)");
             Self::BoxCox { lambda }
         } else {
-            let lambda = optimize_yeo_johnson_lambda(data).expect("Failed to optimize lambda (yeo-johnson)");
+            let lambda =
+                optimize_yeo_johnson_lambda(data).expect("Failed to optimize lambda (yeo-johnson)");
             Self::YeoJohnson { lambda }
         }
     }
@@ -484,7 +485,9 @@ where
 {
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|x| box_cox(x, self.lambda).unwrap_or(f64::NAN))
+        self.inner
+            .next()
+            .map(|x| box_cox(x, self.lambda).unwrap_or(f64::NAN))
     }
 }
 
@@ -555,7 +558,9 @@ where
 {
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|x| yeo_johnson(x, self.lambda).unwrap_or(f64::NAN))
+        self.inner
+            .next()
+            .map(|x| yeo_johnson(x, self.lambda).unwrap_or(f64::NAN))
     }
 }
 
@@ -595,7 +600,9 @@ where
 {
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|y| inverse_yeo_johnson(y, self.lambda))
+        self.inner
+            .next()
+            .map(|y| inverse_yeo_johnson(y, self.lambda))
     }
 }
 

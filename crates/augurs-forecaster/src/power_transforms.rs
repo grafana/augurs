@@ -35,33 +35,40 @@ fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
 
 fn yeo_johnson_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
     let n = data.len() as f64;
-    
+
     if n == 0.0 {
         return Err(Error::msg("Data array is empty"));
     }
-    
-    let transformed_data: Result<Vec<f64>, _> = data.iter().map(|&x| yeo_johnson(x, lambda)).collect();
+
+    let transformed_data: Result<Vec<f64>, _> =
+        data.iter().map(|&x| yeo_johnson(x, lambda)).collect();
 
     let transformed_data = match transformed_data {
         Ok(values) => values,
         Err(e) => return Err(Error::msg(e)),
     };
-    
+
     let mean = transformed_data.iter().sum::<f64>() / n;
-    
-    let variance = transformed_data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n;
-    
+
+    let variance = transformed_data
+        .iter()
+        .map(|&x| (x - mean).powi(2))
+        .sum::<f64>()
+        / n;
+
     if variance <= 0.0 {
         return Err(Error::msg("Variance is non-positive"));
     }
-    
+
     let log_sigma_squared = variance.ln();
     let log_likelihood = -n / 2.0 * log_sigma_squared;
-    
-    let additional_term: f64 = data.iter()
+
+    let additional_term: f64 = data
+        .iter()
         .map(|&x| (x.signum() * (x.abs() + 1.0).ln()))
-        .sum::<f64>() * (lambda - 1.0);
-    
+        .sum::<f64>()
+        * (lambda - 1.0);
+
     Ok(log_likelihood + additional_term)
 }
 
@@ -186,7 +193,7 @@ mod test {
     }
 
     #[test]
-    fn test_yeo_johnson_llf(){
+    fn test_yeo_johnson_llf() {
         let data = &[0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
         let lambda = 1.0;
         let got = yeo_johnson_log_likelihood(data, lambda);
