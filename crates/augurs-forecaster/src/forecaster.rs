@@ -124,4 +124,17 @@ mod test {
         let forecasts = forecaster.predict(4, None).unwrap();
         assert_all_approx_eq(&forecasts.point, &[5.0, 5.0, 5.0, 5.0]);
     }
+
+    #[test]
+    fn test_forecaster_power() {
+        let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
+        let transforms = vec![
+            Transform::power_transform(data),
+        ];
+        let model = MSTLModel::new(vec![2], NaiveTrend::new());
+        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        forecaster.fit(data).unwrap();
+        let forecasts = forecaster.predict(4, None).unwrap();
+        assert_all_approx_eq(&forecasts.point, &[5.084499064884572, 5.000000030329821, 5.084499064884572, 5.000000030329821]);
+    }
 }
