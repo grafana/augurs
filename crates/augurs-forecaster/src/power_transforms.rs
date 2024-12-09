@@ -76,7 +76,7 @@ impl CostFunction for BoxCoxProblem<'_> {
 
     // The goal is to minimize the negative log-likelihood
     fn cost(&self, lambda: &Self::Param) -> Result<Self::Output, Error> {
-        box_cox_log_likelihood(&self.data, *lambda).map(|ll| -ll)
+        box_cox_log_likelihood(self.data, *lambda).map(|ll| -ll)
     }
 }
 
@@ -91,7 +91,7 @@ impl CostFunction for YeoJohnsonProblem<'_> {
 
     // The goal is to minimize the negative log-likelihood
     fn cost(&self, lambda: &Self::Param) -> Result<Self::Output, Error> {
-        yeo_johnson_log_likelihood(&self.data, *lambda).map(|ll| -ll)
+        yeo_johnson_log_likelihood(self.data, *lambda).map(|ll| -ll)
     }
 }
 
