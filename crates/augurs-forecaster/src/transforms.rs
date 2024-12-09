@@ -7,7 +7,7 @@ use augurs_core::{
     Forecast,
 };
 
-use crate::power_transforms::optimize_lambda;
+use crate::power_transforms::{optimize_box_cox_lambda, optimize_yeo_johnson_lambda};
 
 /// Transforms and Transform implementations.
 ///
@@ -62,6 +62,13 @@ pub enum Transform {
         /// Otherwise, the transformation is (x^lambda - 1) / lambda.
         lambda: f64,
     },
+    /// Yeo-Johnson transform.
+    YeoJohnson {
+        /// The lambda parameter for the Yeo-Johnson transformation.
+        /// If lambda == 0, the transformation is equivalent to the natural logarithm.
+        /// Otherwise, the transformation is ((x + 1)^lambda - 1) / lambda.
+        lambda: f64,
+    },
 }
 
 impl Transform {
@@ -107,14 +114,32 @@ impl Transform {
         Self::BoxCox { lambda }
     }
 
+
+    /// Create a new Yeo-Johnson transform.
+    /// This transform applies the Yeo-Johnson transformation to each item.
+    /// The Yeo-Johnson transformation is defined as:
+    /// - if lambda == 0: (x + 1).ln()
+    /// - otherwise: ((x + 1)^lambda - 1) / lambda
+    /// - if x < 0 and lambda == 2: (-x + 1).ln()
+    /// - otherwise: ((-x + 1)^2 - 1) / 2
+    /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that supports negative values.
+    pub fn yeo_johnson(lambda: f64) -> Self {
+        Self::YeoJohnson { lambda }
+    }
+
     /// Create the power transform that optimizes the lambda parameter for the Box-Cox transformation.
     ///
     /// This transform applies the Power transformation to each item.
     /// The Power transformation is defined as:
     ///
     pub fn power_transform(data: &[f64]) -> Self {
-        let lambda = optimize_lambda(data).expect("Failed to optimize lambda");
-        Self::BoxCox { lambda }
+        if data.iter().all(|&x| x > 0.0) {
+            let lambda = optimize_box_cox_lambda(data).expect("Failed to optimize lambda (box-cox)");
+            Self::BoxCox { lambda }
+        } else {
+            let lambda = optimize_yeo_johnson_lambda(data).expect("Failed to optimize lambda (yeo-johnson)");
+            Self::YeoJohnson { lambda }
+        }
     }
 
     /// Apply the transformation to the given time series.
@@ -128,6 +153,7 @@ impl Transform {
             Self::Logit => Box::new(input.logit()),
             Self::Log => Box::new(input.log()),
             Self::BoxCox { lambda } => Box::new(input.box_cox(*lambda)),
+            Self::YeoJohnson { lambda } => Box::new(input.yeo_johnson(*lambda)),
         }
     }
 
@@ -142,6 +168,7 @@ impl Transform {
             Self::Logit => Box::new(input.logistic()),
             Self::Log => Box::new(input.exp()),
             Self::BoxCox { lambda } => Box::new(input.inverse_box_cox(*lambda)),
+            Self::YeoJohnson { lambda } => Box::new(input.inverse_yeo_johnson(*lambda)),
         }
     }
 
@@ -425,6 +452,27 @@ pub fn box_cox(x: f64, lambda: f64) -> Result<f64, &'static str> {
     }
 }
 
+/// Returns the Yeo-Johnson transformation of the given value.
+pub fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, &'static str> {
+    if x.is_nan() || lambda.is_nan() {
+        return Err("Input values must be valid numbers.");
+    }
+
+    if x >= 0.0 {
+        if lambda == 0.0 {
+            Ok((x + 1.0).ln())
+        } else {
+            Ok(((x + 1.0).powf(lambda) - 1.0) / lambda)
+        }
+    } else {
+        if lambda == 2.0 {
+            Ok(-(-x + 1.0).ln())
+        } else {
+            Ok(-((-x + 1.0).powf(2.0 - lambda) - 1.0) / (2.0 - lambda))
+        }
+    }
+}
+
 /// An iterator adapter that applies the Box-Cox transformation to each item.
 #[derive(Clone, Debug)]
 struct BoxCox<T> {
@@ -495,6 +543,77 @@ trait InverseBoxCoxExt: Iterator<Item = f64> {
 }
 
 impl<T> InverseBoxCoxExt for T where T: Iterator<Item = f64> {}
+
+/// An iterator adapter that applies the Yeo-Johnson transformation to each item.
+#[derive(Clone, Debug)]
+struct YeoJohnson<T> {
+    inner: T,
+    lambda: f64,
+}
+
+impl<T> Iterator for YeoJohnson<T>
+where
+    T: Iterator<Item = f64>,
+{
+    type Item = f64;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|x| yeo_johnson(x, self.lambda).unwrap_or(f64::NAN))
+    }
+}
+
+trait YeoJohnsonExt: Iterator<Item = f64> {
+    fn yeo_johnson(self, lambda: f64) -> YeoJohnson<Self>
+    where
+        Self: Sized,
+    {
+        YeoJohnson {
+            inner: self,
+            lambda,
+        }
+    }
+}
+
+impl<T> YeoJohnsonExt for T where T: Iterator<Item = f64> {}
+
+/// Returns the inverse Yeo-Johnson transformation of the given value.
+fn inverse_yeo_johnson(y: f64, lambda: f64) -> f64 {
+    if lambda == 0.0 {
+        y.exp()
+    } else {
+        (y * lambda + 1.0).powf(1.0 / lambda)
+    }
+}
+
+/// An iterator adapter that applies the inverse Yeo-Johnson transformation to each item.
+#[derive(Clone, Debug)]
+struct InverseYeoJohnson<T> {
+    inner: T,
+    lambda: f64,
+}
+
+impl<T> Iterator for InverseYeoJohnson<T>
+where
+    T: Iterator<Item = f64>,
+{
+    type Item = f64;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|y| inverse_yeo_johnson(y, self.lambda))
+    }
+}
+
+trait InverseYeoJohnsonExt: Iterator<Item = f64> {
+    fn inverse_yeo_johnson(self, lambda: f64) -> InverseYeoJohnson<Self>
+    where
+        Self: Sized,
+    {
+        InverseYeoJohnson {
+            inner: self,
+            lambda,
+        }
+    }
+}
+
+impl<T> InverseYeoJohnsonExt for T where T: Iterator<Item = f64> {}
 
 #[cfg(test)]
 mod test {

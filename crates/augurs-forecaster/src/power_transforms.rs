@@ -1,4 +1,5 @@
 use crate::transforms::box_cox;
+use crate::transforms::yeo_johnson;
 use argmin::core::*;
 use argmin::solver::brent::BrentOpt;
 
@@ -10,8 +11,12 @@ fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
     if data.iter().any(|&x| x <= 0.0) {
         return Err(Error::msg("All data must be greater than 0"));
     }
-    let transformed_data: Result<Vec<f64>, Error> = data.iter().map(|&x| box_cox(x, lambda).map_err(|e| Error::msg(e))).collect();
-    let transformed_data = transformed_data?;
+    let transformed_data: Result<Vec<f64>, _> = data.iter().map(|&x| box_cox(x, lambda)).collect();
+
+    let transformed_data = match transformed_data {
+        Ok(values) => values,
+        Err(e) => return Err(Error::msg(e)),
+    };
     let mean_transformed: f64 = transformed_data.iter().copied().sum::<f64>() / n;
     let variance: f64 = transformed_data
         .iter()
@@ -26,6 +31,38 @@ fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
     let log_likelihood =
         -0.5 * n * variance.ln() + (lambda - 1.0) * data.iter().map(|&x| x.ln()).sum::<f64>();
     Ok(log_likelihood)
+}
+
+fn yeo_johnson_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
+    let n = data.len() as f64;
+    
+    if n == 0.0 {
+        return Err(Error::msg("Data array is empty"));
+    }
+    
+    let transformed_data: Result<Vec<f64>, _> = data.iter().map(|&x| yeo_johnson(x, lambda)).collect();
+
+    let transformed_data = match transformed_data {
+        Ok(values) => values,
+        Err(e) => return Err(Error::msg(e)),
+    };
+    
+    let mean = transformed_data.iter().sum::<f64>() / n;
+    
+    let variance = transformed_data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n;
+    
+    if variance <= 0.0 {
+        return Err(Error::msg("Variance is non-positive"));
+    }
+    
+    let log_sigma_squared = variance.ln();
+    let log_likelihood = -n / 2.0 * log_sigma_squared;
+    
+    let additional_term: f64 = data.iter()
+        .map(|&x| (x.signum() * (x.abs() + 1.0).ln()))
+        .sum::<f64>() * (lambda - 1.0);
+    
+    Ok(log_likelihood + additional_term)
 }
 
 #[derive(Clone)]
@@ -43,22 +80,54 @@ impl CostFunction for BoxCoxProblem<'_> {
     }
 }
 
-/// Optimize the lambda parameter for the Box-Cox transformation
-pub (crate) fn optimize_lambda(data: &[f64]) -> Result<f64, Error> {
-    let cost = BoxCoxProblem { data: data };
+#[derive(Clone)]
+struct YeoJohnsonProblem<'a> {
+    data: &'a [f64],
+}
+
+impl CostFunction for YeoJohnsonProblem<'_> {
+    type Param = f64;
+    type Output = f64;
+
+    // The goal is to minimize the negative log-likelihood
+    fn cost(&self, lambda: &Self::Param) -> Result<Self::Output, Error> {
+        yeo_johnson_log_likelihood(&self.data, *lambda).map(|ll| -ll)
+    }
+}
+
+/// Optimize the lambda parameter for the Box-Cox or Yeo-Johnson transformation
+pub(crate) fn optimize_box_cox_lambda(data: &[f64]) -> Result<f64, Error> {
+    // Use Box-Cox transformation
+    let cost = BoxCoxProblem { data };
     let init_param = 0.5;
     let solver = BrentOpt::new(-2.0, 2.0);
 
     let result = Executor::new(cost, solver)
-        .configure(|state| state.param(init_param).max_iters(100))
+        .configure(|state| state.param(init_param).max_iters(1000))
         .run();
 
-    result
-        .and_then(|res| {
-            res.state()
-                .best_param
-                .ok_or_else(|| Error::msg("No best parameter found"))
-            })
+    result.and_then(|res| {
+        res.state()
+            .best_param
+            .ok_or_else(|| Error::msg("No best parameter found"))
+    })
+}
+
+pub(crate) fn optimize_yeo_johnson_lambda(data: &[f64]) -> Result<f64, Error> {
+    // Use Yeo-Johnson transformation
+    let cost = YeoJohnsonProblem { data };
+    let init_param = 0.5;
+    let solver = BrentOpt::new(-2.0, 2.0);
+
+    let result = Executor::new(cost, solver)
+        .configure(|state| state.param(init_param).max_iters(1000))
+        .run();
+
+    result.and_then(|res| {
+        res.state()
+            .best_param
+            .ok_or_else(|| Error::msg("No best parameter found"))
+    })
 }
 
 #[cfg(test)]
@@ -67,30 +136,39 @@ mod test {
     use augurs_testing::assert_approx_eq;
 
     #[test]
-    fn correct_optimal_lambda() {
+    fn correct_optimal_box_cox_lambda() {
         let data = &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
-        let got = optimize_lambda(data);
+        let got = optimize_box_cox_lambda(data);
         assert!(got.is_ok());
         let lambda = got.unwrap();
         assert_approx_eq!(lambda, 0.7123778635679304);
     }
 
     #[test]
-    fn optimize_lambda_empty_data() {
+    fn optimal_box_cox_lambda_lambda_empty_data() {
         let data = &[];
-        let got = optimize_lambda(data);
+        let got = optimize_box_cox_lambda(data);
         assert!(got.is_err());
     }
 
     #[test]
-    fn optimize_lambda_non_positive_data() {
+    fn optimal_box_cox_lambda_non_positive_data() {
         let data = &[0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
-        let got = optimize_lambda(data);
+        let got = optimize_box_cox_lambda(data);
         assert!(got.is_err());
     }
 
     #[test]
-    fn test_boxcox_llf() {
+    fn correct_optimal_yeo_johnson_lambda() {
+        let data = &[0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+        let got = optimize_yeo_johnson_lambda(data);
+        assert!(got.is_ok());
+        let lambda = got.unwrap();
+        assert_approx_eq!(lambda, 1.7458442076987954);
+    }
+
+    #[test]
+    fn test_box_cox_llf() {
         let data = &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
         let lambda = 1.0;
         let got = box_cox_log_likelihood(data, lambda);
@@ -100,10 +178,20 @@ mod test {
     }
 
     #[test]
-    fn test_boxcox_llf_non_positive() {
+    fn test_box_cox_llf_non_positive() {
         let data = &[0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
         let lambda = 0.0;
         let got = box_cox_log_likelihood(data, lambda);
         assert!(got.is_err());
+    }
+
+    #[test]
+    fn test_yeo_johnson_llf(){
+        let data = &[0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+        let lambda = 1.0;
+        let got = yeo_johnson_log_likelihood(data, lambda);
+        assert!(got.is_ok());
+        let llf = got.unwrap();
+        assert_approx_eq!(llf, 10.499377905819307);
     }
 }
