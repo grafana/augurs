@@ -117,12 +117,12 @@ impl Transform {
 
     /// Create a new Yeo-Johnson transform.
     /// This transform applies the Yeo-Johnson transformation to each item.
+    /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that supports negative values.
     /// The Yeo-Johnson transformation is defined as:
     /// - if lambda == 0: (x + 1).ln()
     /// - otherwise: ((x + 1)^lambda - 1) / lambda
     /// - if x < 0 and lambda == 2: (-x + 1).ln()
     /// - otherwise: ((-x + 1)^2 - 1) / 2
-    /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that supports negative values.
     pub fn yeo_johnson(lambda: f64) -> Self {
         Self::YeoJohnson { lambda }
     }
@@ -464,12 +464,10 @@ pub fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, &'static str> {
         } else {
             Ok(((x + 1.0).powf(lambda) - 1.0) / lambda)
         }
+    } else if lambda == 2.0 {
+        Ok(-(-x + 1.0).ln())
     } else {
-        if lambda == 2.0 {
-            Ok(-(-x + 1.0).ln())
-        } else {
-            Ok(-((-x + 1.0).powf(2.0 - lambda) - 1.0) / (2.0 - lambda))
-        }
+        Ok(-((-x + 1.0).powf(2.0 - lambda) - 1.0) / (2.0 - lambda))
     }
 }
 
