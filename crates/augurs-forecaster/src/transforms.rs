@@ -630,20 +630,20 @@ mod test {
     }
 
     #[test]
-    fn boxcox_test() {
+    fn box_cox_test() {
         let data = vec![1.0, 2.0, 3.0];
         let lambda = 0.5;
         let expected = vec![0.0, 0.8284271247461903, 1.4641016151377544];
-        let actual: Vec<_> = data.into_iter().boxcox(lambda).collect();
+        let actual: Vec<_> = data.into_iter().box_cox(lambda).collect();
         assert_all_close(&expected, &actual);
     }
 
     #[test]
-    fn inverse_boxcox_test() {
+    fn inverse_box_cox_test() {
         let data = vec![0.0, 0.5_f64.ln(), 1.0_f64.ln()];
         let lambda = 0.5;
         let expected = vec![1.0, 0.426966072919605, 1.0];
-        let actual: Vec<_> = data.into_iter().inverse_boxcox(lambda).collect();
+        let actual: Vec<_> = data.into_iter().inverse_box_cox(lambda).collect();
         assert_all_close(&expected, &actual);
     }
 }
