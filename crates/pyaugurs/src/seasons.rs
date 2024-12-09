@@ -16,6 +16,7 @@ use augurs_seasons::{Detector, PeriodogramDetector};
 ///                   The default is 0.9.
 /// :return: an array of season lengths.
 #[pyfunction]
+#[pyo3(signature = (y, min_period=None, max_period=None, threshold=None))]
 pub fn seasonalities(
     py: Python<'_>,
     y: PyReadonlyArray1<'_, f64>,
@@ -35,9 +36,5 @@ pub fn seasonalities(
         builder = builder.threshold(threshold);
     }
 
-    Ok(builder
-        .build()
-        .detect(y.as_slice()?)
-        .to_pyarray_bound(py)
-        .into())
+    Ok(builder.build().detect(y.as_slice()?).to_pyarray(py).into())
 }

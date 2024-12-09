@@ -148,6 +148,7 @@ impl Dtw {
     }
 
     #[new]
+    #[pyo3(signature = (window=None, distance_fn=None, max_distance=None, lower_bound=None, upper_bound=None))]
     fn new(
         window: Option<usize>,
         distance_fn: Option<&str>,

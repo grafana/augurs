@@ -1,0 +1,33 @@
+name: Python tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    
+jobs:
+  test:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: crates/pyaugurs/pyproject.toml
+      - name: Setup virtualenv
+        run: uv venv --project crates/pyaugurs
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          target: x86_64
+          args: --uv
+          working-directory: crates/pyaugurs
+          sccache: 'true'
+      - name: Install deps
+        run: uv sync --project crates/pyaugurs --all-extras --dev
+      - name: Run tests
+        run: uv run --project crates/pyaugurs pytest crates/pyaugurs/tests

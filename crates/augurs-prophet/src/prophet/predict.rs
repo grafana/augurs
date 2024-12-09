@@ -504,7 +504,7 @@ impl<O> Prophet<O> {
             let lambda = n_cp as f64 * (t_max - 1.0);
             // Lambda should always be positive, so this should never fail.
             let dist = Poisson::new(lambda).expect("Valid Poisson distribution");
-            rng.sample(dist).round() as usize
+            rng.sample::<f64, _>(dist).round() as usize
         } else {
             0
         };
