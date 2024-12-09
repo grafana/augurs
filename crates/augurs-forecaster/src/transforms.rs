@@ -414,15 +414,14 @@ impl<T> ExpExt for T where T: Iterator<Item = f64> {}
 
 /// Returns the Box-Cox transformation of the given value.
 /// Assumes x > 0.
-pub fn box_cox(x: f64, lambda: f64) -> f64 {
-    assert!(
-        x > 0.0,
-        "Input x must be positive for Box-Cox transformation."
-    );
+pub fn box_cox(x: f64, lambda: f64) -> Result<f64, &'static str> {
+    if x <= 0.0 {
+        return Err("x must be greater than 0");
+    }
     if lambda == 0.0 {
-        x.ln()
+        Ok(x.ln())
     } else {
-        (x.powf(lambda) - 1.0) / lambda
+        Ok((x.powf(lambda) - 1.0) / lambda)
     }
 }
 
@@ -439,7 +438,7 @@ where
 {
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|x| box_cox(x, self.lambda))
+        self.inner.next().map(|x| box_cox(x, self.lambda).unwrap_or(f64::NAN))
     }
 }
 

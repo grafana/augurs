@@ -10,7 +10,8 @@ fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
     if data.iter().any(|&x| x <= 0.0) {
         return Err(Error::msg("All data must be greater than 0"));
     }
-    let transformed_data: Vec<f64> = data.iter().map(|&x| box_cox(x, lambda)).collect();
+    let transformed_data: Result<Vec<f64>, Error> = data.iter().map(|&x| box_cox(x, lambda).map_err(|e| Error::msg(e))).collect();
+    let transformed_data = transformed_data?;
     let mean_transformed: f64 = transformed_data.iter().copied().sum::<f64>() / n;
     let variance: f64 = transformed_data
         .iter()
