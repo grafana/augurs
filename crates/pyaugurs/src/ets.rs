@@ -63,6 +63,7 @@ impl AutoETS {
     /// # Errors
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
+    #[pyo3(signature = (horizon, level=None))]
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> PyResult<Forecast> {
         self.fitted
             .as_ref()
@@ -80,6 +81,7 @@ impl AutoETS {
     /// # Errors
     ///
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
+    #[pyo3(signature = (level=None))]
     pub fn predict_in_sample(&self, level: Option<f64>) -> PyResult<Forecast> {
         self.fitted
             .as_ref()

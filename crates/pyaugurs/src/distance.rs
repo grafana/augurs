@@ -50,7 +50,7 @@ impl DistanceMatrix {
                 *elem = *val;
             }
         }
-        arr.into_pyarray_bound(py).into()
+        arr.into_pyarray(py).into()
     }
 }
 
