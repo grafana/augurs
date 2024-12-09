@@ -1,6 +1,6 @@
 //! Bindings for Multiple Seasonal Trend using LOESS (MSTL).
 
-use numpy::PyReadonlyArray1;
+use numpy::PyReadwriteArray1;
 use pyo3::{exceptions::PyException, prelude::*, types::PyType};
 
 use augurs_ets::{trend::AutoETSTrendModel, AutoETS};
@@ -74,9 +74,9 @@ impl MSTL {
     }
 
     /// Fit the model to the given time series.
-    pub fn fit(&mut self, y: PyReadonlyArray1<'_, f64>) -> PyResult<()> {
+    pub fn fit(&mut self, mut y: PyReadwriteArray1<'_, f64>) -> PyResult<()> {
         self.forecaster
-            .fit(y.as_slice()?)
+            .fit(y.as_slice_mut()?)
             .map_err(|e| PyException::new_err(format!("error fitting model: {e}")))?;
         self.fit = true;
         Ok(())

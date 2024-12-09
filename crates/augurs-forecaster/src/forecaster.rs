@@ -1,6 +1,6 @@
-use augurs_core::{Fit, Forecast, Predict};
+use augurs_core::{Data, Fit, Forecast, MutableData, Predict};
 
-use crate::{Data, Error, Result, Transform, Transforms};
+use crate::{Error, Result, Transform, Transforms};
 
 /// A high-level API to fit and predict time series forecasting models.
 ///
@@ -16,10 +16,11 @@ pub struct Forecaster<M: Fit> {
     transforms: Transforms,
 }
 
-impl<M> Forecaster<M>
+impl<'a, M: 'a> Forecaster<M>
 where
     M: Fit,
     M::Fitted: Predict,
+    M::TrainingData<'a>: MutableData,
 {
     /// Create a new `Forecaster` with the given model.
     pub fn new(model: M) -> Self {
@@ -37,12 +38,13 @@ where
     }
 
     /// Fit the model to the given time series.
-    pub fn fit<D: Data + Clone>(&mut self, y: D) -> Result<()> {
+    pub fn fit<'b: 'a>(&'b mut self, mut td: M::TrainingData<'a>) -> Result<()> {
         let data: Vec<_> = self
             .transforms
-            .transform(y.as_slice().iter().copied())
+            .transform(td.as_slice().iter().copied())
             .collect();
-        self.fitted = Some(self.model.fit(&data).map_err(|e| Error::Fit {
+        td.set(data);
+        self.fitted = Some(self.model.fit(td).map_err(|e| Error::Fit {
             source: Box::new(e) as _,
         })?);
         Ok(())
@@ -105,7 +107,7 @@ mod test {
 
     #[test]
     fn test_forecaster() {
-        let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
+        let data = &mut [1.0_f64, 2.0, 3.0, 4.0, 5.0];
         let MinMaxResult::MinMax(min, max) = data
             .iter()
             .copied()

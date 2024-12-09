@@ -459,8 +459,10 @@ impl AutoETS {
 }
 
 impl Fit for AutoETS {
+    type TrainingData<'a> = &'a [f64];
     type Fitted = FittedAutoETS;
     type Error = Error;
+
     /// Search for the best model, fitting it to the data.
     ///
     /// The model is stored on the `AutoETS` struct and can be retrieved with
@@ -470,7 +472,7 @@ impl Fit for AutoETS {
     ///
     /// If no model can be found, or if any parameters are invalid, this function
     /// returns an error.
-    fn fit(&self, y: &[f64]) -> Result<Self::Fitted> {
+    fn fit<'a, 'b: 'a>(&'b self, y: Self::TrainingData<'a>) -> Result<Self::Fitted> {
         let data_positive = y.iter().fold(f64::INFINITY, |a, &b| a.min(b)) > 0.0;
         if self.spec.error == ErrorSpec::Multiplicative && !data_positive {
             return Err(Error::InvalidModelSpec(format!(
@@ -627,7 +629,7 @@ mod test {
     #[test]
     fn air_passengers_fit() {
         let auto = AutoETS::new(1, "ZZN").unwrap();
-        let fit = auto.fit(AIR_PASSENGERS).expect("fit failed");
+        let fit = auto.fit(&mut AIR_PASSENGERS.to_vec()).expect("fit failed");
         assert_eq!(fit.model.model_type().error, ErrorComponent::Multiplicative);
         assert_eq!(fit.model.model_type().trend, TrendComponent::Additive);
         assert_eq!(fit.model.model_type().season, SeasonalComponent::None);

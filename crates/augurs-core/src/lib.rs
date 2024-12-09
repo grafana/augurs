@@ -15,7 +15,7 @@ use std::convert::Infallible;
 
 pub use distance::DistanceMatrix;
 pub use forecast::{Forecast, ForecastIntervals};
-pub use traits::{Fit, Predict};
+pub use traits::{Data, Fit, MutableData, Predict};
 
 /// An error produced by a time series forecasting model.
 pub trait ModelError: std::error::Error + Sync + Send + 'static {}
