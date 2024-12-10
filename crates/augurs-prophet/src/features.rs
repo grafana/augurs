@@ -76,7 +76,7 @@ impl HolidayOccurrence {
     /// in a timezone represented by the `utc_offset_seconds`.
     ///
     /// The UTC offset can be calculated using, for example,
-    /// [`chrono::FixedOffset::local_minus_utc`]. Alternatively
+    /// [`chrono::FixedOffset::local_minus_utc`](lmu). Alternatively
     /// it's the number of seconds to add to convert from the
     /// local time to UTC, so UTC+1 is represented by `3600`
     /// and UTC-5 by `-18000`.
@@ -91,6 +91,7 @@ impl HolidayOccurrence {
     /// end times, e.g. by calculating them using [`chrono`].
     ///
     /// [`chrono`]: https://docs.rs/chrono/latest/chrono
+    /// [lmu]: https://docs.rs/chrono/latest/chrono/struct.FixedOffset.html#method.local_minus_utc
     pub fn for_day_in_tz(day: TimestampSeconds, utc_offset_seconds: i32) -> Self {
         let day = floor_day(day, utc_offset_seconds);
         Self {
