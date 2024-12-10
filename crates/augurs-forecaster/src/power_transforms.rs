@@ -1,6 +1,6 @@
 use crate::transforms::box_cox;
 use crate::transforms::yeo_johnson;
-use argmin::core::{CostFunction, Executor, Error};
+use argmin::core::{CostFunction, Error, Executor};
 use argmin::solver::brent::BrentOpt;
 
 fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
@@ -109,6 +109,17 @@ struct OptimizationParams {
     max_iterations: u64,
 }
 
+impl Default for OptimizationParams {
+    fn default() -> Self {
+        Self {
+            initial_param: 0.0,
+            lower_bound: -2.0,
+            upper_bound: 2.0,
+            max_iterations: 1000,
+        }
+    }
+}
+
 fn optimize_lambda<T: CostFunction<Param = f64, Output = f64>>(
     cost: T,
     params: OptimizationParams,
@@ -133,24 +144,14 @@ fn optimize_lambda<T: CostFunction<Param = f64, Output = f64>>(
 pub(crate) fn optimize_box_cox_lambda(data: &[f64]) -> Result<f64, Error> {
     // Use Box-Cox transformation
     let cost = BoxCoxProblem { data };
-    let optimization_params = OptimizationParams {
-        initial_param: 0.0,
-        lower_bound: -2.0,
-        upper_bound: 2.0,
-        max_iterations: 1000,
-    };
+    let optimization_params = OptimizationParams::default();
     optimize_lambda(cost, optimization_params)
 }
 
 pub(crate) fn optimize_yeo_johnson_lambda(data: &[f64]) -> Result<f64, Error> {
     // Use Yeo-Johnson transformation
     let cost = YeoJohnsonProblem { data };
-    let optimization_params = OptimizationParams {
-        initial_param: 0.0,
-        lower_bound: -2.0,
-        upper_bound: 2.0,
-        max_iterations: 1000,
-    };
+    let optimization_params = OptimizationParams::default();
     optimize_lambda(cost, optimization_params)
 }
 
