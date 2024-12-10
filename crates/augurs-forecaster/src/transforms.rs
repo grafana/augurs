@@ -581,10 +581,20 @@ impl<T> YeoJohnsonExt for T where T: Iterator<Item = f64> {}
 
 /// Returns the inverse Yeo-Johnson transformation of the given value.
 fn inverse_yeo_johnson(y: f64, lambda: f64) -> f64 {
-    if lambda == 0.0 {
-        y.exp()
+    const EPSILON: f64 = 1e-6;
+
+    if y >= 0.0 && lambda.abs() < EPSILON {
+        // For lambda close to 0 (positive values)
+        (y.exp()) - 1.0
+    } else if y >= 0.0 {
+        // For positive values (lambda not close to 0)
+        (y * lambda + 1.0).powf(1.0 / lambda) - 1.0
+    } else if (lambda - 2.0).abs() < EPSILON {
+        // For lambda close to 2 (negative values)
+        -(-y.exp() - 1.0)
     } else {
-        (y * lambda + 1.0).powf(1.0 / lambda)
+        // For negative values (lambda not close to 2)
+        -((-((2.0 - lambda) * y) + 1.0).powf(1.0 / (2.0 - lambda)) - 1.0)
     }
 }
 
@@ -768,6 +778,24 @@ mod test {
         let lambda = 0.5;
         let expected = vec![1.0, 0.426966072919605, 1.0];
         let actual: Vec<_> = data.into_iter().inverse_box_cox(lambda).collect();
+        assert_all_close(&expected, &actual);
+    }
+
+    #[test]
+    fn yeo_johnson_test() {
+        let data = vec![-1.0, 0.0, 1.0];
+        let lambda = 0.5;
+        let expected = vec![-1.2189514164974602, 0.0, 0.8284271247461903];
+        let actual: Vec<_> = data.into_iter().yeo_johnson(lambda).collect();
+        assert_all_close(&expected, &actual);
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_test() {
+        let data = vec![-1.2189514164974602, 0.0, 0.8284271247461903];
+        let lambda = 0.5;
+        let expected = vec![-1.0, 0.0, 1.0];
+        let actual: Vec<_> = data.into_iter().inverse_yeo_johnson(lambda).collect();
         assert_all_close(&expected, &actual);
     }
 }

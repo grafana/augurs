@@ -109,14 +109,17 @@ struct OptimizationParams {
     max_iterations: u64,
 }
 
-
 fn optimize_lambda<T: CostFunction<Param = f64, Output = f64>>(
     cost: T,
     params: OptimizationParams,
 ) -> Result<f64, Error> {
     let solver = BrentOpt::new(params.lower_bound, params.upper_bound);
     let result = Executor::new(cost, solver)
-        .configure(|state| state.param(params.initial_param).max_iters(params.max_iterations))
+        .configure(|state| {
+            state
+                .param(params.initial_param)
+                .max_iters(params.max_iterations)
+        })
         .run();
 
     result.and_then(|res| {
