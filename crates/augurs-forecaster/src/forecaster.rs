@@ -128,7 +128,9 @@ mod test {
     #[test]
     fn test_forecaster_power_positive() {
         let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
-        let transforms = vec![Transform::power_transform(data)];
+        let got = Transform::power_transform(data);
+        assert!(got.is_ok());
+        let transforms = vec![got.unwrap()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
         let mut forecaster = Forecaster::new(model).with_transforms(transforms);
         forecaster.fit(data).unwrap();
@@ -147,7 +149,9 @@ mod test {
     #[test]
     fn test_forecaster_power_non_positive() {
         let data = &[0.0, 2.0, 3.0, 4.0, 5.0];
-        let transforms = vec![Transform::power_transform(data)];
+        let got = Transform::power_transform(data);
+        assert!(got.is_ok());
+        let transforms = vec![got.unwrap()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
         let mut forecaster = Forecaster::new(model).with_transforms(transforms);
         forecaster.fit(data).unwrap();

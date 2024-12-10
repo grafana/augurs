@@ -2,6 +2,7 @@
 Data transformations.
 */
 
+use argmin::core::Error;
 use augurs_core::{
     interpolate::{InterpolateExt, LinearInterpolator},
     Forecast,
@@ -126,21 +127,19 @@ impl Transform {
         Self::YeoJohnson { lambda }
     }
 
-    /// Create the power transform that optimizes the lambda parameter for the Box-Cox transformation.
+    /// Create a power transform that optimizes the lambda parameter.
     ///
-    /// This transform applies the Power transformation to each item.
-    /// The Power transformation is defined as:
-    /// - if all values are positive: Box-Cox transformation
-    /// - otherwise: Yeo-Johnson transformation
-    pub fn power_transform(data: &[f64]) -> Self {
+    /// # Algorithm Selection
+    /// - If all values are positive: Uses Box-Cox transformation
+    /// - If any values are negative or zero: Uses Yeo-Johnson transformation
+    ///
+    /// # Returns
+    /// Returns `Result<Self, Error>` to handle optimization failures gracefully
+    pub fn power_transform(data: &[f64]) -> Result<Self, Error> {
         if data.iter().all(|&x| x > 0.0) {
-            let lambda =
-                optimize_box_cox_lambda(data).expect("Failed to optimize lambda (box-cox)");
-            Self::BoxCox { lambda }
+            optimize_box_cox_lambda(data).map(|lambda| Self::BoxCox { lambda })
         } else {
-            let lambda =
-                optimize_yeo_johnson_lambda(data).expect("Failed to optimize lambda (yeo-johnson)");
-            Self::YeoJohnson { lambda }
+            optimize_yeo_johnson_lambda(data).map(|lambda| Self::YeoJohnson { lambda })
         }
     }
 
