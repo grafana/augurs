@@ -506,11 +506,16 @@ trait BoxCoxExt: Iterator<Item = f64> {
 impl<T> BoxCoxExt for T where T: Iterator<Item = f64> {}
 
 /// Returns the inverse Box-Cox transformation of the given value.
-fn inverse_box_cox(y: f64, lambda: f64) -> f64 {
+fn inverse_box_cox(y: f64, lambda: f64) -> Result<f64, &'static str> {
     if lambda == 0.0 {
-        y.exp()
+        Ok(y.exp())
     } else {
-        (y * lambda + 1.0).powf(1.0 / lambda)
+        let value = y * lambda + 1.0;
+        if value <= 0.0 {
+            Err("Invalid domain for inverse Box-Cox transformation")
+        } else {
+            Ok(value.powf(1.0 / lambda))
+        }
     }
 }
 
@@ -527,7 +532,9 @@ where
 {
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|y| inverse_box_cox(y, self.lambda))
+        self.inner
+            .next()
+            .map(|y| inverse_box_cox(y, self.lambda).unwrap_or(f64::NAN))
     }
 }
 
