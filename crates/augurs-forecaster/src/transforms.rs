@@ -145,7 +145,7 @@ impl Transform {
     }
 
     /// Apply the transformation to the given time series.
-    pub fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
+    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
@@ -160,7 +160,7 @@ impl Transform {
     }
 
     /// Apply the inverse transformation to the given time series.
-    pub fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
+    pub(crate) fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
