@@ -3,10 +3,7 @@ use std::{cell::RefCell, num::NonZeroU32, sync::Arc};
 
 use augurs_core::{Fit, ModelError, Predict};
 
-use crate::{
-    optimizer::OptimizeOpts, Error, IncludeHistory, Optimizer, Prophet, ProphetOptions,
-    TrainingData,
-};
+use crate::{optimizer::OptimizeOpts, Error, IncludeHistory, Optimizer, Prophet, TrainingData};
 
 impl ModelError for Error {}
 
@@ -20,8 +17,7 @@ impl ModelError for Error {}
 #[derive(Debug)]
 pub struct ProphetForecaster {
     data: TrainingData,
-    opts: ProphetOptions,
-    optimizer: Arc<dyn Optimizer>,
+    model: Prophet<Arc<dyn Optimizer>>,
     optimize_opts: OptimizeOpts,
 }
 
@@ -33,19 +29,18 @@ impl ProphetForecaster {
     /// - `opts`: The options to use for fitting the model.
     /// - `optimizer`: The optimizer to use for fitting the model.
     /// - `optimize_opts`: The options to use for optimizing the model.
-    pub fn new(
+    pub fn new<T: Optimizer + 'static>(
+        mut model: Prophet<T>,
         data: TrainingData,
-        mut opts: ProphetOptions,
-        optimizer: Arc<dyn Optimizer>,
         optimize_opts: OptimizeOpts,
     ) -> Self {
+        let opts = model.opts_mut();
         if opts.uncertainty_samples == 0 {
             opts.uncertainty_samples = 1000;
         }
         Self {
             data,
-            opts,
-            optimizer,
+            model: model.into_dyn_optimizer(),
             optimize_opts,
         }
     }
@@ -56,12 +51,16 @@ impl Fit for ProphetForecaster {
     type Error = Error;
 
     fn fit(&self, y: &[f64]) -> Result<Self::Fitted, Self::Error> {
+        // Use the training data from `self`...
         let mut training_data = self.data.clone();
+        // ...but replace the `y` column with whatever we're passed
+        // (which may be a transformed version of `y`, if the user is
+        // using `augurs_forecaster`).
         training_data.y = y.to_vec();
-        let mut model = Prophet::new(self.opts.clone(), self.optimizer.clone());
-        model.fit(training_data, self.optimize_opts.clone())?;
+        let mut fitted_model = self.model.clone();
+        fitted_model.fit(training_data, self.optimize_opts.clone())?;
         Ok(FittedProphetForecaster {
-            model: RefCell::new(model),
+            model: RefCell::new(fitted_model),
             training_n: y.len(),
         })
     }
@@ -153,7 +152,6 @@ impl Predict for FittedProphetForecaster {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
 
     use augurs_core::{Fit, Predict};
     use augurs_testing::assert_all_close;
@@ -171,12 +169,8 @@ mod test {
         let test_days = 30;
         let (train, _) = train_test_splitn(daily_univariate_ts(), test_days);
 
-        let forecaster = ProphetForecaster::new(
-            train.clone(),
-            Default::default(),
-            Arc::new(WasmstanOptimizer::new()),
-            Default::default(),
-        );
+        let model = Prophet::new(Default::default(), WasmstanOptimizer::new());
+        let forecaster = ProphetForecaster::new(model, train.clone(), Default::default());
         let fitted = forecaster.fit(&train.y).unwrap();
         let forecast_predictions = fitted.predict(30, 0.95).unwrap();
 
