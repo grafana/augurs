@@ -102,15 +102,21 @@ impl CostFunction for YeoJohnsonProblem<'_> {
     }
 }
 
-/// Optimize the lambda parameter for the Box-Cox or Yeo-Johnson transformation
-pub(crate) fn optimize_box_cox_lambda(data: &[f64]) -> Result<f64, Error> {
-    // Use Box-Cox transformation
-    let cost = BoxCoxProblem { data };
-    let init_param = 0.5;
-    let solver = BrentOpt::new(-2.0, 2.0);
+struct OptimizationParams {
+    initial_param: f64,
+    lower_bound: f64,
+    upper_bound: f64,
+    max_iterations: u64,
+}
 
+
+fn optimize_lambda<T: CostFunction<Param = f64, Output = f64>>(
+    cost: T,
+    params: OptimizationParams,
+) -> Result<f64, Error> {
+    let solver = BrentOpt::new(params.lower_bound, params.upper_bound);
     let result = Executor::new(cost, solver)
-        .configure(|state| state.param(init_param).max_iters(1000))
+        .configure(|state| state.param(params.initial_param).max_iters(params.max_iterations))
         .run();
 
     result.and_then(|res| {
@@ -120,21 +126,29 @@ pub(crate) fn optimize_box_cox_lambda(data: &[f64]) -> Result<f64, Error> {
     })
 }
 
+/// Optimize the lambda parameter for the Box-Cox or Yeo-Johnson transformation
+pub(crate) fn optimize_box_cox_lambda(data: &[f64]) -> Result<f64, Error> {
+    // Use Box-Cox transformation
+    let cost = BoxCoxProblem { data };
+    let optimization_params = OptimizationParams {
+        initial_param: 0.0,
+        lower_bound: -2.0,
+        upper_bound: 2.0,
+        max_iterations: 1000,
+    };
+    optimize_lambda(cost, optimization_params)
+}
+
 pub(crate) fn optimize_yeo_johnson_lambda(data: &[f64]) -> Result<f64, Error> {
     // Use Yeo-Johnson transformation
     let cost = YeoJohnsonProblem { data };
-    let init_param = 0.5;
-    let solver = BrentOpt::new(-2.0, 2.0);
-
-    let result = Executor::new(cost, solver)
-        .configure(|state| state.param(init_param).max_iters(1000))
-        .run();
-
-    result.and_then(|res| {
-        res.state()
-            .best_param
-            .ok_or_else(|| Error::msg("No best parameter found"))
-    })
+    let optimization_params = OptimizationParams {
+        initial_param: 0.0,
+        lower_bound: -2.0,
+        upper_bound: 2.0,
+        max_iterations: 1000,
+    };
+    optimize_lambda(cost, optimization_params)
 }
 
 #[cfg(test)]
