@@ -1,6 +1,6 @@
 use crate::transforms::box_cox;
 use crate::transforms::yeo_johnson;
-use argmin::core::*;
+use argmin::core::{CostFunction, Executor, Error};
 use argmin::solver::brent::BrentOpt;
 
 fn box_cox_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
