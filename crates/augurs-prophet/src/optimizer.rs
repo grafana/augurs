@@ -21,7 +21,7 @@
 //       WASM Components?
 // TODO: write a pure Rust optimizer for the default case.
 
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use crate::positive_float::PositiveFloat;
 
@@ -297,6 +297,20 @@ pub trait Optimizer: std::fmt::Debug {
         data: &Data,
         opts: &OptimizeOpts,
     ) -> Result<OptimizedParams, Error>;
+}
+
+/// An implementation of `Optimize` which simply delegates to the
+/// `Arc`'s inner type. This enables thread-safe sharing of optimizers
+/// while maintaining the ability to use dynamic dispatch.
+impl Optimizer for Arc<dyn Optimizer> {
+    fn optimize(
+        &self,
+        init: &InitialParams,
+        data: &Data,
+        opts: &OptimizeOpts,
+    ) -> Result<OptimizedParams, Error> {
+        (**self).optimize(init, data, opts)
+    }
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ pub(crate) mod prep;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroU32,
+    sync::Arc,
 };
 
 use itertools::{izip, Itertools};
@@ -12,9 +13,10 @@ use options::ProphetOptions;
 use prep::{ComponentColumns, Modes, Preprocessed, Scales};
 
 use crate::{
+    forecaster::ProphetForecaster,
     optimizer::{InitialParams, OptimizeOpts, OptimizedParams, Optimizer},
-    Error, EstimationMode, FeaturePrediction, IncludeHistory, PredictionData, Predictions,
-    Regressor, Seasonality, TimestampSeconds, TrainingData,
+    Error, EstimationMode, FeaturePrediction, IncludeHistory, IntervalWidth, PredictionData,
+    Predictions, Regressor, Seasonality, TimestampSeconds, TrainingData,
 };
 
 /// The Prophet time series forecasting model.
@@ -233,6 +235,25 @@ impl<O> Prophet<O> {
         Ok(PredictionData::new(ds))
     }
 
+    /// Get a reference to the Prophet options.
+    pub fn opts(&self) -> &ProphetOptions {
+        &self.opts
+    }
+
+    /// Get a mutable reference to the Prophet options.
+    pub fn opts_mut(&mut self) -> &mut ProphetOptions {
+        &mut self.opts
+    }
+
+    /// Set the width of the uncertainty intervals.
+    ///
+    /// The interval width does not affect training, only predictions,
+    /// so this can be called after fitting the model to obtain predictions
+    /// with different levels of uncertainty.
+    pub fn set_interval_width(&mut self, interval_width: IntervalWidth) {
+        self.opts.interval_width = interval_width;
+    }
+
     fn infer_freq(history_dates: &[TimestampSeconds]) -> Result<TimestampSeconds, Error> {
         const INFER_N: usize = 5;
         let get_tried = || {
@@ -265,6 +286,38 @@ impl<O> Prophet<O> {
             .map(|(k, _)| k)
             .exactly_one()
             .map_err(|_| Error::UnableToInferFrequency(get_tried()))
+    }
+}
+
+impl<O: Optimizer + 'static> Prophet<O> {
+    pub(crate) fn into_dyn_optimizer(self) -> Prophet<Arc<dyn Optimizer + 'static>> {
+        Prophet {
+            optimizer: Arc::new(self.optimizer),
+            opts: self.opts,
+            regressors: self.regressors,
+            optimized: self.optimized,
+            changepoints: self.changepoints,
+            changepoints_t: self.changepoints_t,
+            init: self.init,
+            scales: self.scales,
+            processed: self.processed,
+            seasonalities: self.seasonalities,
+            component_modes: self.component_modes,
+            train_holiday_names: self.train_holiday_names,
+            train_component_columns: self.train_component_columns,
+        }
+    }
+
+    /// Create a new `ProphetForecaster` from this Prophet model.
+    ///
+    /// This requires the data and optimize options to be provided and sets up
+    /// a `ProphetForecaster` ready to be used with the `augurs_forecaster` crate.
+    pub fn into_forecaster(
+        self,
+        data: TrainingData,
+        optimize_opts: OptimizeOpts,
+    ) -> ProphetForecaster {
+        ProphetForecaster::new(self, data, optimize_opts)
     }
 }
 
