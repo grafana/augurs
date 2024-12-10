@@ -130,7 +130,8 @@ impl Transform {
     ///
     /// This transform applies the Power transformation to each item.
     /// The Power transformation is defined as:
-    ///
+    /// - if all values are positive: Box-Cox transformation
+    /// - otherwise: Yeo-Johnson transformation
     pub fn power_transform(data: &[f64]) -> Self {
         if data.iter().all(|&x| x > 0.0) {
             let lambda =
