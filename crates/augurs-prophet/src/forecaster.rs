@@ -94,13 +94,13 @@ impl Predict for FittedProphetForecaster {
                 .lower
                 // This `expect` is OK because we've set uncertainty_samples > 0 in the
                 // `ProphetForecaster` constructor.
-                .expect("uncertainty_samples should be > 0");
+                .expect("uncertainty_samples should be > 0, this is a bug");
             intervals.upper = predictions
                 .yhat
                 .upper
                 // This `expect` is OK because we've set uncertainty_samples > 0 in the
                 // `ProphetForecaster` constructor.
-                .expect("uncertainty_samples should be > 0");
+                .expect("uncertainty_samples should be > 0, this is a bug");
         }
         Ok(())
     }
@@ -111,9 +111,11 @@ impl Predict for FittedProphetForecaster {
         level: Option<f64>,
         forecast: &mut augurs_core::Forecast,
     ) -> Result<(), Self::Error> {
-        if horizon == 0 {
-            return Ok(());
-        }
+        let horizon = match NonZeroU32::try_from(horizon as u32) {
+            Ok(h) => h,
+            // If horizon is 0, short circuit without even trying to predict.
+            Err(_) => return Ok(()),
+        };
         if let Some(level) = level {
             self.model
                 .borrow_mut()
@@ -121,10 +123,7 @@ impl Predict for FittedProphetForecaster {
         }
         let predictions = {
             let model = self.model.borrow();
-            let prediction_data = model.make_future_dataframe(
-                NonZeroU32::try_from(horizon as u32).expect("horizon should be > 0"),
-                IncludeHistory::No,
-            )?;
+            let prediction_data = model.make_future_dataframe(horizon, IncludeHistory::No)?;
             model.predict(prediction_data)?
         };
         forecast.point = predictions.yhat.point;

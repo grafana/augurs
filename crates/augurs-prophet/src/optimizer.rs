@@ -299,6 +299,9 @@ pub trait Optimizer: std::fmt::Debug {
     ) -> Result<OptimizedParams, Error>;
 }
 
+/// An implementation of `Optimize` which simply delegates to the
+/// `Arc`'s inner type. This enables thread-safe sharing of optimizers
+/// while maintaining the ability to use dynamic dispatch.
 impl Optimizer for Arc<dyn Optimizer> {
     fn optimize(
         &self,
