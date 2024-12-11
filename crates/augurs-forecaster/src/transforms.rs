@@ -44,6 +44,7 @@ impl Transforms {
 
 /// A transformation that can be applied to a time series.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Transform {
     /// Linear interpolation.
     ///
