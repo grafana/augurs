@@ -7,7 +7,8 @@ build: \
   (build-inner "mstl") \
   (build-inner "outlier") \
   (build-inner "prophet") \
-  (build-inner "seasons")
+  (build-inner "seasons") \
+  (build-inner "transforms")
   just fix-package-json
 
 build-inner target args='':
