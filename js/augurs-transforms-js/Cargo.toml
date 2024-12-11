@@ -18,6 +18,7 @@ doctest = false
 test = false
 
 [dependencies]
+argmin = { workspace = true, features = ["wasm-bindgen"] }
 augurs-core-js.workspace = true
 augurs-forecaster.workspace = true
 getrandom.workspace = true
