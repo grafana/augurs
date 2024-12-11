@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { PowerTransform, initSync } from '@bsull/augurs/transforms';
 
-import { describe, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // Required for Rust's `rand::thread_rng` to support NodeJS modules.
 // See https://docs.rs/getrandom#nodejs-es-module-support.
@@ -24,14 +24,40 @@ describe('transforms', () => {
     0.11, 0.28, 0.78, 0.53,
   ];
 
+  expect.extend({
+    toAllBeCloseTo: (received, expected) => {
+      if (received.length !== expected.length) {
+        return {
+          message: () => `expected array lengths to match (got ${received.length}, wanted ${expected.length})`,
+          pass: false,
+        };
+      }
+      for (let index = 0; index < received.length; index++) {
+        const got = received[index];
+        const exp = expected[index];
+        if (Math.abs(got - exp) > 0.1) {
+          return {
+            message: () => `got (${got}) not close to expected (${exp}) at index ${index}`,
+            pass: false,
+          }
+        }
+      }
+      return { message: () => '', pass: true };
+    }
+  });
+
+
   describe('power transform', () => {
-    const pt = new PowerTransform({ data: y });
-    const transformed = pt.transform(y);
-    expect(transformed).toBeInstanceOf(Float64Array);
-    expect(transformed).toHaveLength(y.length);
-    const inverse = pt.inverseTransform(transformed);
-    expect(inverse).toBeInstanceOf(Float64Array);
-    expect(inverse).toHaveLength(y.length);
-    expect(new Array(inverse)).toEqual(y);
+    it('works with arrays', () => {
+      const pt = new PowerTransform({ data: y });
+      const transformed = pt.transform(y);
+      expect(transformed).toBeInstanceOf(Float64Array);
+      expect(transformed).toHaveLength(y.length);
+      const inverse = pt.inverseTransform(transformed);
+      expect(inverse).toBeInstanceOf(Float64Array);
+      expect(inverse).toHaveLength(y.length);
+      //@ts-ignore
+      expect(Array.from(inverse)).toAllBeCloseTo(y);
+    });
   })
 })
