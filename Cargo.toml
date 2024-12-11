@@ -44,6 +44,7 @@ augurs-testing = { path = "crates/augurs-testing" }
 augurs-core-js = { path = "js/augurs-core-js" }
 
 anyhow = "1.0.89"
+argmin = "0.10.0"
 bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
