@@ -16,6 +16,8 @@ use augurs_forecaster::transforms::Transform;
 ///
 /// The optimal value of the `lambda` parameter is calculated from the data
 /// using maximum likelihood estimation.
+///
+/// @experimental
 #[derive(Debug)]
 #[wasm_bindgen]
 pub struct PowerTransform {
@@ -25,6 +27,8 @@ pub struct PowerTransform {
 #[wasm_bindgen]
 impl PowerTransform {
     /// Create a new power transform for the given data.
+    ///
+    /// @experimental
     #[wasm_bindgen(constructor)]
     pub fn new(opts: PowerTransformOptions) -> Result<PowerTransform, JsError> {
         Ok(PowerTransform {
@@ -34,6 +38,8 @@ impl PowerTransform {
     }
 
     /// Transform the given data.
+    ///
+    /// @experimental
     #[wasm_bindgen]
     pub fn transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
         Ok(self
@@ -43,6 +49,8 @@ impl PowerTransform {
     }
 
     /// Inverse transform the given data.
+    ///
+    /// @experimental
     #[wasm_bindgen(js_name = "inverseTransform")]
     pub fn inverse_transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
         Ok(self
