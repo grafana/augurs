@@ -108,7 +108,9 @@ impl Transform {
     /// Create a new Box-Cox transform.
     ///
     /// This transform applies the Box-Cox transformation to each item.
+    ///
     /// The Box-Cox transformation is defined as:
+    ///
     /// - if lambda == 0: x.ln()
     /// - otherwise: (x^lambda - 1) / lambda
     pub fn boxcox(lambda: f64) -> Self {
@@ -116,13 +118,16 @@ impl Transform {
     }
 
     /// Create a new Yeo-Johnson transform.
+    ///
     /// This transform applies the Yeo-Johnson transformation to each item.
-    /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that supports negative values.
-    /// The Yeo-Johnson transformation is defined as:
-    /// - if lambda == 0: (x + 1).ln()
-    /// - otherwise: ((x + 1)^lambda - 1) / lambda
-    /// - if x < 0 and lambda == 2: (-x + 1).ln()
-    /// - otherwise: ((-x + 1)^2 - 1) / 2
+    ///
+    /// The Yeo-Johnson transformation is a generalization of the Box-Cox transformation that
+    /// supports negative values. It is defined as:
+    ///
+    /// - if lambda != 0 and x >= 0: ((x + 1)^lambda - 1) / lambda
+    /// - if lambda == 0 and x >= 0: (x + 1).ln()
+    /// - if lambda != 2 and x < 0:  ((-x + 1)^2 - 1) / 2
+    /// - if lambda == 2 and x < 0:  (-x + 1).ln()
     pub fn yeo_johnson(lambda: f64) -> Self {
         Self::YeoJohnson { lambda }
     }
@@ -130,10 +135,12 @@ impl Transform {
     /// Create a power transform that optimizes the lambda parameter.
     ///
     /// # Algorithm Selection
+    ///
     /// - If all values are positive: Uses Box-Cox transformation
     /// - If any values are negative or zero: Uses Yeo-Johnson transformation
     ///
     /// # Returns
+    ///
     /// Returns `Result<Self, Error>` to handle optimization failures gracefully
     pub fn power_transform(data: &[f64]) -> Result<Self, Error> {
         if data.iter().all(|&x| x > 0.0) {
