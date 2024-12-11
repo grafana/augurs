@@ -18,7 +18,7 @@ authors = [
 ]
 documentation = "https://docs.rs/crate/augurs"
 repository = "https://github.com/grafana/augurs"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 keywords = [
   "analysis",
@@ -29,16 +29,16 @@ keywords = [
 
 [workspace.dependencies]
 augurs = { path = "crates/augurs" }
-augurs-changepoint = { version = "0.7.0", path = "crates/augurs-changepoint" }
-augurs-clustering = { version = "0.7.0", path = "crates/augurs-clustering" }
-augurs-core = { version = "0.7.0", path = "crates/augurs-core" }
-augurs-dtw = { version = "0.7.0", path = "crates/augurs-dtw" }
-augurs-ets = { version = "0.7.0", path = "crates/augurs-ets" }
-augurs-forecaster = { version = "0.7.0", path = "crates/augurs-forecaster" }
-augurs-mstl = { version = "0.7.0", path = "crates/augurs-mstl" }
-augurs-outlier = { version = "0.7.0", path = "crates/augurs-outlier" }
-augurs-prophet = { version = "0.7.0", path = "crates/augurs-prophet" }
-augurs-seasons = { version = "0.7.0", path = "crates/augurs-seasons" }
+augurs-changepoint = { version = "0.8.0", path = "crates/augurs-changepoint" }
+augurs-clustering = { version = "0.8.0", path = "crates/augurs-clustering" }
+augurs-core = { version = "0.8.0", path = "crates/augurs-core" }
+augurs-dtw = { version = "0.8.0", path = "crates/augurs-dtw" }
+augurs-ets = { version = "0.8.0", path = "crates/augurs-ets" }
+augurs-forecaster = { version = "0.8.0", path = "crates/augurs-forecaster" }
+augurs-mstl = { version = "0.8.0", path = "crates/augurs-mstl" }
+augurs-outlier = { version = "0.8.0", path = "crates/augurs-outlier" }
+augurs-prophet = { version = "0.8.0", path = "crates/augurs-prophet" }
+augurs-seasons = { version = "0.8.0", path = "crates/augurs-seasons" }
 augurs-testing = { path = "crates/augurs-testing" }
 
 augurs-core-js = { path = "js/augurs-core-js" }
