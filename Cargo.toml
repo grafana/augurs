@@ -62,7 +62,7 @@ tinyvec = "1.6.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", default-features = false }
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
-wasm-bindgen = "=0.2.99"
+wasm-bindgen = "0.2.99"
 
 assert_approx_eq = "1.1.0"
 criterion = "0.5.1"
