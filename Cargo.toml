@@ -14,7 +14,7 @@ resolver = "2"
 [workspace.package]
 license = "MIT OR Apache-2.0"
 authors = [
-  "Ben Sully <ben.sully@grafana.com",
+  "Ben Sully <ben.sully@grafana.com>",
 ]
 documentation = "https://docs.rs/crate/augurs"
 repository = "https://github.com/grafana/augurs"
