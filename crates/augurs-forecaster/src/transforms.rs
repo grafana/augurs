@@ -172,7 +172,7 @@ impl Transform {
     {
         match self {
             Self::LinearInterpolator => Box::new(input.interpolate(LinearInterpolator::default())),
-            Self::MinMaxScaler(params) => Box::new(input.min_max_scale(params.clone())),
+            Self::MinMaxScaler(params) => Box::new(input.min_max_scale(params)),
             Self::Logit => Box::new(input.logit()),
             Self::Log => Box::new(input.log()),
             Self::BoxCox { lambda } => Box::new(input.box_cox(*lambda)),
@@ -201,7 +201,7 @@ impl Transform {
     {
         match self {
             Self::LinearInterpolator => Box::new(input),
-            Self::MinMaxScaler(params) => Box::new(input.inverse_min_max_scale(params.clone())),
+            Self::MinMaxScaler(params) => Box::new(input.inverse_min_max_scale(params)),
             Self::Logit => Box::new(input.logistic()),
             Self::Log => Box::new(input.exp()),
             Self::BoxCox { lambda } => Box::new(input.inverse_box_cox(*lambda)),
@@ -228,7 +228,7 @@ impl Transform {
 // Actual implementations of the transforms.
 // These may be moved to a separate module or crate in the future.
 
-/// A transformer that scales each item to a certain range.
+/// Parameters for the min-max scaler.
 ///
 /// The target range is [0, 1] by default. Use [`MinMaxScaleParams::with_scaled_range`]
 /// to set a custom range.
@@ -276,7 +276,8 @@ impl MinMaxScaleParams {
 #[derive(Debug, Clone)]
 struct MinMaxScale<T> {
     inner: T,
-    params: MinMaxScaleParams,
+    scale_factor: f64,
+    offset: f64,
 }
 
 impl<T> Iterator for MinMaxScale<T>
@@ -286,29 +287,27 @@ where
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
         let Self {
-            params:
-                MinMaxScaleParams {
-                    data_min,
-                    data_max,
-                    scaled_min,
-                    scaled_max,
-                },
+            scale_factor,
+            offset,
+            inner,
             ..
         } = self;
-        self.inner.next().map(|x| {
-            *scaled_min + ((x - *data_min) * (*scaled_max - *scaled_min)) / (*data_max - *data_min)
-        })
+        inner.next().map(|x| *offset + (x * *scale_factor))
     }
 }
 
 trait MinMaxScaleExt: Iterator<Item = f64> {
-    fn min_max_scale(self, params: MinMaxScaleParams) -> MinMaxScale<Self>
+    fn min_max_scale(self, params: &MinMaxScaleParams) -> MinMaxScale<Self>
     where
         Self: Sized,
     {
+        let scale_factor =
+            (params.scaled_max - params.scaled_min) / (params.data_max - params.data_min);
+        let offset = params.scaled_min - (params.data_min * scale_factor);
         MinMaxScale {
             inner: self,
-            params,
+            scale_factor,
+            offset,
         }
     }
 }
@@ -317,7 +316,8 @@ impl<T> MinMaxScaleExt for T where T: Iterator<Item = f64> {}
 
 struct InverseMinMaxScale<T> {
     inner: T,
-    params: MinMaxScaleParams,
+    scale_factor: f64,
+    offset: f64,
 }
 
 impl<T> Iterator for InverseMinMaxScale<T>
@@ -327,29 +327,27 @@ where
     type Item = f64;
     fn next(&mut self) -> Option<Self::Item> {
         let Self {
-            params:
-                MinMaxScaleParams {
-                    data_min,
-                    data_max,
-                    scaled_min,
-                    scaled_max,
-                },
+            inner,
+            scale_factor,
+            offset,
             ..
         } = self;
-        self.inner.next().map(|x| {
-            *data_min + ((x - *scaled_min) * (*data_max - *data_min)) / (*scaled_max - *scaled_min)
-        })
+        inner.next().map(|x| *offset + (x * *scale_factor))
     }
 }
 
 trait InverseMinMaxScaleExt: Iterator<Item = f64> {
-    fn inverse_min_max_scale(self, params: MinMaxScaleParams) -> InverseMinMaxScale<Self>
+    fn inverse_min_max_scale(self, params: &MinMaxScaleParams) -> InverseMinMaxScale<Self>
     where
         Self: Sized,
     {
+        let scale_factor =
+            (params.data_max - params.data_min) / (params.scaled_max - params.scaled_min);
+        let offset = params.data_min - (params.scaled_min * scale_factor);
         InverseMinMaxScale {
             inner: self,
-            params,
+            scale_factor,
+            offset,
         }
     }
 }
@@ -751,7 +749,7 @@ mod test {
         let expected = vec![0.0, 0.5, 1.0];
         let actual: Vec<_> = data
             .into_iter()
-            .min_max_scale(MinMaxScaleParams::new(min, max))
+            .min_max_scale(&MinMaxScaleParams::new(min, max))
             .collect();
         assert_all_close(&expected, &actual);
     }
@@ -764,7 +762,7 @@ mod test {
         let expected = vec![0.0, 5.0, 10.0];
         let actual: Vec<_> = data
             .into_iter()
-            .min_max_scale(MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
+            .min_max_scale(&MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
             .collect();
         assert_all_close(&expected, &actual);
     }
@@ -777,7 +775,7 @@ mod test {
         let expected = vec![1.0, 2.0, 3.0];
         let actual: Vec<_> = data
             .into_iter()
-            .inverse_min_max_scale(MinMaxScaleParams::new(min, max))
+            .inverse_min_max_scale(&MinMaxScaleParams::new(min, max))
             .collect();
         assert_all_close(&expected, &actual);
     }
@@ -790,7 +788,7 @@ mod test {
         let expected = vec![1.0, 2.0, 3.0];
         let actual: Vec<_> = data
             .into_iter()
-            .inverse_min_max_scale(MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
+            .inverse_min_max_scale(&MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
             .collect();
         assert_all_close(&expected, &actual);
     }
