@@ -14,7 +14,7 @@ resolver = "2"
 [workspace.package]
 license = "MIT OR Apache-2.0"
 authors = [
-  "Ben Sully <ben.sully@grafana.com",
+  "Ben Sully <ben.sully@grafana.com>",
 ]
 documentation = "https://docs.rs/crate/augurs"
 repository = "https://github.com/grafana/augurs"
@@ -44,6 +44,7 @@ augurs-testing = { path = "crates/augurs-testing" }
 augurs-core-js = { path = "js/augurs-core-js" }
 
 anyhow = "1.0.89"
+argmin = "0.10.0"
 bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"

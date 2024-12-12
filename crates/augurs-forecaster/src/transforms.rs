@@ -152,7 +152,21 @@ impl Transform {
     }
 
     /// Apply the transformation to the given time series.
-    pub(crate) fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
+    ///
+    /// # Returns
+    ///
+    /// A boxed iterator over the transformed values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use augurs_forecaster::transforms::Transform;
+    ///
+    /// let data = vec![1.0, 2.0, 3.0];
+    /// let transform = Transform::log();
+    /// let transformed: Vec<_> = transform.transform(data.into_iter()).collect();
+    /// ```
+    pub fn transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
@@ -167,7 +181,21 @@ impl Transform {
     }
 
     /// Apply the inverse transformation to the given time series.
-    pub(crate) fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
+    ///
+    /// # Returns
+    ///
+    /// A boxed iterator over the inverse transformed values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use augurs_forecaster::transforms::Transform;
+    ///
+    /// let data = vec![1.0, 2.0, 3.0];
+    /// let transform = Transform::log();
+    /// let transformed: Vec<_> = transform.inverse_transform(data.into_iter()).collect();
+    /// ```
+    pub fn inverse_transform<'a, T>(&'a self, input: T) -> Box<dyn Iterator<Item = f64> + 'a>
     where
         T: Iterator<Item = f64> + 'a,
     {
