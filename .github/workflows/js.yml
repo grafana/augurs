@@ -28,6 +28,8 @@ jobs:
       run: just build-augurs-js
 
     - uses: actions/setup-node@v4
+      with:
+        node-version-file: js/.node-version
     - name: Install dependencies
       run: npm ci
       working-directory: js/testpkg
