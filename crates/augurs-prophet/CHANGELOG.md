@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.7.0...augurs-prophet-v0.8.0) - 2024-12-16
+
+### Added
+
+- add Forecaster wrapper for Prophet (#191)
+
+### Fixed
+
+- add explicit link to chrono method (#192)
+
+### Other
+
+- *(deps)* update statrs requirement from 0.17.1 to 0.18.0 (#187)
+
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.3...augurs-prophet-v0.7.0) - 2024-11-25
 
 ### Breaking Changes
