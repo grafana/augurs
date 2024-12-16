@@ -37,6 +37,8 @@ wasm-bindgen-rayon = { version = "1.2.1", optional = true }
 [package.metadata.wasm-pack.profile.release]
 # previously had just ['-O4']
 wasm-opt = ['-O4', '--enable-bulk-memory', '--enable-threads']
+# See https://github.com/RReverser/wasm-bindgen-rayon/issues/16.
+split-linked-modules = true
 
 [lints]
 workspace = true
