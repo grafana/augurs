@@ -1,14 +1,8 @@
-import { webcrypto } from 'node:crypto'
 import { readFileSync } from "node:fs";
 
 import { PowerTransform, initSync } from '@bsull/augurs/transforms';
 
 import { describe, expect, it } from 'vitest';
-
-// Required for Rust's `rand::thread_rng` to support NodeJS modules.
-// See https://docs.rs/getrandom#nodejs-es-module-support.
-// @ts-ignore
-globalThis.crypto = webcrypto
 
 initSync({ module: readFileSync('node_modules/@bsull/augurs/transforms_bg.wasm') });
 
