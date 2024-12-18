@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tracing_subscriber::{layer::SubscriberExt, Registry};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
-use wasm_tracing::WASMLayer;
+use wasm_tracing::{ConsoleConfig, WasmLayer, WasmLayerConfig};
 
 /// The maximum log level to emit.
 ///
@@ -102,16 +102,17 @@ pub struct LogConfig {
 #[wasm_bindgen(js_name = "initLogging")]
 pub fn init_logging(config: Option<LogConfig>) -> Result<(), JsError> {
     let config = config.unwrap_or_default();
-    let config = wasm_tracing::WASMLayerConfigBuilder::new()
-        .set_show_fields(config.show_detailed_fields)
-        .set_report_logs_in_timings(matches!(config.target, LogTarget::Performance))
-        .set_console_config(if config.color {
-            wasm_tracing::ConsoleConfig::ReportWithConsoleColor
+    let config = WasmLayerConfig {
+        report_logs_in_timings: matches!(config.target, LogTarget::Performance),
+        show_fields: config.show_detailed_fields,
+        console: if config.color {
+            ConsoleConfig::ReportWithConsoleColor
         } else {
-            wasm_tracing::ConsoleConfig::ReportWithoutConsoleColor
-        })
-        .set_max_level(config.max_level.into())
-        .build();
-    tracing::subscriber::set_global_default(Registry::default().with(WASMLayer::new(config)))
+            ConsoleConfig::ReportWithoutConsoleColor
+        },
+        max_level: config.max_level.into(),
+        show_origin: false,
+    };
+    tracing::subscriber::set_global_default(Registry::default().with(WasmLayer::new(config)))
         .map_err(|_| JsError::new("logging already initialized"))
 }
