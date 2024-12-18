@@ -114,7 +114,7 @@ impl Transform {
     ///
     /// - if lambda == 0: x.ln()
     /// - otherwise: (x^lambda - 1) / lambda
-    pub fn boxcox(lambda: f64) -> Self {
+    pub fn box_cox(lambda: f64) -> Self {
         Self::BoxCox { lambda }
     }
 
