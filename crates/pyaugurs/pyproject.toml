@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "augurs"
+dynamic = ["version"]
 dependencies = ["numpy"]
 requires-python = ">=3.9"
 classifiers = [
