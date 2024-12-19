@@ -1,10 +1,14 @@
 TOOLS_DIR := "./tools"
-WIT_BINDGEN_VERSION := "0.34.0"
 WASI_ARCH := `uname -m`
 WASI_OS := os()
 WASI_VERSION := "24"
 WASI_VERSION_FULL := WASI_VERSION + ".0"
 WASI_SDK_PATH := "wasi-sdk-" + WASI_VERSION_FULL + "-" + WASI_ARCH + "-" + WASI_OS
+
+CARGO_COMPONENT_VERSION := "0.18.0"
+WIT_BINDGEN_CLI_VERSION := "0.34.0"
+WASM_TOOLS_VERSION := "1.219.1"
+WAC_CLI_VERSION := "0.6.1"
 
 CLANG := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang"
 CLANG_CPP := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang++"
@@ -15,10 +19,10 @@ checkout-submodules:
 
 # Install dependencies to work with WASI.
 install-deps: checkout-submodules
-  cargo binstall -y cargo-component
-  cargo binstall -y wit-bindgen-cli@{{WIT_BINDGEN_VERSION}}
-  cargo binstall -y wasm-tools
-  cargo binstall -y wac-cli
+  cargo binstall -y cargo-component@{{CARGO_COMPONENT_VERSION}}
+  cargo binstall -y wit-bindgen-cli@{{WIT_BINDGEN_CLI_VERSION}}
+  cargo binstall -y wasm-tools@{{WASM_TOOLS_VERSION}}
+  cargo binstall -y wac-cli@{{WAC_CLI_VERSION}}
   curl https://wasmtime.dev/install.sh -sSf | bash
   npm install --yes -g @bytecodealliance/jco
   curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-{{WASI_VERSION}}/{{WASI_SDK_PATH}}.tar.gz
