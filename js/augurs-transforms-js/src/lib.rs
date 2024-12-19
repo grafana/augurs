@@ -1,7 +1,5 @@
 //! JavaScript bindings for augurs transformations, such as power transforms, scaling, etc.
 
-use std::cell::RefCell;
-
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -36,7 +34,7 @@ pub enum PowerTransformAlgorithm {
 pub struct PowerTransform {
     inner: Transform,
     standardize: Standardize,
-    scale_params: RefCell<Option<StandardScaleParams>>,
+    scale_params: Option<StandardScaleParams>,
 }
 
 #[wasm_bindgen]
@@ -50,7 +48,7 @@ impl PowerTransform {
             inner: Transform::power_transform(&opts.data)
                 .map_err(|e| JsError::new(&e.to_string()))?,
             standardize: opts.standardize.unwrap_or_default(),
-            scale_params: RefCell::new(None),
+            scale_params: None,
         })
     }
 
@@ -61,14 +59,14 @@ impl PowerTransform {
     ///
     /// @experimental
     #[wasm_bindgen]
-    pub fn transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
+    pub fn transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
         let data = data.convert()?;
         Ok(match self.standardize {
             Standardize::None => self.inner.transform(data.iter().copied()).collect(),
             Standardize::Before => {
                 let scale_params = StandardScaleParams::from_data(data.iter().copied());
                 let scaler = Transform::standard_scaler(scale_params.clone());
-                self.scale_params.replace(Some(scale_params));
+                self.scale_params = Some(scale_params);
                 let scaled: Vec<_> = scaler.transform(data.iter().copied()).collect();
                 self.inner.transform(scaled.iter().copied()).collect()
             }
@@ -77,7 +75,7 @@ impl PowerTransform {
 
                 let scale_params = StandardScaleParams::from_data(transformed.iter().copied());
                 let scaler = Transform::standard_scaler(scale_params.clone());
-                self.scale_params.replace(Some(scale_params));
+                self.scale_params = Some(scale_params);
                 scaler.transform(transformed.iter().copied()).collect()
             }
         })
@@ -93,23 +91,21 @@ impl PowerTransform {
     #[wasm_bindgen(js_name = "inverseTransform")]
     pub fn inverse_transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
         let data = data.convert()?;
-        Ok(
-            match (self.standardize, self.scale_params.borrow().as_ref()) {
-                (Standardize::Before, Some(scale_params)) => {
-                    let inverse_transformed = self.inner.inverse_transform(data.iter().copied());
-                    let inverse_scaler = Transform::standard_scaler(scale_params.clone());
-                    inverse_scaler
-                        .inverse_transform(inverse_transformed)
-                        .collect()
-                }
-                (Standardize::After, Some(scale_params)) => {
-                    let inverse_scaler = Transform::standard_scaler(scale_params.clone());
-                    let scaled = inverse_scaler.inverse_transform(data.iter().copied());
-                    self.inner.inverse_transform(scaled).collect()
-                }
-                _ => self.inner.inverse_transform(data.iter().copied()).collect(),
-            },
-        )
+        Ok(match (self.standardize, self.scale_params.clone()) {
+            (Standardize::Before, Some(scale_params)) => {
+                let inverse_transformed = self.inner.inverse_transform(data.iter().copied());
+                let inverse_scaler = Transform::standard_scaler(scale_params.clone());
+                inverse_scaler
+                    .inverse_transform(inverse_transformed)
+                    .collect()
+            }
+            (Standardize::After, Some(scale_params)) => {
+                let inverse_scaler = Transform::standard_scaler(scale_params.clone());
+                let scaled = inverse_scaler.inverse_transform(data.iter().copied());
+                self.inner.inverse_transform(scaled).collect()
+            }
+            _ => self.inner.inverse_transform(data.iter().copied()).collect(),
+        })
     }
 
     /// Get the algorithm used by the power transform.
