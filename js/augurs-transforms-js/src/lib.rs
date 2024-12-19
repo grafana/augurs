@@ -1,7 +1,5 @@
 //! JavaScript bindings for augurs transformations, such as power transforms, scaling, etc.
 
-use std::cell::RefCell;
-
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -35,8 +33,7 @@ pub enum PowerTransformAlgorithm {
 #[wasm_bindgen]
 pub struct PowerTransform {
     inner: Transform,
-    standardize: bool,
-    scale_params: RefCell<Option<StandardScaleParams>>,
+    scale_params: Option<StandardScaleParams>,
 }
 
 #[wasm_bindgen]
@@ -46,11 +43,23 @@ impl PowerTransform {
     /// @experimental
     #[wasm_bindgen(constructor)]
     pub fn new(opts: PowerTransformOptions) -> Result<PowerTransform, JsError> {
+        let (scale_params, inner) = if opts.standardize {
+            let scale_params = StandardScaleParams::from_data(opts.data.iter().copied());
+            let scaler = Transform::standard_scaler(scale_params.clone());
+            let scaled: Vec<_> = scaler.transform(opts.data.iter().copied()).collect();
+            (
+                Some(scale_params),
+                Transform::power_transform(&scaled).map_err(|e| JsError::new(&e.to_string()))?,
+            )
+        } else {
+            (
+                None,
+                Transform::power_transform(&opts.data).map_err(|e| JsError::new(&e.to_string()))?,
+            )
+        };
         Ok(PowerTransform {
-            inner: Transform::power_transform(&opts.data)
-                .map_err(|e| JsError::new(&e.to_string()))?,
-            standardize: opts.standardize,
-            scale_params: RefCell::new(None),
+            inner,
+            scale_params,
         })
     }
 
@@ -62,17 +71,13 @@ impl PowerTransform {
     /// @experimental
     #[wasm_bindgen]
     pub fn transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
-        let transformed: Vec<_> = self
-            .inner
-            .transform(data.convert()?.iter().copied())
-            .collect();
-        if !self.standardize {
-            Ok(transformed)
-        } else {
-            let scale_params = StandardScaleParams::from_data(transformed.iter().copied());
+        let data = data.convert()?;
+        if let Some(scale_params) = &self.scale_params {
             let scaler = Transform::standard_scaler(scale_params.clone());
-            self.scale_params.replace(Some(scale_params));
-            Ok(scaler.transform(transformed.iter().copied()).collect())
+            let scaled: Vec<_> = scaler.transform(data.iter().copied()).collect();
+            Ok(self.inner.transform(scaled.iter().copied()).collect())
+        } else {
+            Ok(self.inner.transform(data.iter().copied()).collect())
         }
     }
 
@@ -85,17 +90,13 @@ impl PowerTransform {
     /// @experimental
     #[wasm_bindgen(js_name = "inverseTransform")]
     pub fn inverse_transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
-        match (self.standardize, self.scale_params.borrow().as_ref()) {
-            (true, Some(scale_params)) => {
-                let inverse_scaler = Transform::standard_scaler(scale_params.clone());
-                let data = data.convert()?;
-                let scaled = inverse_scaler.inverse_transform(data.iter().copied());
-                Ok(self.inner.inverse_transform(scaled).collect())
-            }
-            _ => Ok(self
-                .inner
-                .inverse_transform(data.convert()?.iter().copied())
-                .collect()),
+        let data = data.convert()?;
+        if let Some(scale_params) = &self.scale_params {
+            let scaler = Transform::standard_scaler(scale_params.clone());
+            let inverse_transformed = self.inner.inverse_transform(data.iter().copied());
+            Ok(scaler.inverse_transform(inverse_transformed).collect())
+        } else {
+            Ok(self.inner.inverse_transform(data.iter().copied()).collect())
         }
     }
 
