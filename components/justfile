@@ -1,4 +1,5 @@
 TOOLS_DIR := "./tools"
+WIT_BINDGEN_VERSION := "0.34.0"
 WASI_ARCH := `uname -m`
 WASI_OS := os()
 WASI_VERSION := "24"
@@ -15,7 +16,7 @@ checkout-submodules:
 # Install dependencies to work with WASI.
 install-deps: checkout-submodules
   cargo binstall -y cargo-component
-  cargo binstall -y wit-bindgen-cli
+  cargo binstall -y wit-bindgen-cli@{{WIT_BINDGEN_VERSION}}
   cargo binstall -y wasm-tools
   cargo binstall -y wac-cli
   curl https://wasmtime.dev/install.sh -sSf | bash
