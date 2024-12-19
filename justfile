@@ -49,6 +49,9 @@ watch:
 download-prophet-stan-model:
   cargo run --features download --bin download-stan-model
 
+copy-component-wasm:
+  cp components/cpp/prophet-wasmstan/prophet-wasmstan.wasm crates/augurs-prophet/prophet-wasmstan.wasm
+
 build-component:
   just components/build
-  cp components/cpp/prophet-wasmstan/prophet-wasmstan.wasm crates/augurs-prophet/prophet-wasmstan.wasm
+  just copy-component-wasm

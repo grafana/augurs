@@ -22,14 +22,9 @@ jobs:
       - name: Run cargo check
         run: cargo check --all-targets --all-features
 
-  wasmstan:
-    name: Prophet WASMStan component
-    uses: grafana/augurs/.github/workflows/wasmstan.yml@main
-
   test:
     name: Tests
     runs-on: ubuntu-latest
-    needs: wasmstan
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -40,13 +35,6 @@ jobs:
           bins: cargo-nextest,just
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Download the Prophet wasmstan module since an example and some doctests require it.
-      - name: Download Prophet WASMStan component artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prophet-wasmstan.wasm
-          path: crates/augurs-prophet
 
       # Download the Prophet Stan model since an example requires it.
       - name: Download Prophet Stan model
@@ -62,7 +50,6 @@ jobs:
   test-book:
     name: Test Book
     runs-on: ubuntu-latest
-    needs: wasmstan
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -73,13 +60,6 @@ jobs:
           bins: cargo-nextest,just,mdbook
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Download the Prophet wasmstan module since an example and some doctests require it.
-      - name: Download Prophet WASMStan component artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prophet-wasmstan.wasm
-          path: crates/augurs-prophet
 
       # The book tests require the augurs library to be built. In CI, we cache the result
       # of the build so that we don't have to rebuild it every time, but this can result
