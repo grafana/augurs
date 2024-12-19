@@ -36,4 +36,4 @@ jobs:
     - name: Copy prophet-wasmstan.wasm to augurs
       run: just copy-component-wasm
     - name: Ensure no diffs
-      run: git diff --exit-code -- crates/augurs-prophet/prophet-wasmstan.wasm
+      run: git diff --exit-code -a -- crates/augurs-prophet/prophet-wasmstan.wasm
