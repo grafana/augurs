@@ -52,6 +52,5 @@ download-prophet-stan-model:
 copy-component-wasm:
   cp components/cpp/prophet-wasmstan/prophet-wasmstan.wasm crates/augurs-prophet/prophet-wasmstan.wasm
 
-build-component:
-  just components/build
-  just copy-component-wasm
+rebuild-component:
+  act --bind --artifact-server-path=/tmp/artifacts -W ./.github/workflows/wasmstan.yml
