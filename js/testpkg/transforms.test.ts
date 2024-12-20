@@ -54,5 +54,15 @@ describe('transforms', () => {
       //@ts-ignore
       expect(Array.from(inverse)).toAllBeCloseTo(y);
     });
+
+    it('handles empty pipeline', () => {
+      const pt = new Pipeline([]);
+      expect(() => pt.transform(y)).not.toThrow();
+    });
+
+    it('handles invalid transforms', () => {
+      // @ts-ignore
+      expect(() => new Pipeline(["invalidTransform"])).toThrow();
+    });
   });
 })
