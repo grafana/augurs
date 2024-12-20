@@ -15,8 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown,wasm32-wasip1
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-binstall,just,ripgrep,wasmtime
