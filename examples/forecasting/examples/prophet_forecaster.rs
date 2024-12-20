@@ -1,7 +1,7 @@
 //! Example of using the Prophet model with the wasmstan optimizer.
 
 use augurs::{
-    forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+    forecaster::{transforms::MinMaxScaler, Forecaster, Transform},
     prophet::{wasmstan::WasmstanOptimizer, Prophet, TrainingData},
 };
 
@@ -21,9 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up the transforms.
     // These are just illustrative examples; you can use whatever transforms
     // you want.
-    let transforms = vec![Transform::min_max_scaler(MinMaxScaleParams::from_data(
-        y.iter().copied(),
-    ))];
+    let transforms = vec![MinMaxScaler::new().boxed()];
 
     // Set up the model. Create the Prophet model as normal, then convert it to a
     // `ProphetForecaster`.

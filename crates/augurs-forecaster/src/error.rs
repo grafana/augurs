@@ -1,5 +1,7 @@
 use augurs_core::ModelError;
 
+use crate::transforms;
+
 /// Errors returned by this crate.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -17,5 +19,13 @@ pub enum Error {
     Predict {
         /// The original error.
         source: Box<dyn ModelError>,
+    },
+
+    /// An error occurred while running a transformation.
+    #[error("Transform error: {source}")]
+    Transform {
+        /// The original error.
+        #[from]
+        source: transforms::Error,
     },
 }

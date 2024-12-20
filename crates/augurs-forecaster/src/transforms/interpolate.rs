@@ -12,6 +12,8 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
+use super::{Error, Transform};
+
 /// A type that can be used to interpolate between values.
 pub trait Interpolater {
     /// Interpolate between two values.
@@ -42,11 +44,30 @@ pub struct LinearInterpolator {
     _priv: (),
 }
 
+impl LinearInterpolator {
+    /// Create a new `LinearInterpolator`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Interpolater for LinearInterpolator {
     fn interpolate<T: Interpolatable>(&self, low: T, high: T, n: usize) -> impl Iterator<Item = T> {
         let diff = high - low;
         let step = diff / (T::from_usize(n));
         (0..n).map(move |i| low + T::from_usize(i) * step)
+    }
+}
+
+impl Transform for LinearInterpolator {
+    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+        let interpolated: Vec<_> = data.iter().copied().interpolate(*self).collect();
+        data.copy_from_slice(&interpolated);
+        Ok(())
+    }
+
+    fn inverse_transform(&self, _data: &mut [f64]) -> Result<(), Error> {
+        Ok(())
     }
 }
 

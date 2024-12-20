@@ -5,7 +5,10 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_ets::{trend::AutoETSTrendModel, AutoETS};
-use augurs_forecaster::{Forecaster, Transform};
+use augurs_forecaster::{
+    transforms::{LinearInterpolator, Logit},
+    Forecaster, Transform,
+};
 use augurs_mstl::{MSTLModel, TrendModel};
 
 use augurs_core_js::{Forecast, VecF64, VecUsize};
@@ -101,13 +104,13 @@ pub struct ETSOptions {
 }
 
 impl ETSOptions {
-    fn into_transforms(self) -> Vec<Transform> {
+    fn into_transforms(self) -> Vec<Box<dyn Transform>> {
         let mut transforms = vec![];
         if self.impute.unwrap_or_default() {
-            transforms.push(Transform::linear_interpolator());
+            transforms.push(LinearInterpolator::new().boxed())
         }
         if self.logit_transform.unwrap_or_default() {
-            transforms.push(Transform::logit());
+            transforms.push(Logit::new().boxed());
         }
         transforms
     }

@@ -7,7 +7,10 @@
 
 use augurs::{
     ets::AutoETS,
-    forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+    forecaster::{
+        transforms::{LinearInterpolator, Log, MinMaxScaler},
+        Forecaster, Transform,
+    },
     mstl::MSTLModel,
 };
 
@@ -40,9 +43,9 @@ fn main() {
     // These are just illustrative examples; you can use whatever transforms
     // you want.
     let transforms = vec![
-        Transform::linear_interpolator(),
-        Transform::min_max_scaler(MinMaxScaleParams::from_data(DATA.iter().copied())),
-        Transform::log(),
+        LinearInterpolator::new().boxed(),
+        MinMaxScaler::new().boxed(),
+        Log::new().boxed(),
     ];
 
     // Create a forecaster using the transforms.
