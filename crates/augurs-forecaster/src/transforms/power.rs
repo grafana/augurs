@@ -352,6 +352,46 @@ pub(crate) trait InverseYeoJohnsonExt: Iterator<Item = f64> {
 
 impl<T> InverseYeoJohnsonExt for T where T: Iterator<Item = f64> {}
 
+/// A trait for types that can be used as the `lambda` parameter for the
+/// `Transform::box_cox` method.
+pub trait IntoBoxCoxLambda {
+    fn into_box_cox_lambda(self) -> Result<f64, Error>;
+}
+
+impl IntoBoxCoxLambda for f64 {
+    /// Use the given lambda parameter.
+    fn into_box_cox_lambda(self) -> Result<f64, Error> {
+        Ok(self)
+    }
+}
+
+impl IntoBoxCoxLambda for &[f64] {
+    /// Find the optimal Box-Cox lambda parameter using maximum likelihood estimation.
+    fn into_box_cox_lambda(self) -> Result<f64, Error> {
+        optimize_box_cox_lambda(self)
+    }
+}
+
+/// A trait for types that can be used as the `lambda` parameter for the
+/// `Transform::box_cox` method.
+pub trait IntoYeoJohnsonLambda {
+    fn into_yeo_johnson_lambda(self) -> Result<f64, Error>;
+}
+
+impl IntoYeoJohnsonLambda for f64 {
+    /// Use the given lambda parameter.
+    fn into_yeo_johnson_lambda(self) -> Result<f64, Error> {
+        Ok(self)
+    }
+}
+
+impl IntoYeoJohnsonLambda for &[f64] {
+    /// Find the optimal Yeo-Johnson lambda parameter using maximum likelihood estimation.
+    fn into_yeo_johnson_lambda(self) -> Result<f64, Error> {
+        optimize_yeo_johnson_lambda(self)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -23,8 +23,8 @@ use augurs_core::{
 
 use exp::{ExpExt, LogExt, LogisticExt, LogitExt};
 use power::{
-    optimize_box_cox_lambda, optimize_yeo_johnson_lambda, BoxCoxExt, InverseBoxCoxExt,
-    InverseYeoJohnsonExt, YeoJohnsonExt,
+    optimize_box_cox_lambda, optimize_yeo_johnson_lambda, BoxCoxExt, IntoBoxCoxLambda,
+    IntoYeoJohnsonLambda, InverseBoxCoxExt, InverseYeoJohnsonExt, YeoJohnsonExt,
 };
 use scale::{InverseMinMaxScaleExt, InverseStandardScaleExt, MinMaxScaleExt, StandardScaleExt};
 pub use scale::{MinMaxScaleParams, StandardScaleParams};
@@ -156,8 +156,19 @@ impl Transform {
     ///
     /// - if lambda == 0: x.ln()
     /// - otherwise: (x^lambda - 1) / lambda
-    pub fn box_cox(lambda: f64) -> Self {
-        Self::BoxCox { lambda }
+    ///
+    /// # Parameters
+    ///
+    /// The `lambda` parameter can be a `f64` or a slice of `f64`s. In the latter case,
+    /// the optimal lambda parameter will be found using maximum likelihood estimation
+    /// to minimise skewness.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the optimal lambda parameter cannot be found.
+    pub fn box_cox<T: IntoBoxCoxLambda>(lambda: T) -> Result<Self, Error> {
+        let lambda = lambda.into_box_cox_lambda()?;
+        Ok(Self::BoxCox { lambda })
     }
 
     /// Create a new Yeo-Johnson transform.
@@ -171,8 +182,19 @@ impl Transform {
     /// - if lambda == 0 and x >= 0: (x + 1).ln()
     /// - if lambda != 2 and x < 0:  ((-x + 1)^2 - 1) / 2
     /// - if lambda == 2 and x < 0:  (-x + 1).ln()
-    pub fn yeo_johnson(lambda: f64) -> Self {
-        Self::YeoJohnson { lambda }
+    ///
+    /// # Parameters
+    ///
+    /// The `lambda` parameter can be a `f64` or a slice of `f64`s. In the latter case,
+    /// the optimal lambda parameter will be found using maximum likelihood estimation
+    /// to minimise skewness.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the optimal lambda parameter cannot be found.
+    pub fn yeo_johnson<T: IntoYeoJohnsonLambda>(lambda: T) -> Result<Self, Error> {
+        let lambda = lambda.into_yeo_johnson_lambda()?;
+        Ok(Self::YeoJohnson { lambda })
     }
 
     /// Create a power transform that optimizes the lambda parameter.
