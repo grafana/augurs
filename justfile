@@ -49,6 +49,9 @@ watch:
 download-prophet-stan-model:
   cargo run --features download --bin download-stan-model
 
-build-component:
-  just components/build
+copy-component-wasm:
   cp components/cpp/prophet-wasmstan/prophet-wasmstan.wasm crates/augurs-prophet/prophet-wasmstan.wasm
+
+# Rebuild the prophet-wasmstan WASM component. Requires a local runner with the `act` tool.
+rebuild-component:
+  act --bind --artifact-server-path=/tmp/artifacts -W ./.github/workflows/wasmstan.yml

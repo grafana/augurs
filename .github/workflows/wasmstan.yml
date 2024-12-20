@@ -1,7 +1,9 @@
-name: prophet-wasmstan
+name: build-prophet-wasmstan
 
 on:
-  workflow_call:
+  push:
+    branches: ["main"]
+  pull_request:
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,8 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown,wasm32-wasip1
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-binstall,just,ripgrep,wasmtime
@@ -31,3 +31,7 @@ jobs:
       with:
         name: prophet-wasmstan.wasm
         path: components/cpp/prophet-wasmstan/prophet-wasmstan.wasm
+    - name: Copy prophet-wasmstan.wasm to augurs
+      run: just copy-component-wasm
+    - name: Ensure no diffs
+      run: git diff --exit-code -- crates/augurs-prophet/prophet-wasmstan.wasm
