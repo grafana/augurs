@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { Pipeline, Transform, initSync } from '@bsull/augurs/transforms';
+import { Pipeline, initSync } from '@bsull/augurs/transforms';
 
 import { describe, expect, it } from 'vitest';
 
