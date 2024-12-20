@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { PowerTransform, initSync } from '@bsull/augurs/transforms';
+import { Pipeline, Transform, initSync } from '@bsull/augurs/transforms';
 
 import { describe, expect, it } from 'vitest';
 
@@ -41,17 +41,18 @@ describe('transforms', () => {
   });
 
 
-  describe('power transform', () => {
+  describe('pipeline', () => {
     it('works with arrays', () => {
-      const pt = new PowerTransform({ data: y });
+      const pt = new Pipeline(["standardScaler", "yeoJohnson"]);
       const transformed = pt.transform(y);
       expect(transformed).toBeInstanceOf(Float64Array);
       expect(transformed).toHaveLength(y.length);
+      console.log(transformed);
       const inverse = pt.inverseTransform(transformed);
       expect(inverse).toBeInstanceOf(Float64Array);
       expect(inverse).toHaveLength(y.length);
       //@ts-ignore
       expect(Array.from(inverse)).toAllBeCloseTo(y);
     });
-  })
+  });
 })
