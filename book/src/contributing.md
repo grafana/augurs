@@ -17,15 +17,20 @@ There are many ways to contribute:
 1. Fork and clone the repository
 2. Install Rust via rustup if you haven't already
 3. Install [`just`][just] for running tasks
-4. Build the WASM component:
+4. Install [`cargo-binstall`][binstall] to install dependencies
+5. Install dependencies:
+```bash
+(cd components && just install-deps)
+```
+6. Build the WASM component:
 ```bash
 just build-component
 ```
-5. Start building and checking the project using [bacon]:
+7. Start building and checking the project using [bacon]:
 ```bash
-just build
+just watch
 ```
-6. Run tests:
+8. Run tests using [nextest]:
 ```bash
 just test
 ```
@@ -57,4 +62,6 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 [repo]: https://github.com/grafana/augurs/
 [just]: https://just.systems/man/en/
+[binstall]: https://github.com/cargo-bins/cargo-binstall
 [bacon]: https://dystroy.org/bacon/
+[nextest]: https://nexte.st/
