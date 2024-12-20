@@ -27,6 +27,7 @@ install-deps: checkout-submodules
   curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-{{WASI_VERSION}}/{{WASI_SDK_PATH}}.tar.gz
   tar -xf {{WASI_SDK_PATH}}.tar.gz
   rm {{WASI_SDK_PATH}}.tar.gz
+  rm -rf {{TOOLS_DIR}}
   mkdir -p {{TOOLS_DIR}}
   mv {{WASI_SDK_PATH}} {{TOOLS_DIR}}
   curl -Lo {{TOOLS_DIR}}/wasi_snapshot_preview1.wasm https://github.com/bytecodealliance/wasmtime/releases/download/v17.0.0/wasi_snapshot_preview1.reactor.wasm
