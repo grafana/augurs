@@ -3,7 +3,6 @@
 mod data;
 mod error;
 mod forecaster;
-mod power_transforms;
 pub mod transforms;
 
 pub use data::Data;
