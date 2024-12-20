@@ -20,17 +20,15 @@ There are many ways to contribute:
 4. Install [`cargo-binstall`][binstall] to install dependencies
 5. Install dependencies:
 ```bash
-(cd components && just install-deps)
+just components/install-deps
 ```
-6. Build the WASM component:
-```bash
-just build-component
-```
-7. Start building and checking the project using [bacon]:
+
+6. Start building and checking the project using [bacon]:
 ```bash
 just watch
 ```
-8. Run tests using [nextest]:
+
+7. Run tests using [nextest]:
 ```bash
 just test
 ```
