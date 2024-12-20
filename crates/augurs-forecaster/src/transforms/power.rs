@@ -137,6 +137,13 @@ pub(crate) fn optimize_yeo_johnson_lambda(data: &[f64]) -> Result<f64, Error> {
 /// By default the optimal `lambda` parameter is found from the data in
 /// `transform` using maximum likelihood estimation. If you want to use a
 /// specific `lambda` value, you can use the `with_lambda` method.
+///
+/// Note that unlike the scikit-learn implementation, this transform does not
+/// standardize the data after applying the transformation. This can be done
+/// by using the [`StandardScaler`] transformer inside a [`Pipeline`].
+///
+/// [`StandardScaler`]: crate::transforms::StandardScaler
+/// [`Pipeline`]: crate::transforms::Pipeline
 #[derive(Clone, Debug)]
 pub struct BoxCox {
     lambda: f64,
@@ -292,6 +299,13 @@ impl CostFunction for YeoJohnsonProblem<'_> {
 /// By default the optimal `lambda` parameter is found from the data in
 /// `transform` using maximum likelihood estimation. If you want to use a
 /// specific `lambda` value, you can use the `with_lambda` method.
+///
+/// Note that unlike the scikit-learn implementation, this transform does not
+/// standardize the data after applying the transformation. This can be done
+/// by using the [`StandardScaler`] transformer inside a [`Pipeline`].
+///
+/// [`StandardScaler`]: crate::transforms::StandardScaler
+/// [`Pipeline`]: crate::transforms::Pipeline
 #[derive(Clone, Debug)]
 pub struct YeoJohnson {
     lambda: f64,
