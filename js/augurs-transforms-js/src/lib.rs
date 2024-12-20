@@ -1,8 +1,5 @@
 //! JavaScript bindings for augurs transformations, such as power transforms, scaling, etc.
 
-// TODO: rewrite all of this. We can just expose a simple enum of available transforms
-// and a `Pipeline` struct which is a simpler wrapper of `augurs_forecaster::Pipeline`.
-
 use serde::Deserialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
