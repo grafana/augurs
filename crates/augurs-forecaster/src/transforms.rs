@@ -13,7 +13,7 @@ apply a transformation to a time series and its inverse, respectively.
 
 mod error;
 mod exp;
-mod interpolate;
+pub mod interpolate;
 mod power;
 mod scale;
 

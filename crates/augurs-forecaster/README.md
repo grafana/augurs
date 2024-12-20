@@ -16,7 +16,10 @@ augurs-mstl = "*"
 ```rust
 use augurs::{
     ets::{AutoETS, trend::AutoETSTrendModel},
-    forecaster::{Forecaster, Transform, transforms::MinMaxScaleParams},
+    forecaster::{
+        Forecaster, Transform,
+        transforms::{LinearInterpolator, Logit, MinMaxScaler},
+    },
     mstl::MSTLModel
 };
 
@@ -33,9 +36,9 @@ let mstl = MSTLModel::new(vec![2], ets);
 
 // Set up the transforms.
 let transforms = vec![
-    Transform::linear_interpolator(),
-    Transform::min_max_scaler(MinMaxScaleParams::from_data(data.iter().copied())),
-    Transform::log(),
+    LinearInterpolator::new().boxed(),
+    MinMaxScaler::new().boxed(),
+    Logit::new().boxed(),
 ];
 
 // Create a forecaster using the transforms.

@@ -35,7 +35,7 @@ pub trait Interpolater {
 /// # Example
 ///
 /// ```
-/// use augurs_core::interpolate::*;
+/// use augurs_forecaster::transforms::interpolate::*;
 /// let got = LinearInterpolator::default().interpolate(1.0, 2.0, 4).collect::<Vec<_>>();
 /// assert_eq!(got, vec![1.0, 1.25, 1.5, 1.75]);
 /// ```
@@ -83,7 +83,7 @@ impl Transform for LinearInterpolator {
 ///
 /// # Example
 /// ```
-/// use augurs_core::interpolate::*;
+/// use augurs_forecaster::transforms::interpolate::*;
 /// let x = vec![1.0, f32::NAN, f32::NAN, f32::NAN, 2.0];
 /// let interp: Vec<_> = x.into_iter().interpolate(LinearInterpolator::default()).collect();
 /// assert_eq!(interp, vec![1.0, 1.25, 1.5, 1.75, 2.0]);
@@ -188,7 +188,7 @@ pub trait InterpolateExt: Iterator {
     ///
     /// # Example
     /// ```
-    /// use augurs_core::interpolate::*;
+    /// use augurs_forecaster::transforms::interpolate::*;
     /// let x = vec![1.0, f32::NAN, f32::NAN, f32::NAN, 2.0];
     /// let interp: Vec<_> = x.into_iter().interpolate(LinearInterpolator::default()).collect();
     /// assert_eq!(interp, vec![1.0, 1.25, 1.5, 1.75, 2.0]);
