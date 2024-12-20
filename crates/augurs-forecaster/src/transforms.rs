@@ -1,6 +1,15 @@
 /*!
 Data transformations.
+
+This module contains the `Transform` enum, which contains various
+predefined transformations. The enum contains various methods for
+creating new instances of the various transformations, as well as
+the `transform` and `inverse_transform` methods, which allow you to
+apply a transformation to a time series and its inverse, respectively.
 */
+
+// Note: implementations of the various transforms are in the
+// various submodules of this module (e.g. `power` and `scale`).
 
 mod exp;
 mod power;
@@ -51,6 +60,11 @@ impl Transforms {
             .fold(forecast, |f, t| t.inverse_transform_forecast(f))
     }
 }
+
+// Note: ideally this would be a trait, but that makes it quite difficult to
+// compose transformations, since we need to work with trait objects and
+// dynamic dispatch and lifetimes tend to get a bit tricky. It might be worth
+// revisiting this in the future.
 
 /// A transformation that can be applied to a time series.
 #[derive(Debug)]
