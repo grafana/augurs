@@ -76,7 +76,7 @@ impl HolidayOccurrence {
     /// in a timezone represented by the `utc_offset_seconds`.
     ///
     /// The UTC offset can be calculated using, for example,
-    /// [`chrono::FixedOffset::local_minus_utc`](lmu). Alternatively
+    /// [`chrono::FixedOffset::local_minus_utc`][lmu]. Alternatively
     /// it's the number of seconds to add to convert from the
     /// local time to UTC, so UTC+1 is represented by `3600`
     /// and UTC-5 by `-18000`.
