@@ -60,7 +60,11 @@ impl Interpolater for LinearInterpolator {
 }
 
 impl Transform for LinearInterpolator {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+    fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
         let interpolated: Vec<_> = data.iter().copied().interpolate(*self).collect();
         data.copy_from_slice(&interpolated);
         Ok(())

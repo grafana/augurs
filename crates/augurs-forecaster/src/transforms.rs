@@ -1,11 +1,5 @@
 /*!
 Data transformations.
-
-This module contains the `Transform` enum, which contains various
-predefined transformations. The enum contains various methods for
-creating new instances of the various transformations, as well as
-the `transform` and `inverse_transform` methods, which allow you to
-apply a transformation to a time series and its inverse, respectively.
 */
 
 // Note: implementations of the various transforms are in the
@@ -27,38 +21,90 @@ pub use interpolate::{InterpolateExt, LinearInterpolator};
 pub use power::{BoxCox, YeoJohnson};
 pub use scale::{MinMaxScaler, StandardScaleParams, StandardScaler};
 
-/// Transforms and Transform implementations.
+/// A transformation pipeline.
 ///
-/// The `Transforms` struct is a collection of `Transform` instances that can be applied to a time series.
-/// The `Transform` enum represents a single transformation that can be applied to a time series.
+/// The `Pipeline` struct is a collection of heterogeneous `Transform` instances
+/// that can be applied to a time series. Calling the `fit` or `fit_transform`
+/// methods will fit each transformation to the output of the previous one in turn
+/// starting by passing the input to the first transformation.
 #[derive(Debug, Default)]
-pub struct Pipeline(Vec<Box<dyn Transform>>);
+pub struct Pipeline {
+    transforms: Vec<Box<dyn Transform>>,
+    is_fitted: bool,
+}
 
 impl Pipeline {
     /// Create a new `Pipeline` with the given transforms.
     pub fn new(transforms: Vec<Box<dyn Transform>>) -> Self {
-        Self(transforms)
+        Self {
+            transforms,
+            is_fitted: false,
+        }
     }
 
-    /// Apply the transformations to the given time series.
-    pub fn transform(&mut self, input: &mut [f64]) -> Result<(), Error> {
-        for t in self.0.iter_mut() {
+    /// Fit the transformations to the given time series.
+    ///
+    /// Prefer `fit_transform` if possible, as it avoids copying the input.
+    pub fn fit(&mut self, input: &[f64]) -> Result<(), Error> {
+        // Copy the input to avoid mutating the original.
+        // We need to do this so we can call `fit_transform` on each
+        // transformation in the pipeline without mutating the input.
+        // This is required because each transformation needs to be
+        // fit after previous transformations have been applied.
+        let mut input = input.to_vec();
+        // Reuse `fit_transform_inner`, and just discard the result.
+        self.fit_transform_inner(&mut input)?;
+        Ok(())
+    }
+
+    fn fit_transform_inner(&mut self, input: &mut [f64]) -> Result<(), Error> {
+        for t in self.transforms.iter_mut() {
+            t.fit_transform(input)?;
+        }
+        self.is_fitted = true;
+        Ok(())
+    }
+
+    /// Fit and transform the given time series.
+    ///
+    /// This is equivalent to calling `fit` and then `transform` on the pipeline,
+    /// but is more efficient because it avoids copying the input.
+    pub fn fit_transform(&mut self, input: &mut [f64]) -> Result<(), Error> {
+        self.fit_transform_inner(input)?;
+        Ok(())
+    }
+
+    /// Apply the fitted transformations to the given time series.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the pipeline has not been fitted.
+    pub fn transform(&self, input: &mut [f64]) -> Result<(), Error> {
+        for t in self.transforms.iter() {
             t.transform(input)?;
         }
         Ok(())
     }
 
     /// Apply the inverse transformations to the given time series.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the pipeline has not been fitted.
     pub fn inverse_transform(&self, input: &mut [f64]) -> Result<(), Error> {
-        for t in self.0.iter().rev() {
+        for t in self.transforms.iter().rev() {
             t.inverse_transform(input)?;
         }
         Ok(())
     }
 
     /// Apply the inverse transformations to the given forecast.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the pipeline has not been fitted.
     pub(crate) fn inverse_transform_forecast(&self, forecast: &mut Forecast) -> Result<(), Error> {
-        for t in self.0.iter().rev() {
+        for t in self.transforms.iter().rev() {
             t.inverse_transform(&mut forecast.point)?;
             if let Some(intervals) = forecast.intervals.as_mut() {
                 t.inverse_transform(&mut intervals.lower)?;
@@ -71,11 +117,21 @@ impl Pipeline {
 
 /// A transformation that can be applied to a time series.
 pub trait Transform: fmt::Debug + Sync + Send {
+    /// Fit the transformation to the given time series.
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error>;
+
     /// Apply the transformation to the given time series.
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error>;
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error>;
 
     /// Apply the inverse transformation to the given time series.
     fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error>;
+
+    /// Fit the transformation to the given time series and then apply it.
+    fn fit_transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+        self.fit(data)?;
+        self.transform(data)?;
+        Ok(())
+    }
 
     /// Create a boxed version of the transformation.
     ///

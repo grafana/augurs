@@ -36,7 +36,11 @@ impl fmt::Debug for Logit {
 }
 
 impl Transform for Logit {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+    fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
         data.iter_mut().for_each(|x| *x = logit(*x));
         Ok(())
     }
@@ -67,7 +71,11 @@ impl fmt::Debug for Log {
 }
 
 impl Transform for Log {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+    fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
         data.iter_mut().for_each(|x| *x = f64::ln(*x));
         Ok(())
     }

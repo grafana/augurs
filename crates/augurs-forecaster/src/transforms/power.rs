@@ -176,9 +176,16 @@ impl Default for BoxCox {
 }
 
 impl Transform for BoxCox {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
         if self.lambda.is_nan() {
             self.lambda = optimize_box_cox_lambda(data)?;
+        }
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        if self.lambda.is_nan() {
+            return Err(Error::NotFitted);
         }
         for x in data.iter_mut() {
             *x = box_cox(*x, self.lambda)?;
@@ -338,9 +345,16 @@ impl Default for YeoJohnson {
 }
 
 impl Transform for YeoJohnson {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
         if self.lambda.is_nan() {
             self.lambda = optimize_yeo_johnson_lambda(data)?;
+        }
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        if self.lambda.is_nan() {
+            return Err(Error::NotFitted);
         }
         for x in data.iter_mut() {
             *x = yeo_johnson(*x, self.lambda)?;
@@ -427,7 +441,7 @@ mod test {
         let lambda = 0.5;
         let mut box_cox = BoxCox::new().with_lambda(lambda).unwrap();
         let expected = vec![0.0, 0.8284271247461903, 1.4641016151377544];
-        box_cox.transform(&mut data).unwrap();
+        box_cox.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
 
@@ -445,7 +459,7 @@ mod test {
     fn yeo_johnson_test() {
         let mut data = vec![-1.0, 0.0, 1.0];
         let lambda = 0.5;
-        let mut yeo_johnson = YeoJohnson::new().with_lambda(lambda).unwrap();
+        let yeo_johnson = YeoJohnson::new().with_lambda(lambda).unwrap();
         let expected = vec![-1.2189514164974602, 0.0, 0.8284271247461903];
         yeo_johnson.transform(&mut data).unwrap();
         assert_all_close(&expected, &data);

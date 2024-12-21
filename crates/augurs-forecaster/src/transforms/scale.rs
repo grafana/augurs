@@ -97,33 +97,37 @@ impl MinMaxScaler {
         self.params = Some(FittedMinMaxScalerParams::new(data_range, self.output_scale));
         self
     }
+}
 
-    fn fit(&self, data: &[f64]) -> Result<FittedMinMaxScalerParams, Error> {
-        match data
+impl Transform for MinMaxScaler {
+    /// Fit the scaler to the given data.
+    ///
+    /// This will compute the min and max values of the data and store them
+    /// in the `params` field of the scaler.
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        let params = match data
             .iter()
             .copied()
             .minmax_by(|a, b| a.partial_cmp(b).unwrap())
         {
-            e @ MinMaxResult::NoElements | e @ MinMaxResult::OneElement(_) => Err(e.into()),
-            MinMaxResult::MinMax(min, max) => Ok(FittedMinMaxScalerParams::new(
-                MinMax { min, max },
-                self.output_scale,
-            )),
-        }
-    }
-}
-
-impl Transform for MinMaxScaler {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
-        let params = match &mut self.params {
-            Some(p) => p,
-            None => self.params.get_or_insert(self.fit(data)?),
+            e @ MinMaxResult::NoElements | e @ MinMaxResult::OneElement(_) => return Err(e.into()),
+            MinMaxResult::MinMax(min, max) => {
+                FittedMinMaxScalerParams::new(MinMax { min, max }, self.output_scale)
+            }
         };
+        self.params = Some(params);
+        Ok(())
+    }
+
+    /// Apply the scaler to the given data.
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
         data.iter_mut()
             .for_each(|x| *x = *x * params.scale_factor + params.offset);
         Ok(())
     }
 
+    /// Apply the inverse of the scaler to the given data.
     fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
         let params = self.params.as_ref().ok_or(Error::NotFitted)?;
         data.iter_mut()
@@ -212,7 +216,7 @@ impl StandardScaleParams {
 ///
 /// let mut data = vec![1.0, 2.0, 3.0];
 /// let mut scaler = StandardScaler::new();
-/// scaler.transform(&mut data);
+/// scaler.fit_transform(&mut data);
 ///
 /// assert_eq!(data, vec![-1.224744871391589, 0.0, 1.224744871391589]);
 /// ```
@@ -237,18 +241,16 @@ impl StandardScaler {
         self.params = Some(params);
         self
     }
-
-    fn fit(&self, data: &[f64]) -> StandardScaleParams {
-        StandardScaleParams::from_data(data.iter().copied())
-    }
 }
 
 impl Transform for StandardScaler {
-    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
-        let params = match &mut self.params {
-            Some(p) => p,
-            None => self.params.get_or_insert(self.fit(data)),
-        };
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        self.params = Some(StandardScaleParams::from_data(data.iter().copied()));
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
         data.iter_mut()
             .for_each(|x| *x = (*x - params.mean) / params.std_dev);
         Ok(())
@@ -273,7 +275,7 @@ mod test {
         let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![0.0, 0.5, 1.0];
         let mut scaler = MinMaxScaler::new();
-        scaler.transform(&mut data).unwrap();
+        scaler.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
 
@@ -282,7 +284,7 @@ mod test {
         let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![0.0, 5.0, 10.0];
         let mut scaler = MinMaxScaler::new().with_scaled_range(0.0, 10.0);
-        scaler.transform(&mut data).unwrap();
+        scaler.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
 
@@ -313,7 +315,7 @@ mod test {
         // not necessarily obvious.
         let expected = vec![-1.224744871391589, 0.0, 1.224744871391589];
         let mut scaler = StandardScaler::new(); // 2.0, 1.0); // mean=2, std=1
-        scaler.transform(&mut data).unwrap();
+        scaler.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
 
@@ -322,7 +324,7 @@ mod test {
         let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![-1.0, 0.0, 1.0];
         let params = StandardScaleParams::new(2.0, 1.0); // mean=2, std=1
-        let mut scaler = StandardScaler::new().with_parameters(params);
+        let scaler = StandardScaler::new().with_parameters(params);
         scaler.transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }

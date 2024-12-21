@@ -39,7 +39,7 @@ where
     /// Fit the model to the given time series.
     pub fn fit<D: Data + Clone>(&mut self, y: D) -> Result<()> {
         let mut y = y.as_slice().to_vec();
-        self.pipeline.transform(&mut y)?;
+        self.pipeline.fit_transform(&mut y)?;
         self.fitted = Some(self.model.fit(&y).map_err(|e| Error::Fit {
             source: Box::new(e) as _,
         })?);
