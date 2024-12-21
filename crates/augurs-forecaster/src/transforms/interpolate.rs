@@ -12,6 +12,8 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
+use super::{Error, Transform};
+
 /// A type that can be used to interpolate between values.
 pub trait Interpolater {
     /// Interpolate between two values.
@@ -33,7 +35,7 @@ pub trait Interpolater {
 /// # Example
 ///
 /// ```
-/// use augurs_core::interpolate::*;
+/// use augurs_forecaster::transforms::interpolate::*;
 /// let got = LinearInterpolator::default().interpolate(1.0, 2.0, 4).collect::<Vec<_>>();
 /// assert_eq!(got, vec![1.0, 1.25, 1.5, 1.75]);
 /// ```
@@ -42,11 +44,30 @@ pub struct LinearInterpolator {
     _priv: (),
 }
 
+impl LinearInterpolator {
+    /// Create a new `LinearInterpolator`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Interpolater for LinearInterpolator {
     fn interpolate<T: Interpolatable>(&self, low: T, high: T, n: usize) -> impl Iterator<Item = T> {
         let diff = high - low;
         let step = diff / (T::from_usize(n));
         (0..n).map(move |i| low + T::from_usize(i) * step)
+    }
+}
+
+impl Transform for LinearInterpolator {
+    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+        let interpolated: Vec<_> = data.iter().copied().interpolate(*self).collect();
+        data.copy_from_slice(&interpolated);
+        Ok(())
+    }
+
+    fn inverse_transform(&self, _data: &mut [f64]) -> Result<(), Error> {
+        Ok(())
     }
 }
 
@@ -62,7 +83,7 @@ impl Interpolater for LinearInterpolator {
 ///
 /// # Example
 /// ```
-/// use augurs_core::interpolate::*;
+/// use augurs_forecaster::transforms::interpolate::*;
 /// let x = vec![1.0, f32::NAN, f32::NAN, f32::NAN, 2.0];
 /// let interp: Vec<_> = x.into_iter().interpolate(LinearInterpolator::default()).collect();
 /// assert_eq!(interp, vec![1.0, 1.25, 1.5, 1.75, 2.0]);
@@ -167,7 +188,7 @@ pub trait InterpolateExt: Iterator {
     ///
     /// # Example
     /// ```
-    /// use augurs_core::interpolate::*;
+    /// use augurs_forecaster::transforms::interpolate::*;
     /// let x = vec![1.0, f32::NAN, f32::NAN, f32::NAN, 2.0];
     /// let interp: Vec<_> = x.into_iter().interpolate(LinearInterpolator::default()).collect();
     /// assert_eq!(interp, vec![1.0, 1.25, 1.5, 1.75, 2.0]);

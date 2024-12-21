@@ -49,7 +49,10 @@ For more complex scenarios, you can use the `Forecaster` API which supports data
 # extern crate augurs;
 use augurs::{
     ets::AutoETS,
-    forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+    forecaster::{
+        transforms::{LinearInterpolator, Log, MinMaxScaler},
+        Forecaster, Transform,
+    },
     mstl::MSTLModel,
 };
 
@@ -61,9 +64,9 @@ fn main() {
     let mstl = MSTLModel::new(vec![2], ets);
 
     let transforms = vec![
-        Transform::linear_interpolator(),
-        Transform::min_max_scaler(MinMaxScaleParams::from_data(data.iter().copied())),
-        Transform::log(),
+        LinearInterpolator::new().boxed(),
+        MinMaxScaler::new().boxed(),
+        Log::new().boxed(),
     ];
 
     // Create and fit forecaster

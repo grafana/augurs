@@ -1,5 +1,9 @@
 //! Exponential transformations, including log and logit.
 
+use std::fmt;
+
+use super::{Error, Transform};
+
 // Logit and logistic functions.
 
 /// Returns the logistic function of the given value.
@@ -12,117 +16,71 @@ fn logit(x: f64) -> f64 {
     (x / (1.0 - x)).ln()
 }
 
-/// An iterator adapter that applies the logit function to each item.
-#[derive(Clone, Debug)]
-pub(crate) struct Logit<T> {
-    inner: T,
+/// The logit transform.
+#[derive(Clone, Default)]
+pub struct Logit {
+    _priv: (),
 }
 
-impl<T> Iterator for Logit<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(logit)
+impl Logit {
+    /// Create a new logit transform.
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
-pub(crate) trait LogitExt: Iterator<Item = f64> {
-    fn logit(self) -> Logit<Self>
-    where
-        Self: Sized,
-    {
-        Logit { inner: self }
+impl fmt::Debug for Logit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Logit").finish()
     }
 }
 
-impl<T> LogitExt for T where T: Iterator<Item = f64> {}
+impl Transform for Logit {
+    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+        data.iter_mut().for_each(|x| *x = logit(*x));
+        Ok(())
+    }
 
-/// An iterator adapter that applies the logistic function to each item.
-#[derive(Clone, Debug)]
-pub(crate) struct Logistic<T> {
-    inner: T,
-}
-
-impl<T> Iterator for Logistic<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(logistic)
+    fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        data.iter_mut().for_each(|x| *x = logistic(*x));
+        Ok(())
     }
 }
 
-pub(crate) trait LogisticExt: Iterator<Item = f64> {
-    fn logistic(self) -> Logistic<Self>
-    where
-        Self: Sized,
-    {
-        Logistic { inner: self }
+/// The log transform.
+#[derive(Clone, Default)]
+pub struct Log {
+    _priv: (),
+}
+
+impl Log {
+    /// Create a new log transform.
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
-impl<T> LogisticExt for T where T: Iterator<Item = f64> {}
-
-/// An iterator adapter that applies the log function to each item.
-#[derive(Clone, Debug)]
-pub(crate) struct Log<T> {
-    inner: T,
-}
-
-impl<T> Iterator for Log<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(f64::ln)
+impl fmt::Debug for Log {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Log").finish()
     }
 }
 
-pub(crate) trait LogExt: Iterator<Item = f64> {
-    fn log(self) -> Log<Self>
-    where
-        Self: Sized,
-    {
-        Log { inner: self }
+impl Transform for Log {
+    fn transform(&mut self, data: &mut [f64]) -> Result<(), Error> {
+        data.iter_mut().for_each(|x| *x = f64::ln(*x));
+        Ok(())
+    }
+
+    fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        data.iter_mut().for_each(|x| *x = f64::exp(*x));
+        Ok(())
     }
 }
-
-impl<T> LogExt for T where T: Iterator<Item = f64> {}
-
-/// An iterator adapter that applies the exponential function to each item.
-#[derive(Clone, Debug)]
-pub(crate) struct Exp<T> {
-    inner: T,
-}
-
-impl<T> Iterator for Exp<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(f64::exp)
-    }
-}
-
-pub(crate) trait ExpExt: Iterator<Item = f64> {
-    fn exp(self) -> Exp<Self>
-    where
-        Self: Sized,
-    {
-        Exp { inner: self }
-    }
-}
-
-impl<T> ExpExt for T where T: Iterator<Item = f64> {}
 
 #[cfg(test)]
 mod test {
-    use augurs_testing::assert_approx_eq;
+    use augurs_testing::{assert_all_close, assert_approx_eq};
 
     use super::*;
 
@@ -159,34 +117,50 @@ mod test {
     }
 
     #[test]
-    fn logistic_transform() {
-        let data = vec![0.0, 1.0, -1.0];
-        let expected = vec![
-            0.5_f64,
-            1.0 / (1.0 + (-1.0_f64).exp()),
-            1.0 / (1.0 + 1.0_f64.exp()),
-        ];
-        let actual: Vec<_> = data.into_iter().logistic().collect();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
     fn logit_transform() {
-        let data = vec![0.5, 0.75, 0.25];
+        let mut data = vec![0.5, 0.75, 0.25];
         let expected = vec![
             0.0_f64,
             (0.75_f64 / (1.0 - 0.75)).ln(),
             (0.25_f64 / (1.0 - 0.25)).ln(),
         ];
-        let actual: Vec<_> = data.into_iter().logit().collect();
-        assert_eq!(expected, actual);
+        Logit::new()
+            .transform(&mut data)
+            .expect("failed to logit transform");
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn logit_inverse_transform() {
+        let mut data = vec![0.0, 1.0, -1.0];
+        let expected = vec![
+            0.5_f64,
+            1.0 / (1.0 + (-1.0_f64).exp()),
+            1.0 / (1.0 + 1.0_f64.exp()),
+        ];
+        Logit::new()
+            .inverse_transform(&mut data)
+            .expect("failed to inverse logit transform");
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn log_transform() {
-        let data = vec![1.0, 2.0, 3.0];
+        let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![0.0_f64, 2.0_f64.ln(), 3.0_f64.ln()];
-        let actual: Vec<_> = data.into_iter().log().collect();
-        assert_eq!(expected, actual);
+        Log::new()
+            .transform(&mut data)
+            .expect("failed to log transform");
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn log_inverse_transform() {
+        let mut data = vec![0.0, 2.0_f64.ln(), 3.0_f64.ln()];
+        let expected = vec![1.0, 2.0, 3.0];
+        Log::new()
+            .inverse_transform(&mut data)
+            .expect("failed to inverse log transform");
+        assert_all_close(&expected, &data);
     }
 }

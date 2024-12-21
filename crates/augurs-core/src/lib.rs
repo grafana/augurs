@@ -8,7 +8,6 @@ pub mod prelude {
 
 mod distance;
 mod forecast;
-pub mod interpolate;
 mod traits;
 
 use std::convert::Infallible;
