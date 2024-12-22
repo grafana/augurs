@@ -54,8 +54,6 @@ jobs:
 
       - name: Run cargo nextest
         run: just test-all
-      # Run book tests before doc tests because otherwise there are multiple
-      # 'augurs' rlibs that the book could use as its augurs dependency.
       - name: Run doc tests
         run: just doctest
 
