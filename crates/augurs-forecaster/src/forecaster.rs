@@ -1,6 +1,6 @@
 use augurs_core::{Fit, Forecast, Predict};
 
-use crate::{Data, Error, Pipeline, Result, Transform};
+use crate::{Data, Error, Pipeline, Result, Transformer};
 
 /// A high-level API to fit and predict time series forecasting models.
 ///
@@ -31,8 +31,8 @@ where
     }
 
     /// Set the transformations to be applied to the input data.
-    pub fn with_transforms(mut self, transforms: Vec<Box<dyn Transform>>) -> Self {
-        self.pipeline = Pipeline::new(transforms);
+    pub fn with_transformers(mut self, transformers: Vec<Box<dyn Transformer>>) -> Self {
+        self.pipeline = Pipeline::new(transformers);
         self
     }
 
@@ -92,13 +92,13 @@ mod test {
     #[test]
     fn test_forecaster() {
         let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
-        let transforms = vec![
+        let transformers = vec![
             LinearInterpolator::new().boxed(),
             MinMaxScaler::new().boxed(),
             Logit::new().boxed(),
         ];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
         assert_all_close(&forecasts.point, &[5.0, 5.0, 5.0, 5.0]);
@@ -107,9 +107,9 @@ mod test {
     #[test]
     fn test_forecaster_power_positive() {
         let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
-        let transforms = vec![BoxCox::new().boxed()];
+        let transformers = vec![BoxCox::new().boxed()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
         assert_all_close(
@@ -126,9 +126,9 @@ mod test {
     #[test]
     fn test_forecaster_power_non_positive() {
         let data = &[0.0, 2.0, 3.0, 4.0, 5.0];
-        let transforms = vec![YeoJohnson::new().boxed()];
+        let transformers = vec![YeoJohnson::new().boxed()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
         assert_all_close(

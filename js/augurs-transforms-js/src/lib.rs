@@ -5,7 +5,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_core_js::VecF64;
-use augurs_forecaster::transforms;
+use augurs_forecaster::transforms::{StandardScaler, Transformer, YeoJohnson};
 
 /// A transformation to be applied to the data.
 ///
@@ -21,10 +21,10 @@ pub enum Transform {
 }
 
 impl Transform {
-    fn into_transform(self) -> Box<dyn augurs_forecaster::Transform> {
+    fn into_transformer(self) -> Box<dyn Transformer> {
         match self {
-            Transform::StandardScaler => Box::new(transforms::StandardScaler::new()),
-            Transform::YeoJohnson => Box::new(transforms::YeoJohnson::new()),
+            Transform::StandardScaler => Box::new(StandardScaler::new()),
+            Transform::YeoJohnson => Box::new(YeoJohnson::new()),
         }
     }
 }
@@ -51,18 +51,47 @@ impl Pipeline {
     pub fn new(transforms: Vec<Transform>) -> Self {
         Self {
             inner: augurs_forecaster::Pipeline::new(
-                transforms.into_iter().map(|t| t.into_transform()).collect(),
+                transforms
+                    .into_iter()
+                    .map(|t| t.into_transformer())
+                    .collect(),
             ),
         }
     }
 
+    /// Fit the pipeline to the given data.
+    ///
+    /// Prefer calling `fitTransform` if possible, as it avoids needing
+    /// to copy the data as many times.
+    ///
+    /// @experimental
+    #[wasm_bindgen]
+    pub fn fit(&mut self, data: VecF64) -> Result<(), JsError> {
+        let data = data.convert()?;
+        self.inner.fit(&data)?;
+        Ok(())
+    }
+
     /// Transform the given data using the pipeline.
+    ///
+    /// Prefer calling `fitTransform` if possible, as it avoids needing
+    /// to copy the data as many times.
     ///
     /// @experimental
     #[wasm_bindgen]
     pub fn transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
         let mut data = data.convert()?;
         self.inner.transform(&mut data)?;
+        Ok(data)
+    }
+
+    /// Fit and transform the given data.
+    ///
+    /// @experimental
+    #[wasm_bindgen(js_name = "fitTransform")]
+    pub fn fit_transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
+        let mut data = data.convert()?;
+        self.inner.fit_transform(&mut data)?;
         Ok(data)
     }
 

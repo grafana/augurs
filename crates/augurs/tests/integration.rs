@@ -102,7 +102,7 @@ fn test_ets() {
 #[test]
 fn test_forecaster() {
     use augurs::{
-        forecaster::{transforms::MinMaxScaler, Forecaster, Transform},
+        forecaster::{transforms::MinMaxScaler, Forecaster, Transformer},
         mstl::{MSTLModel, NaiveTrend},
     };
     use augurs_forecaster::transforms::{LinearInterpolator, Logit};
@@ -114,7 +114,7 @@ fn test_forecaster() {
         Logit::new().boxed(),
     ];
     let model = MSTLModel::new(vec![2], NaiveTrend::new());
-    let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+    let mut forecaster = Forecaster::new(model).with_transformers(transforms);
     forecaster.fit(AIR_PASSENGERS).unwrap();
     let forecasts = forecaster.predict(4, None).unwrap();
     dbg!(&forecasts.point);

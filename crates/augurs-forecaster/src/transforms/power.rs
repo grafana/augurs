@@ -3,7 +3,7 @@
 use argmin::core::{CostFunction, Executor};
 use argmin::solver::brent::BrentOpt;
 
-use super::{Error, Transform};
+use super::{Error, Transformer};
 
 /// Returns the Box-Cox transformation of the given value.
 /// Assumes x > 0.
@@ -175,7 +175,7 @@ impl Default for BoxCox {
     }
 }
 
-impl Transform for BoxCox {
+impl Transformer for BoxCox {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
         if self.lambda.is_nan() {
             self.lambda = optimize_box_cox_lambda(data)?;
@@ -344,7 +344,7 @@ impl Default for YeoJohnson {
     }
 }
 
-impl Transform for YeoJohnson {
+impl Transformer for YeoJohnson {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
         if self.lambda.is_nan() {
             self.lambda = optimize_yeo_johnson_lambda(data)?;

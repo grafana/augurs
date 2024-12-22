@@ -17,7 +17,7 @@ augurs-mstl = "*"
 use augurs::{
     ets::{AutoETS, trend::AutoETSTrendModel},
     forecaster::{
-        Forecaster, Transform,
+        Forecaster, Transformer,
         transforms::{LinearInterpolator, Logit, MinMaxScaler},
     },
     mstl::MSTLModel
@@ -34,15 +34,15 @@ let data = &[
 let ets = AutoETS::non_seasonal().into_trend_model();
 let mstl = MSTLModel::new(vec![2], ets);
 
-// Set up the transforms.
-let transforms = vec![
+// Set up the transformers.
+let transformers = vec![
     LinearInterpolator::new().boxed(),
     MinMaxScaler::new().boxed(),
     Logit::new().boxed(),
 ];
 
 // Create a forecaster using the transforms.
-let mut forecaster = Forecaster::new(mstl).with_transforms(transforms);
+let mut forecaster = Forecaster::new(mstl).with_transformers(transformers);
 
 // Fit the forecaster. This will transform the training data by
 // running the transforms in order, then fit the MSTL model.

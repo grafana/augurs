@@ -4,7 +4,7 @@ use core::f64;
 
 use itertools::{Itertools, MinMaxResult};
 
-use super::{Error, Transform};
+use super::{Error, Transformer};
 
 /// Helper struct holding the min and max for use in a `MinMaxScaler`.
 #[derive(Debug, Clone, Copy)]
@@ -99,7 +99,7 @@ impl MinMaxScaler {
     }
 }
 
-impl Transform for MinMaxScaler {
+impl Transformer for MinMaxScaler {
     /// Fit the scaler to the given data.
     ///
     /// This will compute the min and max values of the data and store them
@@ -212,7 +212,7 @@ impl StandardScaleParams {
 /// ## Using the default constructor
 ///
 /// ```
-/// use augurs_forecaster::transforms::{StandardScaler, Transform};
+/// use augurs_forecaster::transforms::{StandardScaler, Transformer};
 ///
 /// let mut data = vec![1.0, 2.0, 3.0];
 /// let mut scaler = StandardScaler::new();
@@ -243,7 +243,7 @@ impl StandardScaler {
     }
 }
 
-impl Transform for StandardScaler {
+impl Transformer for StandardScaler {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
         self.params = Some(StandardScaleParams::from_data(data.iter().copied()));
         Ok(())

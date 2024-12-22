@@ -12,7 +12,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use super::{Error, Transform};
+use super::{Error, Transformer};
 
 /// A type that can be used to interpolate between values.
 pub trait Interpolater {
@@ -59,7 +59,7 @@ impl Interpolater for LinearInterpolator {
     }
 }
 
-impl Transform for LinearInterpolator {
+impl Transformer for LinearInterpolator {
     fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
         Ok(())
     }

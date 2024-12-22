@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 use augurs_ets::{trend::AutoETSTrendModel, AutoETS};
 use augurs_forecaster::{
     transforms::{LinearInterpolator, Logit},
-    Forecaster, Transform,
+    Forecaster, Transformer,
 };
 use augurs_mstl::{MSTLModel, TrendModel};
 
@@ -50,8 +50,8 @@ impl MSTL {
         let ets: Box<dyn TrendModel + Sync + Send> =
             Box::new(AutoETSTrendModel::from(AutoETS::non_seasonal()));
         let model = MSTLModel::new(periods.convert()?, ets);
-        let forecaster =
-            Forecaster::new(model).with_transforms(options.unwrap_or_default().into_transforms());
+        let forecaster = Forecaster::new(model)
+            .with_transformers(options.unwrap_or_default().into_transformers());
         Ok(MSTL { forecaster })
     }
 
@@ -104,15 +104,15 @@ pub struct ETSOptions {
 }
 
 impl ETSOptions {
-    fn into_transforms(self) -> Vec<Box<dyn Transform>> {
-        let mut transforms = vec![];
+    fn into_transformers(self) -> Vec<Box<dyn Transformer>> {
+        let mut transformers = vec![];
         if self.impute.unwrap_or_default() {
-            transforms.push(LinearInterpolator::new().boxed())
+            transformers.push(LinearInterpolator::new().boxed())
         }
         if self.logit_transform.unwrap_or_default() {
-            transforms.push(Logit::new().boxed());
+            transformers.push(Logit::new().boxed());
         }
-        transforms
+        transformers
     }
 }
 

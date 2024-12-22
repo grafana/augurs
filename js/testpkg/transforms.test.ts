@@ -44,7 +44,7 @@ describe('transforms', () => {
   describe('pipeline', () => {
     it('works with arrays', () => {
       const pt = new Pipeline(["standardScaler", "yeoJohnson"]);
-      const transformed = pt.transform(y);
+      const transformed = pt.fitTransform(y);
       expect(transformed).toBeInstanceOf(Float64Array);
       expect(transformed).toHaveLength(y.length);
       console.log(transformed);
@@ -57,7 +57,7 @@ describe('transforms', () => {
 
     it('handles empty pipeline', () => {
       const pt = new Pipeline([]);
-      expect(() => pt.transform(y)).not.toThrow();
+      expect(() => pt.fitTransform(y)).not.toThrow();
     });
 
     it('handles invalid transforms', () => {

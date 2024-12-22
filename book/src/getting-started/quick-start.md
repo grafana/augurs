@@ -51,7 +51,7 @@ use augurs::{
     ets::AutoETS,
     forecaster::{
         transforms::{LinearInterpolator, Log, MinMaxScaler},
-        Forecaster, Transform,
+        Forecaster, Transformer,
     },
     mstl::MSTLModel,
 };
@@ -59,18 +59,18 @@ use augurs::{
 fn main() {
     let data = &[1.0, 1.2, 1.4, 1.5, f64::NAN, 1.4, 1.2, 1.5, 1.6, 2.0, 1.9, 1.8];
 
-    // Set up model and transforms
+    // Set up model and transformers
     let ets = AutoETS::non_seasonal().into_trend_model();
     let mstl = MSTLModel::new(vec![2], ets);
 
-    let transforms = vec![
+    let transformers = vec![
         LinearInterpolator::new().boxed(),
         MinMaxScaler::new().boxed(),
         Log::new().boxed(),
     ];
 
     // Create and fit forecaster
-    let mut forecaster = Forecaster::new(mstl).with_transforms(transforms);
+    let mut forecaster = Forecaster::new(mstl).with_transformers(transformers);
     forecaster.fit(data).expect("model should fit");
 
     // Generate forecasts

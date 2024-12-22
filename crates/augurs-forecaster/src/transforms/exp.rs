@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::{Error, Transform};
+use super::{Error, Transformer};
 
 // Logit and logistic functions.
 
@@ -35,7 +35,7 @@ impl fmt::Debug for Logit {
     }
 }
 
-impl Transform for Logit {
+impl Transformer for Logit {
     fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
         Ok(())
     }
@@ -70,7 +70,7 @@ impl fmt::Debug for Log {
     }
 }
 
-impl Transform for Log {
+impl Transformer for Log {
     fn fit(&mut self, _data: &[f64]) -> Result<(), Error> {
         Ok(())
     }
