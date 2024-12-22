@@ -61,12 +61,6 @@ let model = MSTLModel::new(vec![2], NaiveTrend::new());
 let mut forecaster = Forecaster::new(model).with_transformers(transformers);
 ```
 
-### Prophet
-
-In version 0.8 the `augurs::prophet::Prophet` struct was removed and replaced with the
-`augurs::prophet::ProphetForecaster` struct, which is a `Forecaster` implementation that
-uses the Prophet model to forecast future values.
-
 ## From 0.6 to 0.7
 
 ### Prophet
