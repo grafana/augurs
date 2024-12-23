@@ -47,6 +47,11 @@ impl Pipeline {
         }
     }
 
+    /// Return `true` if the pipeline has been fitted.
+    pub fn is_fitted(&self) -> bool {
+        self.is_fitted
+    }
+
     // Helper function for actually doing the fit then transform steps.
     fn fit_transform_inner(&mut self, input: &mut [f64]) -> Result<(), Error> {
         for t in self.transformers.iter_mut() {
