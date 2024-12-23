@@ -10,6 +10,7 @@ build: \
   (build-inner "seasons") \
   (build-inner "transforms")
   just fix-package-json
+  just copy-readme
 
 build-inner target args='':
   cd augurs-{{target}}-js && \
@@ -30,6 +31,9 @@ fix-package-json:
   VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select (.name == "augurs") | .version')
   jq < augurs/package.json ". | .version = \"$VERSION\"" > augurs/package.json.tmp
   mv augurs/package.json.tmp augurs/package.json
+
+copy-readme:
+  cp README.md augurs/README.md
 
 test:
   cd testpkg && \
