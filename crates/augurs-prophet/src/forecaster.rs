@@ -151,7 +151,7 @@ impl Predict for FittedProphetForecaster {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "wasmstan"))]
 mod test {
 
     use augurs_core::{Fit, Predict};

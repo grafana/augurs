@@ -863,4 +863,16 @@ mod test_fit {
             &[0.781831, 0.623490, 0.974928, -0.222521, 0.433884, -0.900969],
         );
     }
+
+    // Regression test for https://github.com/grafana/augurs/issues/209.
+    #[test]
+    fn fit_with_nans() {
+        let test_days = 30;
+        let (mut train, _) = train_test_splitn(daily_univariate_ts(), test_days);
+        train.y[10] = f64::NAN;
+        let opt = MockOptimizer::new();
+        let mut prophet = Prophet::new(Default::default(), opt);
+        // Should not panic.
+        prophet.fit(train.clone(), Default::default()).unwrap();
+    }
 }

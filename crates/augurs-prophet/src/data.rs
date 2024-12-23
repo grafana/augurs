@@ -132,6 +132,52 @@ impl TrainingData {
         Ok(self)
     }
 
+    /// Remove any NaN values from the `y` column, and the corresponding values
+    /// in the other columns.
+    ///
+    /// This handles updating all columns and `n` appropriately.
+    ///
+    /// NaN values in other columns are retained.
+    pub(crate) fn filter_nans(mut self) -> Self {
+        let mut n = self.n;
+        let mut keep = vec![true; self.n];
+        self.y = self
+            .y
+            .into_iter()
+            .zip(keep.iter_mut())
+            .filter_map(|(y, keep)| {
+                if y.is_nan() {
+                    *keep = false;
+                    n -= 1;
+                    None
+                } else {
+                    Some(y)
+                }
+            })
+            .collect();
+
+        fn retain<T>(v: &mut Vec<T>, keep: &[bool]) {
+            let mut iter = keep.iter();
+            v.retain(|_| *iter.next().unwrap());
+        }
+
+        self.n = n;
+        retain(&mut self.ds, &keep);
+        if let Some(cap) = self.cap.as_mut() {
+            retain(cap, &keep);
+        }
+        if let Some(floor) = self.floor.as_mut() {
+            retain(floor, &keep);
+        }
+        for v in self.x.values_mut() {
+            retain(v, &keep);
+        }
+        for v in self.seasonality_conditions.values_mut() {
+            retain(v, &keep);
+        }
+        self
+    }
+
     #[cfg(test)]
     pub(crate) fn head(mut self, n: usize) -> Self {
         self.n = n;
@@ -296,5 +342,21 @@ impl PredictionData {
         }
         self.x = x;
         Ok(self)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::testdata::daily_univariate_ts;
+
+    #[test]
+    fn filter_nans() {
+        let mut data = daily_univariate_ts();
+        let expected_len = data.n - 1;
+        data.y[10] = f64::NAN;
+        let data = data.filter_nans();
+        assert_eq!(data.n, expected_len);
+        assert_eq!(data.y.len(), expected_len);
+        assert_eq!(data.ds.len(), expected_len);
     }
 }
