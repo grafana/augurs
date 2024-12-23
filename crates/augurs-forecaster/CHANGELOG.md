@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.7.0...augurs-forecaster-v0.8.0) - 2024-12-23
+
+### Added
+
+- [**breaking**] switch `transform` to a trait (#213)
+- allow creating a Box-Cox or Yeo-Johnson transform with either lambda or data (#212)
+- add standard scaler transform (#204)
+- add 'transforms' JS crate and include in augurs JS bindings (#195)
+
+### Fixed
+
+- use box_cox instead of boxcox (#203)
+- make Transform enum non-exhaustive (#194)
+
+### Other
+
+- restructure transforms into modules (#210)
+- precalculate offset and scale factor for min-max scale transformer (#196)
+- Add power transformation logic to forecaster transforms ([#185](https://github.com/grafana/augurs/pull/185))
+
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.6.3...augurs-forecaster-v0.7.0) - 2024-11-25
 
 ### Other
