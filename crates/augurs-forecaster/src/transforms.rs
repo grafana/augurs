@@ -29,6 +29,9 @@ pub use scale::{MinMaxScaler, StandardScaleParams, StandardScaler};
 /// starting by passing the input to the first transformation. The
 /// [`Pipeline::inverse_transform`] can then be used to back-transform data
 /// to the original scale.
+///
+/// The default `Pipeline` contains no transformers and the fit/transform methods
+/// are noops.
 #[derive(Debug, Default)]
 pub struct Pipeline {
     transformers: Vec<Box<dyn Transformer>>,
