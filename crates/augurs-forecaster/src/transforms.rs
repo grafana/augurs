@@ -83,6 +83,9 @@ impl Transformer for Pipeline {
     ///
     /// Prefer `fit_transform` if possible, as it avoids copying the input.
     fn fit(&mut self, input: &[f64]) -> Result<(), Error> {
+        if self.transformers.is_empty() {
+            return Ok(());
+        }
         // Copy the input to avoid mutating the original.
         // We need to do this so we can call `fit_transform` on each
         // transformation in the pipeline without mutating the input.
