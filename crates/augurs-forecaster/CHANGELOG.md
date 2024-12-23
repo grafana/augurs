@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.7.0...augurs-forecaster-v0.8.0) - 2024-12-23
 
+This release includes some major, breaking changes to the `augurs-forecaster` crate. See the [migration guide](https://docs.augu.rs/migrating.html#from-07-to-08) for more information on how to upgrade.
+
 ### Added
 
 - [**breaking**] switch `transform` to a trait (#213)
@@ -27,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add power transformation logic to forecaster transforms ([#185](https://github.com/grafana/augurs/pull/185))
 
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.6.3...augurs-forecaster-v0.7.0) - 2024-11-25
+
+This release includes some major, breaking changes to how holidays are handled in Prophet. See the [migration guide](https://docs.augu.rs/migrating.html#from-06-to-07) for more information on how to upgrade.
 
 ### Other
 
