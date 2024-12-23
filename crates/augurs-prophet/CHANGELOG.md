@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.3...augurs-prophet-v0.7.0) - 2024-11-25
 
+This release includes some major, breaking changes to how holidays are handled. See the [migration guide](https://docs.augu.rs/migrating.html#from-06-to-07) for more information on how to upgrade.
+
 ### Breaking Changes
 
 - Support sub-daily & non-UTC holidays ([#181](https://github.com/grafana/augurs/pull/181))
