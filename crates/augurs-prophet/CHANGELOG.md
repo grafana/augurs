@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.7.0...augurs-prophet-v0.8.0) - 2024-12-23
+
+### Added
+
+- add Forecaster wrapper for Prophet (#191)
+
+### Fixed
+
+- fix filtering of NaNs in Prophet preprocessing (#219)
+- *(docs)* fix incorrect link to chrono
+- add explicit link to chrono method (#192)
+
+### Other
+
+- *(deps)* update wasmtime requirement from 27 to 28 (#216)
+- Commit prophet-wasmstan.wasm to git ([#206](https://github.com/grafana/augurs/pull/206))
+- *(deps)* update statrs requirement from 0.17.1 to 0.18.0 (#187)
+
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-prophet-v0.6.3...augurs-prophet-v0.7.0) - 2024-11-25
 
 ### Breaking Changes

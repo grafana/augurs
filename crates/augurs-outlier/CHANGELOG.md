@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-outlier-v0.7.0...augurs-outlier-v0.8.0) - 2024-12-23
+
+### Other
+
+- *(deps)* update rv requirement from 0.17.0 to 0.18.0 (#198)
+
 ## [0.7.0](https://github.com/grafana/augurs/compare/augurs-outlier-v0.6.3...augurs-outlier-v0.7.0) - 2024-11-25
 
 ### Other

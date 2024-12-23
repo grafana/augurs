@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-core-v0.7.0...augurs-core-v0.8.0) - 2024-12-23
+
+### Added
+
+- [**breaking**] switch `transform` to a trait (#213)
+
 ## [0.5.1](https://github.com/grafana/augurs/compare/augurs-core-v0.5.0...augurs-core-v0.5.1) - 2024-10-24
 
 ### Other
