@@ -32,3 +32,6 @@
 
 # Contributing
 - [Contributing](./contributing.md)
+
+# Appendix
+- [Migration Guide](./migrating.md)

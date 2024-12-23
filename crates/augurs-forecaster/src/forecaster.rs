@@ -1,6 +1,6 @@
 use augurs_core::{Fit, Forecast, Predict};
 
-use crate::{Data, Error, Result, Transform, Transforms};
+use crate::{Data, Error, Pipeline, Result, Transformer};
 
 /// A high-level API to fit and predict time series forecasting models.
 ///
@@ -13,7 +13,7 @@ pub struct Forecaster<M: Fit> {
     model: M,
     fitted: Option<M::Fitted>,
 
-    transforms: Transforms,
+    pipeline: Pipeline,
 }
 
 impl<M> Forecaster<M>
@@ -26,23 +26,21 @@ where
         Self {
             model,
             fitted: None,
-            transforms: Transforms::default(),
+            pipeline: Pipeline::default(),
         }
     }
 
     /// Set the transformations to be applied to the input data.
-    pub fn with_transforms(mut self, transforms: Vec<Transform>) -> Self {
-        self.transforms = Transforms::new(transforms);
+    pub fn with_transformers(mut self, transformers: Vec<Box<dyn Transformer>>) -> Self {
+        self.pipeline = Pipeline::new(transformers);
         self
     }
 
     /// Fit the model to the given time series.
     pub fn fit<D: Data + Clone>(&mut self, y: D) -> Result<()> {
-        let data: Vec<_> = self
-            .transforms
-            .transform(y.as_slice().iter().copied())
-            .collect();
-        self.fitted = Some(self.model.fit(&data).map_err(|e| Error::Fit {
+        let mut y = y.as_slice().to_vec();
+        self.pipeline.fit_transform(&mut y)?;
+        self.fitted = Some(self.model.fit(&y).map_err(|e| Error::Fit {
             source: Box::new(e) as _,
         })?);
         Ok(())
@@ -55,87 +53,66 @@ where
     /// Predict the next `horizon` values, optionally including prediction
     /// intervals at the given level.
     pub fn predict(&self, horizon: usize, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        self.fitted()?
-            .predict(horizon, level.into())
-            .map_err(|e| Error::Predict {
-                source: Box::new(e) as _,
-            })
-            .map(|f| self.transforms.inverse_transform(f))
+        let mut untransformed =
+            self.fitted()?
+                .predict(horizon, level.into())
+                .map_err(|e| Error::Predict {
+                    source: Box::new(e) as _,
+                })?;
+        self.pipeline
+            .inverse_transform_forecast(&mut untransformed)?;
+        Ok(untransformed)
     }
 
     /// Produce in-sample forecasts, optionally including prediction intervals
     /// at the given level.
     pub fn predict_in_sample(&self, level: impl Into<Option<f64>>) -> Result<Forecast> {
-        self.fitted()?
+        let mut untransformed = self
+            .fitted()?
             .predict_in_sample(level.into())
             .map_err(|e| Error::Predict {
                 source: Box::new(e) as _,
-            })
-            .map(|f| self.transforms.inverse_transform(f))
+            })?;
+        self.pipeline
+            .inverse_transform_forecast(&mut untransformed)?;
+        Ok(untransformed)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use itertools::{Itertools, MinMaxResult};
 
     use augurs::mstl::{MSTLModel, NaiveTrend};
+    use augurs_testing::assert_all_close;
 
-    use crate::transforms::MinMaxScaleParams;
+    use crate::transforms::{BoxCox, LinearInterpolator, Logit, MinMaxScaler, YeoJohnson};
 
     use super::*;
-
-    fn assert_approx_eq(a: f64, b: f64) -> bool {
-        if a.is_nan() && b.is_nan() {
-            return true;
-        }
-        (a - b).abs() < 0.001
-    }
-
-    fn assert_all_approx_eq(a: &[f64], b: &[f64]) {
-        if a.len() != b.len() {
-            assert_eq!(a, b);
-        }
-        for (ai, bi) in a.iter().zip(b) {
-            if !assert_approx_eq(*ai, *bi) {
-                assert_eq!(a, b);
-            }
-        }
-    }
 
     #[test]
     fn test_forecaster() {
         let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
-        let MinMaxResult::MinMax(min, max) = data
-            .iter()
-            .copied()
-            .minmax_by(|a, b| a.partial_cmp(b).unwrap())
-        else {
-            unreachable!();
-        };
-        let transforms = vec![
-            Transform::linear_interpolator(),
-            Transform::min_max_scaler(MinMaxScaleParams::new(min - 1e-3, max + 1e-3)),
-            Transform::logit(),
+        let transformers = vec![
+            LinearInterpolator::new().boxed(),
+            MinMaxScaler::new().boxed(),
+            Logit::new().boxed(),
         ];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
-        assert_all_approx_eq(&forecasts.point, &[5.0, 5.0, 5.0, 5.0]);
+        assert_all_close(&forecasts.point, &[5.0, 5.0, 5.0, 5.0]);
     }
 
     #[test]
     fn test_forecaster_power_positive() {
         let data = &[1.0_f64, 2.0, 3.0, 4.0, 5.0];
-        let got = Transform::power_transform(data);
-        assert!(got.is_ok());
-        let transforms = vec![got.unwrap()];
+        let transformers = vec![BoxCox::new().boxed()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
-        assert_all_approx_eq(
+        assert_all_close(
             &forecasts.point,
             &[
                 5.084499064884572,
@@ -149,14 +126,12 @@ mod test {
     #[test]
     fn test_forecaster_power_non_positive() {
         let data = &[0.0, 2.0, 3.0, 4.0, 5.0];
-        let got = Transform::power_transform(data);
-        assert!(got.is_ok());
-        let transforms = vec![got.unwrap()];
+        let transformers = vec![YeoJohnson::new().boxed()];
         let model = MSTLModel::new(vec![2], NaiveTrend::new());
-        let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+        let mut forecaster = Forecaster::new(model).with_transformers(transformers);
         forecaster.fit(data).unwrap();
         let forecasts = forecaster.predict(4, None).unwrap();
-        assert_all_approx_eq(
+        assert_all_close(
             &forecasts.point,
             &[
                 5.205557727170964,

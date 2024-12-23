@@ -1,130 +1,140 @@
 //! Scalers, including min-max and standard scalers.
 
-/// Parameters for the min-max scaler.
-///
-/// The target range is [0, 1] by default. Use [`MinMaxScaleParams::with_scaled_range`]
-/// to set a custom range.
-#[derive(Debug, Clone)]
-pub struct MinMaxScaleParams {
-    data_min: f64,
-    data_max: f64,
-    scaled_min: f64,
-    scaled_max: f64,
+use core::f64;
+
+use itertools::{Itertools, MinMaxResult};
+
+use super::{Error, Transformer};
+
+/// Helper struct holding the min and max for use in a `MinMaxScaler`.
+#[derive(Debug, Clone, Copy)]
+struct MinMax {
+    min: f64,
+    max: f64,
 }
 
-impl MinMaxScaleParams {
-    /// Create a new `MinMaxScaleParams` with the given data min and max.
-    ///
-    /// The scaled range is set to [0, 1] by default.
-    pub fn new(data_min: f64, data_max: f64) -> Self {
+impl MinMax {
+    fn zero_one() -> Self {
         Self {
-            data_min,
-            data_max,
-            scaled_min: 0.0 + f64::EPSILON,
-            scaled_max: 1.0 - f64::EPSILON,
+            min: 0.0 + f64::EPSILON,
+            max: 1.0 - f64::EPSILON,
+        }
+    }
+}
+
+/// Parameters for the min-max scaler.
+///
+/// Will be created by the `MinMaxScaler` when it is fit to the data,
+/// or when it is supplied with a custom data range.
+///
+/// We store the scale factor and offset to avoid having to
+/// recalculating them every time the transform is applied.
+///
+/// We store the input scale as well so we can recalculate the
+/// scale factor and offset if the user changes the output scale.
+#[derive(Debug, Clone)]
+struct FittedMinMaxScalerParams {
+    input_scale: MinMax,
+    scale_factor: f64,
+    offset: f64,
+}
+
+impl FittedMinMaxScalerParams {
+    fn new(input_scale: MinMax, output_scale: MinMax) -> Self {
+        let scale_factor =
+            (output_scale.max - output_scale.min) / (input_scale.max - input_scale.min);
+        Self {
+            input_scale,
+            scale_factor,
+            offset: output_scale.min - (input_scale.min * scale_factor),
+        }
+    }
+}
+
+/// A transformer that scales each item to a custom range, defaulting to [0, 1].
+#[derive(Debug, Clone)]
+pub struct MinMaxScaler {
+    output_scale: MinMax,
+    // The parameters learned from the data and used to transform it.
+    // Not known until the transform method is called.
+    params: Option<FittedMinMaxScalerParams>,
+}
+
+impl Default for MinMaxScaler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MinMaxScaler {
+    /// Create a new `MinMaxScaler` with the default output range of [0, 1].
+    pub fn new() -> Self {
+        Self {
+            output_scale: MinMax::zero_one(),
+            params: None,
         }
     }
 
-    /// Set the scaled range for the transformation.
+    /// Set the output range for the transformation.
     pub fn with_scaled_range(mut self, min: f64, max: f64) -> Self {
-        self.scaled_min = min;
-        self.scaled_max = max;
+        self.output_scale = MinMax { min, max };
+        self.params.iter_mut().for_each(|p| {
+            let input_scale = p.input_scale;
+            *p = FittedMinMaxScalerParams::new(input_scale, self.output_scale);
+        });
         self
     }
 
-    /// Create a new `MinMaxScaleParams` from the given data.
-    pub fn from_data<T>(data: T) -> Self
-    where
-        T: Iterator<Item = f64>,
-    {
-        let (min, max) = data.fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), x| {
-            (min.min(x), max.max(x))
-        });
-        Self::new(min, max)
+    /// Manually set the input range for the transformation.
+    ///
+    /// This is useful if you know the input range in advance and want to avoid
+    /// the overhead of fitting the scaler to the data during the initial transform,
+    /// and instead want to set the input range manually.
+    ///
+    /// Note that this will override any previously set (or learned) parameters.
+    pub fn with_data_range(mut self, min: f64, max: f64) -> Self {
+        let data_range = MinMax { min, max };
+        self.params = Some(FittedMinMaxScalerParams::new(data_range, self.output_scale));
+        self
     }
 }
 
-/// Iterator adapter that scales each item to the range [0, 1].
-#[derive(Debug, Clone)]
-pub(crate) struct MinMaxScale<T> {
-    inner: T,
-    scale_factor: f64,
-    offset: f64,
-}
+impl Transformer for MinMaxScaler {
+    /// Fit the scaler to the given data.
+    ///
+    /// This will compute the min and max values of the data and store them
+    /// in the `params` field of the scaler.
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        let params = match data
+            .iter()
+            .copied()
+            .minmax_by(|a, b| a.partial_cmp(b).unwrap())
+        {
+            e @ MinMaxResult::NoElements | e @ MinMaxResult::OneElement(_) => return Err(e.into()),
+            MinMaxResult::MinMax(min, max) => {
+                FittedMinMaxScalerParams::new(MinMax { min, max }, self.output_scale)
+            }
+        };
+        self.params = Some(params);
+        Ok(())
+    }
 
-impl<T> Iterator for MinMaxScale<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        let Self {
-            scale_factor,
-            offset,
-            inner,
-            ..
-        } = self;
-        inner.next().map(|x| *offset + (x * *scale_factor))
+    /// Apply the scaler to the given data.
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
+        data.iter_mut()
+            .for_each(|x| *x = *x * params.scale_factor + params.offset);
+        Ok(())
+    }
+
+    /// Apply the inverse of the scaler to the given data.
+    fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
+        data.iter_mut()
+            .for_each(|x| *x = (*x - params.offset) / params.scale_factor);
+        Ok(())
     }
 }
-
-pub(crate) trait MinMaxScaleExt: Iterator<Item = f64> {
-    fn min_max_scale(self, params: &MinMaxScaleParams) -> MinMaxScale<Self>
-    where
-        Self: Sized,
-    {
-        let scale_factor =
-            (params.scaled_max - params.scaled_min) / (params.data_max - params.data_min);
-        let offset = params.scaled_min - (params.data_min * scale_factor);
-        MinMaxScale {
-            inner: self,
-            scale_factor,
-            offset,
-        }
-    }
-}
-
-impl<T> MinMaxScaleExt for T where T: Iterator<Item = f64> {}
-
-pub(crate) struct InverseMinMaxScale<T> {
-    inner: T,
-    scale_factor: f64,
-    offset: f64,
-}
-
-impl<T> Iterator for InverseMinMaxScale<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        let Self {
-            inner,
-            scale_factor,
-            offset,
-            ..
-        } = self;
-        inner.next().map(|x| *offset + (x * *scale_factor))
-    }
-}
-
-pub(crate) trait InverseMinMaxScaleExt: Iterator<Item = f64> {
-    fn inverse_min_max_scale(self, params: &MinMaxScaleParams) -> InverseMinMaxScale<Self>
-    where
-        Self: Sized,
-    {
-        let scale_factor =
-            (params.data_max - params.data_min) / (params.scaled_max - params.scaled_min);
-        let offset = params.data_min - (params.scaled_min * scale_factor);
-        InverseMinMaxScale {
-            inner: self,
-            scale_factor,
-            offset,
-        }
-    }
-}
-
-impl<T> InverseMinMaxScaleExt for T where T: Iterator<Item = f64> {}
 
 /// Parameters for the standard scaler.
 #[derive(Debug, Clone)]
@@ -178,73 +188,81 @@ impl StandardScaleParams {
     }
 }
 
-/// Iterator adapter that scales each item using the given mean and standard deviation,
-/// so that (assuming the adapter was created using the same data), the output items
-/// have zero mean and unit standard deviation.
-#[derive(Debug, Clone)]
-pub(crate) struct StandardScale<T> {
-    inner: T,
-    mean: f64,
-    std_dev: f64,
+/// A transformer that scales items to have zero mean and unit standard deviation.
+///
+/// The standard score of a sample `x` is calculated as:
+///
+/// ```text
+/// z = (x - mean) / std_dev
+/// ```
+///
+/// where `mean` is the mean and s is the standard deviation of the data first passed to
+/// `transform` (or provided via `with_parameters`).
+///
+/// # Implementation
+///
+/// This transformer uses Welford's online algorithm to compute mean and variance in
+/// one pass over the data. The standard deviation is calculated using the biased
+/// estimator, for parity with the [scikit-learn implementation][sklearn].
+///
+/// [sklearn]: https://github.com/scikit-learn/scikit-learn/blob/main/sklearn/preprocessing/_data.py#L128
+///
+/// # Example
+///
+/// ## Using the default constructor
+///
+/// ```
+/// use augurs_forecaster::transforms::{StandardScaler, Transformer};
+///
+/// let mut data = vec![1.0, 2.0, 3.0];
+/// let mut scaler = StandardScaler::new();
+/// scaler.fit_transform(&mut data);
+///
+/// assert_eq!(data, vec![-1.224744871391589, 0.0, 1.224744871391589]);
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct StandardScaler {
+    params: Option<StandardScaleParams>,
 }
 
-impl<T> Iterator for StandardScale<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|x| (x - self.mean) / self.std_dev)
+impl StandardScaler {
+    /// Create a new `StandardScaler`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the parameters for the scaler.
+    ///
+    /// This is useful if you know the mean and standard deviation in advance
+    /// and want to avoid the overhead of fitting the scaler to the data
+    /// during the initial transform, and instead want to set the parameters
+    /// manually.
+    pub fn with_parameters(mut self, params: StandardScaleParams) -> Self {
+        self.params = Some(params);
+        self
     }
 }
 
-pub(crate) trait StandardScaleExt: Iterator<Item = f64> {
-    fn standard_scale(self, params: &StandardScaleParams) -> StandardScale<Self>
-    where
-        Self: Sized,
-    {
-        StandardScale {
-            inner: self,
-            mean: params.mean,
-            std_dev: params.std_dev,
-        }
+impl Transformer for StandardScaler {
+    fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        self.params = Some(StandardScaleParams::from_data(data.iter().copied()));
+        Ok(())
+    }
+
+    fn transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
+        data.iter_mut()
+            .for_each(|x| *x = (*x - params.mean) / params.std_dev);
+        Ok(())
+    }
+
+    fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        let params = self.params.as_ref().ok_or(Error::NotFitted)?;
+        data.iter_mut()
+            .for_each(|x| *x = (*x * params.std_dev) + params.mean);
+        Ok(())
     }
 }
-
-impl<T> StandardScaleExt for T where T: Iterator<Item = f64> {}
-
-/// Iterator adapter that applies the inverse standard scaling transformation.
-#[derive(Debug, Clone)]
-pub(crate) struct InverseStandardScale<T> {
-    inner: T,
-    mean: f64,
-    std_dev: f64,
-}
-
-impl<T> Iterator for InverseStandardScale<T>
-where
-    T: Iterator<Item = f64>,
-{
-    type Item = f64;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|x| (x * self.std_dev) + self.mean)
-    }
-}
-
-pub(crate) trait InverseStandardScaleExt: Iterator<Item = f64> {
-    fn inverse_standard_scale(self, params: &StandardScaleParams) -> InverseStandardScale<Self>
-    where
-        Self: Sized,
-    {
-        InverseStandardScale {
-            inner: self,
-            mean: params.mean,
-            std_dev: params.std_dev,
-        }
-    }
-}
-
-impl<T> InverseStandardScaleExt for T where T: Iterator<Item = f64> {}
 
 #[cfg(test)]
 mod test {
@@ -254,72 +272,71 @@ mod test {
 
     #[test]
     fn min_max_scale() {
-        let data = vec![1.0, 2.0, 3.0];
-        let min = 1.0;
-        let max = 3.0;
+        let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![0.0, 0.5, 1.0];
-        let actual: Vec<_> = data
-            .into_iter()
-            .min_max_scale(&MinMaxScaleParams::new(min, max))
-            .collect();
-        assert_all_close(&expected, &actual);
+        let mut scaler = MinMaxScaler::new();
+        scaler.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn min_max_scale_custom() {
-        let data = vec![1.0, 2.0, 3.0];
-        let min = 1.0;
-        let max = 3.0;
+        let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![0.0, 5.0, 10.0];
-        let actual: Vec<_> = data
-            .into_iter()
-            .min_max_scale(&MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
-            .collect();
-        assert_all_close(&expected, &actual);
+        let mut scaler = MinMaxScaler::new().with_scaled_range(0.0, 10.0);
+        scaler.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn inverse_min_max_scale() {
-        let data = vec![0.0, 0.5, 1.0];
-        let min = 1.0;
-        let max = 3.0;
+        let mut data = vec![0.0, 0.5, 1.0];
         let expected = vec![1.0, 2.0, 3.0];
-        let actual: Vec<_> = data
-            .into_iter()
-            .inverse_min_max_scale(&MinMaxScaleParams::new(min, max))
-            .collect();
-        assert_all_close(&expected, &actual);
+        let scaler = MinMaxScaler::new().with_data_range(1.0, 3.0);
+        scaler.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn inverse_min_max_scale_custom() {
-        let data = vec![0.0, 5.0, 10.0];
-        let min = 1.0;
-        let max = 3.0;
+        let mut data = vec![0.0, 5.0, 10.0];
         let expected = vec![1.0, 2.0, 3.0];
-        let actual: Vec<_> = data
-            .into_iter()
-            .inverse_min_max_scale(&MinMaxScaleParams::new(min, max).with_scaled_range(0.0, 10.0))
-            .collect();
-        assert_all_close(&expected, &actual);
+        let scaler = MinMaxScaler::new()
+            .with_scaled_range(0.0, 10.0)
+            .with_data_range(1.0, 3.0);
+        scaler.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn standard_scale() {
-        let data = vec![1.0, 2.0, 3.0];
-        let params = StandardScaleParams::new(2.0, 1.0); // mean=2, std=1
+        let mut data = vec![1.0, 2.0, 3.0];
+        // We use the biased estimator for standard deviation so the result is
+        // not necessarily obvious.
+        let expected = vec![-1.224744871391589, 0.0, 1.224744871391589];
+        let mut scaler = StandardScaler::new(); // 2.0, 1.0); // mean=2, std=1
+        scaler.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn standard_scale_custom() {
+        let mut data = vec![1.0, 2.0, 3.0];
         let expected = vec![-1.0, 0.0, 1.0];
-        let actual: Vec<_> = data.into_iter().standard_scale(&params).collect();
-        assert_all_close(&expected, &actual);
+        let params = StandardScaleParams::new(2.0, 1.0); // mean=2, std=1
+        let scaler = StandardScaler::new().with_parameters(params);
+        scaler.transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
     fn inverse_standard_scale() {
-        let data = vec![-1.0, 0.0, 1.0];
-        let params = StandardScaleParams::new(2.0, 1.0); // mean=2, std=1
+        let mut data = vec![-1.0, 0.0, 1.0];
         let expected = vec![1.0, 2.0, 3.0];
-        let actual: Vec<_> = data.into_iter().inverse_standard_scale(&params).collect();
-        assert_all_close(&expected, &actual);
+        let params = StandardScaleParams::new(2.0, 1.0); // mean=2, std=1
+        let scaler = StandardScaler::new().with_parameters(params);
+        scaler.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 
     #[test]
@@ -347,15 +364,5 @@ mod test {
         let params = StandardScaleParams::from_data(data.into_iter());
         assert_approx_eq!(params.mean, 42.0);
         assert_approx_eq!(params.std_dev, 0.0); // technically undefined, but we return 0
-    }
-
-    #[test]
-    fn min_max_scale_params_from_data() {
-        let data = [1.0, 2.0, f64::NAN, 3.0];
-        let params = MinMaxScaleParams::from_data(data.iter().copied());
-        assert_approx_eq!(params.data_min, 1.0);
-        assert_approx_eq!(params.data_max, 3.0);
-        assert_approx_eq!(params.scaled_min, 0.0);
-        assert_approx_eq!(params.scaled_max, 1.0);
     }
 }

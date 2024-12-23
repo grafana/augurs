@@ -49,25 +49,28 @@ For more complex scenarios, you can use the `Forecaster` API which supports data
 # extern crate augurs;
 use augurs::{
     ets::AutoETS,
-    forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+    forecaster::{
+        transforms::{LinearInterpolator, Log, MinMaxScaler},
+        Forecaster, Transformer,
+    },
     mstl::MSTLModel,
 };
 
 fn main() {
     let data = &[1.0, 1.2, 1.4, 1.5, f64::NAN, 1.4, 1.2, 1.5, 1.6, 2.0, 1.9, 1.8];
 
-    // Set up model and transforms
+    // Set up model and transformers
     let ets = AutoETS::non_seasonal().into_trend_model();
     let mstl = MSTLModel::new(vec![2], ets);
 
-    let transforms = vec![
-        Transform::linear_interpolator(),
-        Transform::min_max_scaler(MinMaxScaleParams::from_data(data.iter().copied())),
-        Transform::log(),
+    let transformers = vec![
+        LinearInterpolator::new().boxed(),
+        MinMaxScaler::new().boxed(),
+        Log::new().boxed(),
     ];
 
     // Create and fit forecaster
-    let mut forecaster = Forecaster::new(mstl).with_transforms(transforms);
+    let mut forecaster = Forecaster::new(mstl).with_transformers(transformers);
     forecaster.fit(data).expect("model should fit");
 
     // Generate forecasts

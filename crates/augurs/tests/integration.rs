@@ -102,36 +102,29 @@ fn test_ets() {
 #[test]
 fn test_forecaster() {
     use augurs::{
-        forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+        forecaster::{transforms::MinMaxScaler, Forecaster, Transformer},
         mstl::{MSTLModel, NaiveTrend},
     };
+    use augurs_forecaster::transforms::{LinearInterpolator, Logit};
     use augurs_testing::{assert_all_close, data::AIR_PASSENGERS};
-    use itertools::{Itertools, MinMaxResult};
 
-    let MinMaxResult::MinMax(min, max) = AIR_PASSENGERS
-        .iter()
-        .copied()
-        .minmax_by(|a, b| a.partial_cmp(b).unwrap())
-    else {
-        unreachable!()
-    };
     let transforms = vec![
-        Transform::linear_interpolator(),
-        Transform::min_max_scaler(MinMaxScaleParams::new(min - 1e-3, max + 1e-3)),
-        Transform::logit(),
+        LinearInterpolator::new().boxed(),
+        MinMaxScaler::new().boxed(),
+        Logit::new().boxed(),
     ];
     let model = MSTLModel::new(vec![2], NaiveTrend::new());
-    let mut forecaster = Forecaster::new(model).with_transforms(transforms);
+    let mut forecaster = Forecaster::new(model).with_transformers(transforms);
     forecaster.fit(AIR_PASSENGERS).unwrap();
     let forecasts = forecaster.predict(4, None).unwrap();
     dbg!(&forecasts.point);
     assert_all_close(
         &forecasts.point,
         &[
-            559.0587706145459,
-            432.00000550710956,
-            559.0587706145459,
-            432.00000550710956,
+            620.5523022842495,
+            431.9999972537765,
+            620.5523022842495,
+            431.9999972537765,
         ],
     );
 }

@@ -1,143 +1,107 @@
 //! JavaScript bindings for augurs transformations, such as power transforms, scaling, etc.
 
-use std::cell::RefCell;
-
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_core_js::VecF64;
-use augurs_forecaster::transforms::{StandardScaleParams, Transform};
+use augurs_forecaster::transforms::{StandardScaler, Transformer, YeoJohnson};
 
-/// The algorithm used by a power transform.
-#[derive(Debug, Serialize, Tsify)]
+/// A transformation to be applied to the data.
+///
+/// @experimental
+#[derive(Debug, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum PowerTransformAlgorithm {
-    /// The Box-Cox transform.
-    BoxCox,
+#[tsify(from_wasm_abi)]
+pub enum Transform {
+    /// Standardize the data such that it has zero mean and unit variance.
+    StandardScaler,
     /// The Yeo-Johnson transform.
     YeoJohnson,
 }
 
-/// A power transform.
+impl Transform {
+    fn into_transformer(self) -> Box<dyn Transformer> {
+        match self {
+            Transform::StandardScaler => Box::new(StandardScaler::new()),
+            Transform::YeoJohnson => Box::new(YeoJohnson::new()),
+        }
+    }
+}
+
+/// A transformation pipeline.
 ///
-/// This transform applies the power function to each item.
-///
-/// If all values are positive, it will use the Box-Cox transform.
-/// If any values are negative or zero, it will use the Yeo-Johnson transform.
-///
-/// The optimal value of the `lambda` parameter is calculated from the data
-/// using maximum likelihood estimation.
+/// A pipeline consists of a sequence of transformations that are applied to
+/// the data in order. Use the `transform` method to apply the pipeline to
+/// the data, and the `inverseTransform` method to reverse the transformations.
 ///
 /// @experimental
 #[derive(Debug)]
 #[wasm_bindgen]
-pub struct PowerTransform {
-    inner: Transform,
-    standardize: bool,
-    scale_params: RefCell<Option<StandardScaleParams>>,
+pub struct Pipeline {
+    inner: augurs_forecaster::Pipeline,
 }
 
 #[wasm_bindgen]
-impl PowerTransform {
-    /// Create a new power transform for the given data.
+impl Pipeline {
+    /// Create a new pipeline with the given transforms.
     ///
     /// @experimental
     #[wasm_bindgen(constructor)]
-    pub fn new(opts: PowerTransformOptions) -> Result<PowerTransform, JsError> {
-        Ok(PowerTransform {
-            inner: Transform::power_transform(&opts.data)
-                .map_err(|e| JsError::new(&e.to_string()))?,
-            standardize: opts.standardize,
-            scale_params: RefCell::new(None),
-        })
+    pub fn new(transforms: Vec<Transform>) -> Self {
+        Self {
+            inner: augurs_forecaster::Pipeline::new(
+                transforms
+                    .into_iter()
+                    .map(|t| t.into_transformer())
+                    .collect(),
+            ),
+        }
     }
 
-    /// Transform the given data.
+    /// Fit the pipeline to the given data.
     ///
-    /// The transformed data is then scaled using a standard scaler (unless
-    /// `standardize` was set to `false` in the constructor).
+    /// Prefer calling `fitTransform` if possible, as it avoids needing
+    /// to copy the data as many times.
     ///
     /// @experimental
     #[wasm_bindgen]
-    pub fn transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
-        let transformed: Vec<_> = self
-            .inner
-            .transform(data.convert()?.iter().copied())
-            .collect();
-        if !self.standardize {
-            Ok(transformed)
-        } else {
-            let scale_params = StandardScaleParams::from_data(transformed.iter().copied());
-            let scaler = Transform::standard_scaler(scale_params.clone());
-            self.scale_params.replace(Some(scale_params));
-            Ok(scaler.transform(transformed.iter().copied()).collect())
-        }
+    pub fn fit(&mut self, data: VecF64) -> Result<(), JsError> {
+        let data = data.convert()?;
+        self.inner.fit(&data)?;
+        Ok(())
     }
 
-    /// Inverse transform the given data.
+    /// Transform the given data using the pipeline.
     ///
-    /// The data is first scaled back to the original scale using the standard scaler
-    /// (unless `standardize` was set to `false` in the constructor), then the
-    /// inverse power transform is applied.
+    /// Prefer calling `fitTransform` if possible, as it avoids needing
+    /// to copy the data as many times.
+    ///
+    /// @experimental
+    #[wasm_bindgen]
+    pub fn transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
+        let mut data = data.convert()?;
+        self.inner.transform(&mut data)?;
+        Ok(data)
+    }
+
+    /// Fit and transform the given data.
+    ///
+    /// @experimental
+    #[wasm_bindgen(js_name = "fitTransform")]
+    pub fn fit_transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
+        let mut data = data.convert()?;
+        self.inner.fit_transform(&mut data)?;
+        Ok(data)
+    }
+
+    /// Inverse transform the given data using the pipeline.
     ///
     /// @experimental
     #[wasm_bindgen(js_name = "inverseTransform")]
-    pub fn inverse_transform(&self, data: VecF64) -> Result<Vec<f64>, JsError> {
-        match (self.standardize, self.scale_params.borrow().as_ref()) {
-            (true, Some(scale_params)) => {
-                let inverse_scaler = Transform::standard_scaler(scale_params.clone());
-                let data = data.convert()?;
-                let scaled = inverse_scaler.inverse_transform(data.iter().copied());
-                Ok(self.inner.inverse_transform(scaled).collect())
-            }
-            _ => Ok(self
-                .inner
-                .inverse_transform(data.convert()?.iter().copied())
-                .collect()),
-        }
+    pub fn inverse_transform(&mut self, data: VecF64) -> Result<Vec<f64>, JsError> {
+        let mut data = data.convert()?;
+        self.inner.inverse_transform(&mut data)?;
+        Ok(data)
     }
-
-    /// Get the algorithm used by the power transform.
-    ///
-    /// @experimental
-    pub fn algorithm(&self) -> PowerTransformAlgorithm {
-        match self.inner {
-            Transform::BoxCox { .. } => PowerTransformAlgorithm::BoxCox,
-            Transform::YeoJohnson { .. } => PowerTransformAlgorithm::YeoJohnson,
-            _ => unreachable!(),
-        }
-    }
-
-    /// Retrieve the `lambda` parameter used to transform the data.
-    ///
-    /// @experimental
-    pub fn lambda(&self) -> f64 {
-        match self.inner {
-            Transform::BoxCox { lambda, .. } | Transform::YeoJohnson { lambda, .. } => lambda,
-            _ => unreachable!(),
-        }
-    }
-}
-
-fn default_standardize() -> bool {
-    true
-}
-
-/// Options for the power transform.
-#[derive(Debug, Default, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi)]
-pub struct PowerTransformOptions {
-    /// The data to transform. This is used to calculate the optimal value of 'lambda'.
-    #[tsify(type = "number[] | Float64Array")]
-    pub data: Vec<f64>,
-
-    /// Whether to standardize the data after applying the power transform.
-    ///
-    /// This is generally recommended, and defaults to `true`.
-    #[serde(default = "default_standardize")]
-    #[tsify(optional)]
-    pub standardize: bool,
 }

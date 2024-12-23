@@ -1,7 +1,7 @@
 //! Example of using the Prophet model with the wasmstan optimizer.
 
 use augurs::{
-    forecaster::{transforms::MinMaxScaleParams, Forecaster, Transform},
+    forecaster::{transforms::MinMaxScaler, Forecaster, Transformer},
     prophet::{wasmstan::WasmstanOptimizer, Prophet, TrainingData},
 };
 
@@ -18,12 +18,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let data = TrainingData::new(ds, y.clone())?;
 
-    // Set up the transforms.
-    // These are just illustrative examples; you can use whatever transforms
+    // Set up the transformers.
+    // These are just illustrative examples; you can use whatever transformers
     // you want.
-    let transforms = vec![Transform::min_max_scaler(MinMaxScaleParams::from_data(
-        y.iter().copied(),
-    ))];
+    let transformers = vec![MinMaxScaler::new().boxed()];
 
     // Set up the model. Create the Prophet model as normal, then convert it to a
     // `ProphetForecaster`.
@@ -31,10 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let prophet_forecaster = prophet.into_forecaster(data.clone(), Default::default());
 
     // Finally create a Forecaster using those transforms.
-    let mut forecaster = Forecaster::new(prophet_forecaster).with_transforms(transforms);
+    let mut forecaster = Forecaster::new(prophet_forecaster).with_transformers(transformers);
 
     // Fit the forecaster. This will transform the training data by
-    // running the transforms in order, then fit the Prophet model.
+    // running the transformers in order, then fit the Prophet model.
     forecaster.fit(&y).expect("model should fit");
 
     // Generate some in-sample predictions with 95% prediction intervals.
