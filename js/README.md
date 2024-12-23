@@ -21,6 +21,7 @@ Full usage docs are still to come, but here's a quick example:
 ```js
 import initProphet, { Prophet } from '@bsull/augurs/prophet';
 import initTransforms, { Pipeline, Transform } from '@bsull/augurs/transforms';
+// Note: you'll need this extra package if you want to use the Prophet model.
 import { optimizer } from '@bsull/augurs-prophet-wasmstan';
 
 // Initialize the WASM components before using any augurs functions.
