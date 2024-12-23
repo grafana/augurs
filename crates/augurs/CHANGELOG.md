@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/grafana/augurs/compare/augurs-v0.7.0...augurs-v0.8.0) - 2024-12-23
+
+This release includes some major, breaking changes to the `augurs-forecaster` crate (and the `forecaster` feature of the `augurs` crate). See the [migration guide](https://docs.augu.rs/migrating.html#from-07-to-08) for more information on how to upgrade.
+
+### Added
+
+- [**breaking**] switch `transform` to a trait (#213)
+
 ## [0.6.0](https://github.com/grafana/augurs/compare/augurs-v0.5.4...augurs-v0.6.0) - 2024-11-08
 
 ### Added
