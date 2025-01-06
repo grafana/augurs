@@ -49,7 +49,7 @@ bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
 getrandom = { version = "0.2.10", features = ["js"] }
-itertools = "0.13.0"
+itertools = "0.14.0"
 js-sys = "0.3.64"
 num-traits = "0.2.19"
 rand = "0.8.5"
