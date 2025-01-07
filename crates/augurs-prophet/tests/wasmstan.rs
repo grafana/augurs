@@ -9,11 +9,39 @@ use augurs_prophet::{Prophet, ProphetOptions};
 
 #[test]
 fn wasmstan() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt::try_init().ok();
     let opts = ProphetOptions::default();
     let opt = WasmstanOptimizer::new();
     let mut prophet = Prophet::new(opts, opt);
     let training_data = TrainingData::new(TRAINING_DS.to_vec(), TRAINING_Y.to_vec()).unwrap();
+    tracing::info!("fitting");
+    prophet
+        .fit(
+            training_data,
+            OptimizeOpts {
+                seed: Some(100),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let prediction_data = PredictionData::new(PREDICTION_DS.to_vec());
+    tracing::info!("predicting");
+    let predictions = prophet.predict(Some(prediction_data)).unwrap();
+    tracing::info!("done");
+    assert_all_close(&predictions.yhat.point, EXPECTED);
+}
+
+#[test]
+fn wasmstan_nans() {
+    tracing_subscriber::fmt::try_init().ok();
+    let opts = ProphetOptions::default();
+    let opt = WasmstanOptimizer::new();
+    let mut prophet = Prophet::new(opts, opt);
+    let mut y = TRAINING_Y.to_vec();
+    y[100] = f64::NAN;
+    y[200] = f64::NAN;
+    y[300] = f64::NAN;
+    let training_data = TrainingData::new(TRAINING_DS.to_vec(), y).unwrap();
     tracing::info!("fitting");
     prophet
         .fit(
