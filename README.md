@@ -14,6 +14,8 @@ and more. Most algorithms are based on existing R or Python implementations.
 As well as the core Rust library, augurs will provide bindings to other
 languages such as Python and Javascript (via WASM).
 
+[Check out the demo][demo] to see what augurs can do!
+
 > [!IMPORTANT]
 > Please note that this is not an official Grafana project, so
 > maintenance may be a bit slower than usual. It's still early days too
@@ -89,3 +91,4 @@ Licensed under the Apache License, Version 2.0 `<http://www.apache.org/licenses/
 [`pyaugurs`]: https://crates.io/crates/pyaugurs
 [`just`]: https://just.systems/man/en/
 [`bacon`]: https://dystroy.org/bacon
+[demo]: https://demo.augu.rs
