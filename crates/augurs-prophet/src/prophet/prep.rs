@@ -195,6 +195,7 @@ pub(super) struct Features {
 
 impl<O> Prophet<O> {
     pub(super) fn preprocess(&mut self, data: TrainingData) -> Result<Preprocessed, Error> {
+        let data = data.filter_nans();
         let n = data.ds.len();
         if n != data.y.len() {
             return Err(Error::MismatchedLengths {
@@ -207,7 +208,6 @@ impl<O> Prophet<O> {
         if n < 2 {
             return Err(Error::NotEnoughData);
         }
-        let data = data.filter_nans();
 
         let mut history_dates = data.ds.clone();
         history_dates.sort_unstable();
