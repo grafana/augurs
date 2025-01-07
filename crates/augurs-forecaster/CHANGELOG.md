@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.8.0...augurs-forecaster-v0.8.1) - 2025-01-07
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.8.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.7.0...augurs-forecaster-v0.8.0) - 2024-12-23
 
 This release includes some major, breaking changes to the `augurs-forecaster` crate. See the [migration guide](https://docs.augu.rs/migrating.html#from-07-to-08) for more information on how to upgrade.
