@@ -17,6 +17,25 @@ pub enum NanMinMaxResult<T> {
     NaN,
 }
 
+// Helper function used by nanmin and nanmax.
+fn nan_reduce<I, T, F>(iter: I, ignore_nans: bool, f: F) -> T
+where
+    I: Iterator<Item = T>,
+    T: Float + FromPrimitive,
+    F: Fn(T, T) -> T,
+{
+    iter.reduce(|acc, x| {
+        if ignore_nans && x.is_nan() {
+            acc
+        } else if x.is_nan() || acc.is_nan() {
+            T::nan()
+        } else {
+            f(acc, x)
+        }
+    })
+    .unwrap_or_else(T::nan)
+}
+
 /// Helper trait for calculating summary statistics on floating point iterators with alternative NaN handling.
 ///
 /// This is intended to be similar to numpy's `nanmean`, `nanmin`, `nanmax` etc.
@@ -30,16 +49,7 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     where
         Self: Sized,
     {
-        self.reduce(|acc, x| {
-            if ignore_nans && x.is_nan() {
-                acc
-            } else if x.is_nan() || acc.is_nan() {
-                T::nan()
-            } else {
-                acc.min(x)
-            }
-        })
-        .unwrap_or_else(T::nan)
+        nan_reduce(self, ignore_nans, T::min)
     }
 
     /// Returns the maximum of all elements in the iterator, handling NaN values.
@@ -51,16 +61,7 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     where
         Self: Sized,
     {
-        self.reduce(|acc, x| {
-            if ignore_nans && x.is_nan() {
-                acc
-            } else if x.is_nan() || acc.is_nan() {
-                T::nan()
-            } else {
-                acc.max(x)
-            }
-        })
-        .unwrap_or_else(T::nan)
+        nan_reduce(self, ignore_nans, T::max)
     }
 
     /// Returns the minimum and maximum of all elements in the iterator,
