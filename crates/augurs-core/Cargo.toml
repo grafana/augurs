@@ -13,6 +13,7 @@ description = "Core data structures and traits for the augurs time series librar
 bench = false
 
 [dependencies]
+num-traits.workspace = true
 serde = { version = "1.0.166", optional = true, features = ["derive"] }
 
 [lints]

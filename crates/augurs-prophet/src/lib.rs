@@ -10,7 +10,6 @@ mod positive_float;
 mod prophet;
 #[cfg(test)]
 mod testdata;
-mod util;
 
 #[cfg(feature = "cmdstan")]
 pub mod cmdstan;

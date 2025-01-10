@@ -7,12 +7,14 @@ pub mod prelude {
 }
 
 mod distance;
+mod float_iter;
 mod forecast;
 mod traits;
 
 use std::convert::Infallible;
 
 pub use distance::DistanceMatrix;
+pub use float_iter::{FloatIterExt, NanMinMaxResult};
 pub use forecast::{Forecast, ForecastIntervals};
 pub use traits::{Fit, Predict};
 

@@ -349,6 +349,7 @@ impl<O: Optimizer> Prophet<O> {
 mod test_trend {
     use std::f64::consts::PI;
 
+    use augurs_core::FloatIterExt;
     use augurs_testing::assert_approx_eq;
     use chrono::{NaiveDate, TimeDelta};
     use itertools::Itertools;
@@ -357,7 +358,6 @@ mod test_trend {
     use crate::{
         optimizer::mock_optimizer::MockOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
-        util::FloatIterExt,
         GrowthType, IncludeHistory, Scaling, TrainingData,
     };
 
@@ -790,13 +790,13 @@ mod test_holidays {
 
 #[cfg(test)]
 mod test_fit {
+    use augurs_core::FloatIterExt;
     use augurs_testing::assert_all_close;
     use itertools::Itertools;
 
     use crate::{
         optimizer::{mock_optimizer::MockOptimizer, InitialParams},
         testdata::{daily_univariate_ts, train_test_splitn},
-        util::FloatIterExt,
         Prophet, ProphetOptions, TrendIndicator,
     };
 

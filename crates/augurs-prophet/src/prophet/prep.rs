@@ -3,12 +3,12 @@ use std::{
     num::NonZeroU32,
 };
 
+use augurs_core::FloatIterExt;
 use itertools::{Either, Itertools, MinMaxResult};
 
 use crate::{
     features::RegressorScale,
     optimizer::{Data, InitialParams},
-    util::FloatIterExt,
     Error, FeatureMode, GrowthType, Holiday, PositiveFloat, Prophet, ProphetOptions, Scaling,
     Seasonality, SeasonalityOption, Standardize, TimestampSeconds, TrainingData,
 };
@@ -1049,7 +1049,6 @@ mod test {
         features::HolidayOccurrence,
         optimizer::mock_optimizer::MockOptimizer,
         testdata::{daily_univariate_ts, train_test_split},
-        util::FloatIterExt,
         ProphetOptions, Regressor, Standardize,
     };
 
