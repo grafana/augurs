@@ -215,11 +215,13 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
             // From here on, we're ignoring NaNs.
             acc = match acc {
                 NanMinMaxResult::NoElements => NanMinMaxResult::OneElement(x),
-                NanMinMaxResult::OneElement(one) => match one.partial_cmp(&x).unwrap() {
-                    Ordering::Equal => acc,
-                    Ordering::Less => NanMinMaxResult::MinMax(one, x),
-                    Ordering::Greater => NanMinMaxResult::MinMax(x, one),
-                },
+                NanMinMaxResult::OneElement(one) => {
+                    match one.partial_cmp(&x).expect("x should not be NaN") {
+                        Ordering::Equal => acc,
+                        Ordering::Less => NanMinMaxResult::MinMax(one, x),
+                        Ordering::Greater => NanMinMaxResult::MinMax(x, one),
+                    }
+                }
                 NanMinMaxResult::MinMax(min, max) => {
                     NanMinMaxResult::MinMax(min.min(x), max.max(x))
                 }
