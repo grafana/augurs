@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2](https://github.com/grafana/augurs/compare/augurs-outlier-v0.8.1...augurs-outlier-v0.8.2) - 2025-01-10
+
+### Added
+
+- *(forecaster)* add NaN handling to MinMaxScaler and StandardScaler (#227)
+
 ## [0.8.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.8.0...augurs-outlier-v0.8.1) - 2025-01-07
 
 ### Other
