@@ -45,6 +45,38 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     /// If `ignore_nans` is true, NaN values will be ignored and
     /// not included in the minimum.
     /// Otherwise, the minimum will be NaN if any element is NaN.
+    ///
+    /// # Examples
+    ///
+    /// ## Simple usage
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [1.0, 2.0, 3.0, f64::NAN, 5.0];
+    /// assert_eq!(x.iter().copied().nanmin(true), 1.0);
+    /// assert!(x.iter().copied().nanmin(false).is_nan());
+    /// ```
+    ///
+    /// ## Empty iterator
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x: [f64; 0] = [];
+    /// assert!(x.iter().copied().nanmin(true).is_nan());
+    /// assert!(x.iter().copied().nanmin(false).is_nan());
+    /// ```
+    ///
+    /// ## Only NaN values
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [f64::NAN, f64::NAN];
+    /// assert!(x.iter().copied().nanmin(true).is_nan());
+    /// assert!(x.iter().copied().nanmin(false).is_nan());
+    /// ```
     fn nanmin(self, ignore_nans: bool) -> T
     where
         Self: Sized,
@@ -57,6 +89,38 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     /// If `ignore_nans` is true, NaN values will be ignored and
     /// not included in the maximum.
     /// Otherwise, the maximum will be NaN if any element is NaN.
+    ///
+    /// # Examples
+    ///
+    /// ## Simple usage
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [1.0, 2.0, 3.0, f64::NAN, 5.0];
+    /// assert_eq!(x.iter().copied().nanmax(true), 5.0);
+    /// assert!(x.iter().copied().nanmax(false).is_nan());
+    /// ```
+    ///
+    /// ## Empty iterator
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x: [f64; 0] = [];
+    /// assert!(x.iter().copied().nanmax(true).is_nan());
+    /// assert!(x.iter().copied().nanmax(false).is_nan());
+    /// ```
+    ///
+    /// ## Only NaN values
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [f64::NAN, f64::NAN];
+    /// assert!(x.iter().copied().nanmax(true).is_nan());
+    /// assert!(x.iter().copied().nanmax(false).is_nan());
+    /// ```
     fn nanmax(self, ignore_nans: bool) -> T
     where
         Self: Sized,
@@ -173,6 +237,38 @@ pub trait FloatIterExt<T: Float + FromPrimitive>: Iterator<Item = T> {
     /// If `ignore_nans` is true, NaN values will be ignored and
     /// not included in the mean.
     /// Otherwise, the mean will be NaN if any element is NaN.
+    ///
+    /// # Examples
+    ///
+    /// ## Simple usage
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [1.0, 2.0, 3.0, f64::NAN, 4.0];
+    /// assert_eq!(x.iter().copied().nanmean(true), 2.5);
+    /// assert!(x.iter().copied().nanmean(false).is_nan());
+    /// ```
+    ///
+    /// ## Empty iterator
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x: [f64; 0] = [];
+    /// assert!(x.iter().copied().nanmean(true).is_nan());
+    /// assert!(x.iter().copied().nanmean(false).is_nan());
+    /// ```
+    ///
+    /// ## Only NaN values
+    ///
+    /// ```rust
+    /// use augurs_core::FloatIterExt;
+    ///
+    /// let x = [f64::NAN, f64::NAN];
+    /// assert!(x.iter().copied().nanmean(true).is_nan());
+    /// assert!(x.iter().copied().nanmean(false).is_nan());
+    /// ```
     fn nanmean(self, ignore_nans: bool) -> T
     where
         Self: Sized,
