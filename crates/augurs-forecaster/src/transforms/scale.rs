@@ -2,7 +2,7 @@
 
 use core::f64;
 
-use itertools::{Itertools, MinMaxResult};
+use augurs_core::{FloatIterExt, NanMinMaxResult};
 
 use super::{Error, Transformer};
 
@@ -105,13 +105,12 @@ impl Transformer for MinMaxScaler {
     /// This will compute the min and max values of the data and store them
     /// in the `params` field of the scaler.
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
-        let params = match data
-            .iter()
-            .copied()
-            .minmax_by(|a, b| a.partial_cmp(b).unwrap())
-        {
-            e @ MinMaxResult::NoElements | e @ MinMaxResult::OneElement(_) => return Err(e.into()),
-            MinMaxResult::MinMax(min, max) => {
+        let params = match data.iter().copied().nanminmax(true) {
+            NanMinMaxResult::NaN => unreachable!(),
+            e @ NanMinMaxResult::NoElements | e @ NanMinMaxResult::OneElement(_) => {
+                return Err(e.into())
+            }
+            NanMinMaxResult::MinMax(min, max) => {
                 FittedMinMaxScalerParams::new(MinMax { min, max }, self.output_scale)
             }
         };
@@ -186,6 +185,16 @@ impl StandardScaleParams {
 
         Self { mean, std_dev }
     }
+
+    /// Create a new `StandardScaleParams` from the given data, ignoring NaN values.
+    ///
+    /// This is useful if you have NaN values in your data and want to avoid
+    /// propagating them during the standardization process.
+    ///
+    /// See [`StandardScaleParams::from_data`] for more details on the implementation.
+    pub fn from_data_ignoring_nans<T: Iterator<Item = f64>>(data: T) -> Self {
+        Self::from_data(data.filter(|x| !x.is_nan()))
+    }
 }
 
 /// A transformer that scales items to have zero mean and unit standard deviation.
@@ -223,6 +232,7 @@ impl StandardScaleParams {
 #[derive(Debug, Clone, Default)]
 pub struct StandardScaler {
     params: Option<StandardScaleParams>,
+    ignore_nans: bool,
 }
 
 impl StandardScaler {
@@ -241,11 +251,27 @@ impl StandardScaler {
         self.params = Some(params);
         self
     }
+
+    /// Whether to ignore NaN values when calculating the scaler parameters.
+    ///
+    /// If `true`, NaN values will be ignored when calculating the scaler parameters.
+    /// This can be useful if you have NaN values in your data and want to avoid
+    /// errors when calculating the scaler parameters.
+    ///
+    /// Defaults to `false`.
+    pub fn ignore_nans(mut self, ignore_nans: bool) -> Self {
+        self.ignore_nans = ignore_nans;
+        self
+    }
 }
 
 impl Transformer for StandardScaler {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
-        self.params = Some(StandardScaleParams::from_data(data.iter().copied()));
+        self.params = Some(if self.ignore_nans {
+            StandardScaleParams::from_data_ignoring_nans(data.iter().copied())
+        } else {
+            StandardScaleParams::from_data(data.iter().copied())
+        });
         Ok(())
     }
 
@@ -364,5 +390,57 @@ mod test {
         let params = StandardScaleParams::from_data(data.into_iter());
         assert_approx_eq!(params.mean, 42.0);
         assert_approx_eq!(params.std_dev, 0.0); // technically undefined, but we return 0
+    }
+
+    #[test]
+    fn min_max_scale_with_nan() {
+        let mut data = vec![1.0, f64::NAN, 2.0, 3.0, f64::NAN];
+        let expected = vec![0.0, f64::NAN, 0.5, 1.0, f64::NAN];
+        let mut scaler = MinMaxScaler::new();
+        scaler.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn inverse_min_max_scale_with_nan() {
+        let mut data = vec![0.0, f64::NAN, 0.5, 1.0, f64::NAN];
+        let expected = vec![1.0, f64::NAN, 2.0, 3.0, f64::NAN];
+        let scaler = MinMaxScaler::new().with_data_range(1.0, 3.0);
+        scaler.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn standard_scale_with_nan() {
+        let mut data = vec![1.0, f64::NAN, 2.0, 3.0, f64::NAN];
+        let expected = vec![
+            -1.224744871391589,
+            f64::NAN,
+            0.0,
+            1.224744871391589,
+            f64::NAN,
+        ];
+        let mut scaler = StandardScaler::new().ignore_nans(true);
+        scaler.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn standard_scale_params_from_data_with_nan() {
+        // Test that NaN values are properly ignored in parameter calculation
+        let data = vec![1.0, f64::NAN, 2.0, 3.0, f64::NAN];
+        let params = StandardScaleParams::from_data_ignoring_nans(data.into_iter());
+        assert_approx_eq!(params.mean, 2.0);
+        assert_approx_eq!(params.std_dev, 0.816496580927726);
+    }
+
+    #[test]
+    fn inverse_standard_scale_with_nan() {
+        let mut data = vec![-1.0, f64::NAN, 0.0, 1.0, f64::NAN];
+        let expected = vec![1.0, f64::NAN, 2.0, 3.0, f64::NAN];
+        let params = StandardScaleParams::new(2.0, 1.0);
+        let scaler = StandardScaler::new().with_parameters(params);
+        scaler.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
     }
 }

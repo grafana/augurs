@@ -523,7 +523,7 @@ mod tests {
             let mut iter = outlier_indices.iter();
             let mut next_idx = iter.next();
             for (i, item) in matrix.iter_mut().enumerate() {
-                if next_idx.map_or(false, |next_idx| i >= *next_idx) {
+                if next_idx.is_some_and(|next_idx| i >= *next_idx) {
                     outlier_state = !outlier_state;
                     next_idx = iter.next();
                 }

@@ -9,7 +9,7 @@ pub enum Error {
     NoBestParameter,
     /// The input data did not have a distinct minimum and maximum value.
     #[error("no min-max found: {0:?}")]
-    MinMaxNotFound(itertools::MinMaxResult<f64>),
+    MinMaxNotFound(augurs_core::NanMinMaxResult<f64>),
     /// The transform has not been fitted yet.
     #[error("transform has not been fitted yet")]
     NotFitted,
@@ -36,8 +36,8 @@ pub enum Error {
     InvalidDomain,
 }
 
-impl From<itertools::MinMaxResult<f64>> for Error {
-    fn from(e: itertools::MinMaxResult<f64>) -> Self {
+impl From<augurs_core::NanMinMaxResult<f64>> for Error {
+    fn from(e: augurs_core::NanMinMaxResult<f64>) -> Self {
         Self::MinMaxNotFound(e)
     }
 }

@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
+use augurs_core::FloatIterExt;
 use itertools::{izip, Itertools};
 use rand::{distributions::Uniform, thread_rng, Rng};
 use statrs::distribution::{Laplace, Normal, Poisson};
 
-use crate::{
-    optimizer::OptimizedParams, util::FloatIterExt, Error, GrowthType, Prophet, TimestampSeconds,
-};
+use crate::{optimizer::OptimizedParams, Error, GrowthType, Prophet, TimestampSeconds};
 
 use super::prep::{ComponentName, Features, FeaturesFrame, Modes, ProcessedData};
 

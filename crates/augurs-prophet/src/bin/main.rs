@@ -85,7 +85,7 @@ fn unzip(dest: &Path) -> Result<()> {
                     && file.is_file()
                     && x.file_name()
                         .and_then(|x| x.to_str())
-                        .map_or(false, |x| x.contains(LIBTBB_SO_FILENAME)) =>
+                        .is_some_and(|x| x.contains(LIBTBB_SO_FILENAME)) =>
             {
                 let mut dest = dest
                     .parent()

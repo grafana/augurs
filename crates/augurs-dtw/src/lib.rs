@@ -340,7 +340,7 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                 cost_k_minus_1 = *c;
             }
 
-            if max_distance_transformed.map_or(false, |d| min_cost >= d) {
+            if max_distance_transformed.is_some_and(|d| min_cost >= d) {
                 return self.max_distance.unwrap();
             }
             (prev_cost, cost) = (cost, prev_cost);
