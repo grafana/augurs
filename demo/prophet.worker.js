@@ -1,5 +1,4 @@
 import initProphet, {
-  initLogging,
   Prophet,
 } from "./dist/@bsull/augurs/prophet.js";
 import { optimizer } from "./dist/@bsull/augurs-prophet-wasmstan/prophet-wasmstan.js";

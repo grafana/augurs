@@ -1242,7 +1242,7 @@ class ProphetWorker {
   }
 
   fitPredict = async (data, opts) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const start = performance.now();
       this.worker.postMessage({ data, opts });
       this.worker.onmessage = (e) => {

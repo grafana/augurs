@@ -48,7 +48,7 @@ class ClusteringWorker {
   }
 
   cluster = async (dtwOpts, dbscanOpts) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const start = performance.now();
       this.worker.postMessage({
         dtwOpts,
