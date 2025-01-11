@@ -903,7 +903,6 @@ function highlightChangepointsPlugin(ds, cps) {
     hooks: {
       drawClear: [
         (u) => {
-          const { ctx } = u;
           const { height, top } = u.bbox;
           u.ctx.save();
           let color = "white";

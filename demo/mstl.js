@@ -1243,7 +1243,7 @@ class MSTLWorker {
   }
 
   fitPredict = async (data, opts) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const start = performance.now();
       this.worker.postMessage({ data, opts });
       this.worker.onmessage = (e) => {
@@ -1278,8 +1278,6 @@ async function main() {
   });
 
   const worker = await MSTLWorker.create();
-
-  let start;
 
   async function runMSTL(opts) {
     const { predictions, elapsed } = await worker.fitPredict(df, opts);
@@ -1323,7 +1321,7 @@ async function main() {
       `Forecasting with MSTL - done in ${elapsed}ms`;
   }
   runMSTL(undefined);
-  document.getElementById("mstl-interval-width").addEventListener("change", function() {
+  document.getElementById("mstl-interval-width").addEventListener("input", function() {
     const intervalWidth = parseFloat(this.value);
     runMSTL({ intervalWidth });
   })

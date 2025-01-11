@@ -26,7 +26,7 @@ class OutlierWorker {
   }
 
   detect = async (opts) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const start = performance.now();
       this.worker.postMessage({
         opts,
@@ -40,7 +40,7 @@ class OutlierWorker {
   }
 }
 
-function setUpPlot(data, outlyingSeries) {
+function setUpPlot(data) {
   const opts = {
     ...getSize(),
     series: [
@@ -68,7 +68,6 @@ async function main() {
   const u = setUpPlot(worker.data);
   async function runOutlierDetection(opts) {
     const { outliers, elapsed } = await worker.detect(opts);
-    const outlyingSeries = new Set(outliers.outlyingSeries);
     outliers.seriesResults.forEach((res, i) => {
       const seriesIdx = i + 1;
       u.delSeries(seriesIdx);
@@ -83,7 +82,7 @@ async function main() {
   }
   runOutlierDetection({ sensitivity: 0.8 });
 
-  document.getElementById("outlier-sensitivity").addEventListener("change", function() {
+  document.getElementById("outlier-sensitivity").addEventListener("input", function() {
     runOutlierDetection({ sensitivity: parseFloat(this.value) });
   })
 }

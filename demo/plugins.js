@@ -7,7 +7,7 @@ export function legendAsTooltipPlugin({
 } = {}) {
   let legendEl;
 
-  function init(u, opts) {
+  function init(u) {
     legendEl = u.root.querySelector(".u-legend");
 
     legendEl.classList.remove("u-inline");
