@@ -1323,7 +1323,7 @@ async function main() {
       `Forecasting with MSTL - done in ${elapsed}ms`;
   }
   runMSTL(undefined);
-  document.getElementById("mstl-interval-width").addEventListener("change", function() {
+  document.getElementById("mstl-interval-width").addEventListener("input", function() {
     const intervalWidth = parseFloat(this.value);
     runMSTL({ intervalWidth });
   })

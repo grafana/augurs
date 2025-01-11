@@ -85,15 +85,15 @@ async function main() {
   const dbscanOpts = { epsilon: 5000, minClusterSize: 2 };
   runClustering(dtwOpts, dbscanOpts);
 
-  document.getElementById("clustering-dtw-window").addEventListener("change", function() {
+  document.getElementById("clustering-dtw-window").addEventListener("input", function() {
     dtwOpts.window = parseFloat(this.value);
     runClustering(dtwOpts, dbscanOpts);
   });
-  document.getElementById("clustering-dbscan-epsilon").addEventListener("change", function() {
+  document.getElementById("clustering-dbscan-epsilon").addEventListener("input", function() {
     dbscanOpts.epsilon = parseFloat(this.value);
     runClustering(dtwOpts, dbscanOpts);
   });
-  document.getElementById("clustering-dbscan-min-cluster-size").addEventListener("change", function() {
+  document.getElementById("clustering-dbscan-min-cluster-size").addEventListener("input", function() {
     dbscanOpts.minClusterSize = parseInt(this.value);
     runClustering(dtwOpts, dbscanOpts);
   });

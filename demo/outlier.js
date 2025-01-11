@@ -83,7 +83,7 @@ async function main() {
   }
   runOutlierDetection({ sensitivity: 0.8 });
 
-  document.getElementById("outlier-sensitivity").addEventListener("change", function() {
+  document.getElementById("outlier-sensitivity").addEventListener("input", function() {
     runOutlierDetection({ sensitivity: parseFloat(this.value) });
   })
 }
