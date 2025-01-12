@@ -14,7 +14,10 @@ Let's start with a simple example using DBSCAN clustering:
 
 ```rust
 # extern crate augurs;
-use augurs::{clustering::DbscanClusterer, dtw::Dtw};
+use augurs::{
+    clustering::{DbscanCluster, DbscanClusterer},
+    dtw::Dtw,
+};
 
 // Sample time series data
 const SERIES: &[&[f64]] = &[
@@ -39,11 +42,20 @@ fn main() {
     let min_cluster_size = 2;
 
     // Perform clustering
-    let clusters: Vec<isize> = DbscanClusterer::new(epsilon, min_cluster_size)
+    let clusters = DbscanClusterer::new(epsilon, min_cluster_size)
         .fit(&distance_matrix);
 
     // Clusters are labeled: -1 for noise, 0+ for cluster membership
-    assert_eq!(clusters, vec![0, 0, 1, 1, -1]);
+    assert_eq!(
+        clusters,
+        vec![
+            DbscanCluster::Cluster(1.try_into().unwrap()),
+            DbscanCluster::Cluster(1.try_into().unwrap()),
+            DbscanCluster::Cluster(2.try_into().unwrap()),
+            DbscanCluster::Cluster(2.try_into().unwrap()),
+            DbscanCluster::Noise,
+        ]
+    );
 }
 ```
 

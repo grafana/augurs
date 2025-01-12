@@ -82,8 +82,15 @@ impl Dbscan {
         &self,
         py: Python<'_>,
         distance_matrix: InputDistanceMatrix<'_>,
-    ) -> PyResult<Py<PyArray1<isize>>> {
+    ) -> PyResult<Py<PyArray1<i32>>> {
         let distance_matrix = distance_matrix.try_into()?;
-        Ok(self.inner.fit(&distance_matrix).into_pyarray(py).into())
+        Ok(self
+            .inner
+            .fit(&distance_matrix)
+            .into_iter()
+            .map(|x| x.as_i32())
+            .collect::<Vec<_>>()
+            .into_pyarray(py)
+            .into())
     }
 }
