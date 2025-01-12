@@ -18,6 +18,9 @@ fn test_changepoint() {
 #[cfg(feature = "clustering")]
 #[test]
 fn test_clustering() {
+    fn convert_clusters(clusters: Vec<augurs_clustering::DbscanCluster>) -> Vec<i32> {
+        clusters.into_iter().map(|c| c.as_i32()).collect()
+    }
     use augurs::{clustering::DbscanClusterer, DistanceMatrix};
     let distance_matrix = vec![
         vec![0.0, 1.0, 2.0, 3.0],
@@ -27,22 +30,22 @@ fn test_clustering() {
     ];
     let distance_matrix = DistanceMatrix::try_from_square(distance_matrix).unwrap();
     let clusters = DbscanClusterer::new(0.5, 2).fit(&distance_matrix);
-    assert_eq!(clusters, vec![-1, -1, -1, -1]);
+    assert_eq!(convert_clusters(clusters), vec![-1, -1, -1, -1]);
 
     let clusters = DbscanClusterer::new(1.0, 2).fit(&distance_matrix);
-    assert_eq!(clusters, vec![0, 0, -1, -1]);
+    assert_eq!(convert_clusters(clusters), vec![1, 1, -1, -1]);
 
     let clusters = DbscanClusterer::new(1.0, 3).fit(&distance_matrix);
-    assert_eq!(clusters, vec![-1, -1, -1, -1]);
+    assert_eq!(convert_clusters(clusters), vec![-1, -1, -1, -1]);
 
     let clusters = DbscanClusterer::new(2.0, 2).fit(&distance_matrix);
-    assert_eq!(clusters, vec![0, 0, 0, -1]);
+    assert_eq!(convert_clusters(clusters), vec![1, 1, 1, -1]);
 
     let clusters = DbscanClusterer::new(2.0, 3).fit(&distance_matrix);
-    assert_eq!(clusters, vec![0, 0, 0, -1]);
+    assert_eq!(convert_clusters(clusters), vec![1, 1, 1, -1]);
 
     let clusters = DbscanClusterer::new(3.0, 3).fit(&distance_matrix);
-    assert_eq!(clusters, vec![0, 0, 0, 0]);
+    assert_eq!(convert_clusters(clusters), vec![1, 1, 1, 1]);
 }
 
 #[cfg(feature = "dtw")]

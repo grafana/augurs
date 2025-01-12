@@ -22,7 +22,7 @@ describe('clustering', () => {
       [2, 3, 0, 4],
       [3, 3, 4, 0],
     ]);
-    expect(labels).toEqual(new Int32Array([0, 0, -1, -1]));
+    expect(labels).toEqual(new Int32Array([1, 1, -1, -1]));
   });
 
   it('can be fit with a raw distance matrix of typed arrays', () => {
@@ -33,7 +33,7 @@ describe('clustering', () => {
       new Float64Array([2, 3, 0, 4]),
       new Float64Array([3, 3, 4, 0]),
     ]);
-    expect(labels).toEqual(new Int32Array([0, 0, -1, -1]));
+    expect(labels).toEqual(new Int32Array([1, 1, -1, -1]));
   });
 
   it('can be fit with a distance matrix from augurs', () => {
@@ -46,6 +46,6 @@ describe('clustering', () => {
     ]);
     const clusterer = new DbscanClusterer({ epsilon: 0.5, minClusterSize: 2 });
     const labels = clusterer.fit(distanceMatrix);
-    expect(labels).toEqual(new Int32Array([0, 0, 0, -1]));
+    expect(labels).toEqual(new Int32Array([1, 1, 1, -1]));
   })
 });

@@ -44,7 +44,12 @@ impl DbscanClusterer {
     /// The return value is an `Int32Array` of cluster IDs, with `-1` indicating noise.
     #[wasm_bindgen]
     #[allow(non_snake_case)]
-    pub fn fit(&self, distanceMatrix: VecVecF64) -> Result<Vec<isize>, JsError> {
-        Ok(self.inner.fit(&DistanceMatrix::new(distanceMatrix)?.into()))
+    pub fn fit(&self, distanceMatrix: VecVecF64) -> Result<Vec<i32>, JsError> {
+        Ok(self
+            .inner
+            .fit(&DistanceMatrix::new(distanceMatrix)?.into())
+            .into_iter()
+            .map(|x| x.as_i32())
+            .collect::<Vec<_>>())
     }
 }

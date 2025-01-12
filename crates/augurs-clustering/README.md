@@ -8,7 +8,7 @@ A crate such as [`augurs-dtw`] must be used to calculate the distance matrix for
 ## Usage
 
 ```rust
-use augurs::clustering::{DbscanClusterer, DistanceMatrix};
+use augurs::clustering::{DbscanCluster, DbscanClusterer, DistanceMatrix};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 // Start with a distance matrix.
@@ -32,7 +32,16 @@ let min_cluster_size = 2;
 // Use DBSCAN to detect clusters of series.
 // Note that we don't need to specify the number of clusters in advance.
 let clusters = DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
-assert_eq!(clusters, vec![0, 0, 0, 1, 1]);
+assert_eq!(
+    clusters,
+    vec![
+        DbscanCluster::Cluster(1.try_into().unwrap()),
+        DbscanCluster::Cluster(1.try_into().unwrap()),
+        DbscanCluster::Cluster(1.try_into().unwrap()),
+        DbscanCluster::Cluster(2.try_into().unwrap()),
+        DbscanCluster::Cluster(2.try_into().unwrap()),
+    ],
+);
 # Ok(())
 # }
 ```

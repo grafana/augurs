@@ -7,7 +7,10 @@
 //! The resulting clusters are assigned a label of -1 for noise, 0 for the first cluster, and 1 for
 //! the second cluster.
 
-use augurs::{clustering::DbscanClusterer, dtw::Dtw};
+use augurs::{
+    clustering::{DbscanCluster, DbscanClusterer},
+    dtw::Dtw,
+};
 
 // This is a very trivial example dataset containing 5 time series which
 // form two obvious clusters, plus a noise cluster.
@@ -49,7 +52,16 @@ fn main() {
     let min_cluster_size = 2;
 
     // Run DBSCAN clustering on the distance matrix.
-    let clusters: Vec<isize> =
-        DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
-    assert_eq!(clusters, vec![0, 0, 1, 1, -1]);
+    let clusters = DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
+    println!("Clusters: {:?}", clusters);
+    assert_eq!(
+        clusters,
+        vec![
+            DbscanCluster::Cluster(1.try_into().unwrap()),
+            DbscanCluster::Cluster(1.try_into().unwrap()),
+            DbscanCluster::Cluster(2.try_into().unwrap()),
+            DbscanCluster::Cluster(2.try_into().unwrap()),
+            DbscanCluster::Noise,
+        ]
+    );
 }
