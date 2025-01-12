@@ -11,6 +11,9 @@ fn box_cox(x: f64, lambda: f64) -> Result<f64, Error> {
     if x <= 0.0 {
         return Err(Error::NonPositiveData);
     }
+    if x.is_nan() {
+        return Ok(x);
+    }
     if lambda == 0.0 {
         Ok(x.ln())
     } else {
@@ -20,7 +23,9 @@ fn box_cox(x: f64, lambda: f64) -> Result<f64, Error> {
 
 /// Returns the inverse Box-Cox transformation of the given value.
 fn inverse_box_cox(y: f64, lambda: f64) -> Result<f64, Error> {
-    if lambda == 0.0 {
+    if y.is_nan() {
+        Ok(y)
+    } else if lambda == 0.0 {
         Ok(y.exp())
     } else {
         let value = y * lambda + 1.0;
@@ -147,12 +152,16 @@ pub(crate) fn optimize_yeo_johnson_lambda(data: &[f64]) -> Result<f64, Error> {
 #[derive(Clone, Debug)]
 pub struct BoxCox {
     lambda: f64,
+    ignore_nans: bool,
 }
 
 impl BoxCox {
     /// Create a new `BoxCox` transformer.
     pub fn new() -> Self {
-        Self { lambda: f64::NAN }
+        Self {
+            lambda: f64::NAN,
+            ignore_nans: false,
+        }
     }
 
     /// Set the `lambda` parameter for the Box-Cox transformation.
@@ -167,6 +176,17 @@ impl BoxCox {
         self.lambda = lambda;
         Ok(self)
     }
+
+    /// Set whether to ignore NaN values when calculating the transform.
+    ///
+    /// If `true`, NaN values will be ignored when calculating the optimal
+    /// lambda and simply passed through the transform.
+    ///
+    /// Defaults to `false`.
+    pub fn with_ignore_nans(mut self, ignore_nans: bool) -> Self {
+        self.ignore_nans = ignore_nans;
+        self
+    }
 }
 
 impl Default for BoxCox {
@@ -177,8 +197,18 @@ impl Default for BoxCox {
 
 impl Transformer for BoxCox {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
-        if self.lambda.is_nan() {
+        if !self.ignore_nans || !data.iter().any(|&x| x.is_nan()) {
             self.lambda = optimize_box_cox_lambda(data)?;
+        } else {
+            let data = data
+                .iter()
+                .copied()
+                .filter(|&x| !x.is_nan())
+                .collect::<Vec<_>>();
+            if data.is_empty() {
+                return Err(Error::EmptyData);
+            }
+            self.lambda = optimize_box_cox_lambda(&data)?;
         }
         Ok(())
     }
@@ -204,7 +234,7 @@ impl Transformer for BoxCox {
 /// Returns the Yeo-Johnson transformation of the given value.
 fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, Error> {
     if x.is_nan() {
-        return Err(Error::NaNValue);
+        return Ok(x);
     }
     if !lambda.is_finite() {
         return Err(Error::InvalidLambda);
@@ -316,12 +346,16 @@ impl CostFunction for YeoJohnsonProblem<'_> {
 #[derive(Clone, Debug)]
 pub struct YeoJohnson {
     lambda: f64,
+    ignore_nans: bool,
 }
 
 impl YeoJohnson {
     /// Create a new `YeoJohnson` transformer.
     pub fn new() -> Self {
-        Self { lambda: f64::NAN }
+        Self {
+            lambda: f64::NAN,
+            ignore_nans: false,
+        }
     }
 
     /// Set the `lambda` parameter for the Yeo-Johnson transformation.
@@ -336,6 +370,17 @@ impl YeoJohnson {
         self.lambda = lambda;
         Ok(self)
     }
+
+    /// Set whether to ignore NaN values when calculating the transform.
+    ///
+    /// If `true`, NaN values will be ignored when calculating the optimal
+    /// lambda and simply passed through the transform.
+    ///
+    /// Defaults to `false`.
+    pub fn with_ignore_nans(mut self, ignore_nans: bool) -> Self {
+        self.ignore_nans = ignore_nans;
+        self
+    }
 }
 
 impl Default for YeoJohnson {
@@ -346,8 +391,18 @@ impl Default for YeoJohnson {
 
 impl Transformer for YeoJohnson {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
-        if self.lambda.is_nan() {
+        if !self.ignore_nans || !data.iter().any(|&x| x.is_nan()) {
             self.lambda = optimize_yeo_johnson_lambda(data)?;
+        } else {
+            let data = data
+                .iter()
+                .copied()
+                .filter(|&x| !x.is_nan())
+                .collect::<Vec<_>>();
+            if data.is_empty() {
+                return Err(Error::EmptyData);
+            }
+            self.lambda = optimize_yeo_johnson_lambda(&data)?;
         }
         Ok(())
     }
@@ -436,17 +491,47 @@ mod test {
     }
 
     #[test]
-    fn box_cox_test() {
+    fn box_cox_single() {
+        assert_approx_eq!(box_cox(1.0, 0.5).unwrap(), 0.0);
+        assert_approx_eq!(box_cox(2.0, 0.5).unwrap(), 0.8284271247461903);
+        assert!(box_cox(f64::NAN, 0.5).unwrap().is_nan());
+    }
+
+    #[test]
+    fn inverse_box_cox_single() {
+        assert_approx_eq!(inverse_box_cox(0.0, 0.5).unwrap(), 1.0);
+        assert_approx_eq!(inverse_box_cox(0.8284271247461903, 0.5).unwrap(), 2.0);
+        assert!(inverse_box_cox(f64::NAN, 0.5).unwrap().is_nan());
+    }
+
+    #[test]
+    fn box_cox_transform() {
         let mut data = vec![1.0, 2.0, 3.0];
         let lambda = 0.5;
-        let mut box_cox = BoxCox::new().with_lambda(lambda).unwrap();
+        let box_cox = BoxCox::new().with_lambda(lambda).unwrap();
         let expected = vec![0.0, 0.8284271247461903, 1.4641016151377544];
+        box_cox.transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn box_cox_fit_transform_nans() {
+        let mut data = vec![1.0, 2.0, f64::NAN, 3.0];
+        let mut box_cox = BoxCox::new();
+        assert!(box_cox.fit_transform(&mut data).is_err());
+    }
+
+    #[test]
+    fn box_cox_transform_ignore_nans() {
+        let mut data = vec![1.0, 2.0, f64::NAN, 3.0];
+        let mut box_cox = BoxCox::new().with_ignore_nans(true);
+        let expected = vec![0.0, 0.8284271247461903, f64::NAN, 1.4641016151377544];
         box_cox.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
 
     #[test]
-    fn inverse_box_cox_test() {
+    fn inverse_box_cox_transform() {
         let mut data = vec![0.0, 0.5_f64.ln(), 1.0_f64.ln()];
         let lambda = 0.5;
         let box_cox = BoxCox::new().with_lambda(lambda).unwrap();
@@ -456,7 +541,21 @@ mod test {
     }
 
     #[test]
-    fn yeo_johnson_test() {
+    fn yeo_johnson_single() {
+        assert_approx_eq!(yeo_johnson(1.0, 0.5).unwrap(), 0.8284271247461903);
+        assert_approx_eq!(yeo_johnson(2.0, 0.5).unwrap(), 1.4641016151377544);
+        assert!(yeo_johnson(f64::NAN, 0.5).unwrap().is_nan());
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_single() {
+        assert_approx_eq!(inverse_yeo_johnson(0.8284271247461903, 0.5), 1.0);
+        assert_approx_eq!(inverse_yeo_johnson(1.4641016151377544, 0.5), 2.0);
+        assert!(inverse_yeo_johnson(f64::NAN, 0.5).is_nan());
+    }
+
+    #[test]
+    fn yeo_johnson_transform() {
         let mut data = vec![-1.0, 0.0, 1.0];
         let lambda = 0.5;
         let yeo_johnson = YeoJohnson::new().with_lambda(lambda).unwrap();
@@ -466,7 +565,23 @@ mod test {
     }
 
     #[test]
-    fn inverse_yeo_johnson_test() {
+    fn yeo_johnson_fit_transform_nans() {
+        let mut data = vec![-1.0, 0.0, f64::NAN, 1.0];
+        let mut yeo_johnson = YeoJohnson::new();
+        assert!(yeo_johnson.fit_transform(&mut data).is_err());
+    }
+
+    #[test]
+    fn yeo_johnson_fit_transform_ignore_nans() {
+        let mut data = vec![-1.0, 0.0, f64::NAN, 1.0];
+        let mut yeo_johnson = YeoJohnson::new().with_ignore_nans(true);
+        let expected = vec![-1.0000010312156777, 0.0, f64::NAN, 0.9999989687856643];
+        yeo_johnson.fit_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_transform() {
         let mut data = vec![-1.2189514164974602, 0.0, 0.8284271247461903];
         let lambda = 0.5;
         let yeo_johnson = YeoJohnson::new().with_lambda(lambda).unwrap();
