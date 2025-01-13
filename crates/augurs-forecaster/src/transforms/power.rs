@@ -197,6 +197,8 @@ impl Default for BoxCox {
 
 impl Transformer for BoxCox {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        // Avoid copying the data if we don't need to,
+        // i.e. if we're not ignoring NaNs or if there are no NaNs.
         if !self.ignore_nans || !data.iter().any(|&x| x.is_nan()) {
             self.lambda = optimize_box_cox_lambda(data)?;
         } else {
@@ -391,6 +393,8 @@ impl Default for YeoJohnson {
 
 impl Transformer for YeoJohnson {
     fn fit(&mut self, data: &[f64]) -> Result<(), Error> {
+        // Avoid copying the data if we don't need to,
+        // i.e. if we're not ignoring NaNs or if there are no NaNs.
         if !self.ignore_nans || !data.iter().any(|&x| x.is_nan()) {
             self.lambda = optimize_yeo_johnson_lambda(data)?;
         } else {
