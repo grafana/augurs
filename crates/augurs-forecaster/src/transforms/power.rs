@@ -183,7 +183,7 @@ impl BoxCox {
     /// lambda and simply passed through the transform.
     ///
     /// Defaults to `false`.
-    pub fn with_ignore_nans(mut self, ignore_nans: bool) -> Self {
+    pub fn ignore_nans(mut self, ignore_nans: bool) -> Self {
         self.ignore_nans = ignore_nans;
         self
     }
@@ -377,7 +377,7 @@ impl YeoJohnson {
     /// lambda and simply passed through the transform.
     ///
     /// Defaults to `false`.
-    pub fn with_ignore_nans(mut self, ignore_nans: bool) -> Self {
+    pub fn ignore_nans(mut self, ignore_nans: bool) -> Self {
         self.ignore_nans = ignore_nans;
         self
     }
@@ -524,7 +524,7 @@ mod test {
     #[test]
     fn box_cox_transform_ignore_nans() {
         let mut data = vec![1.0, 2.0, f64::NAN, 3.0];
-        let mut box_cox = BoxCox::new().with_ignore_nans(true);
+        let mut box_cox = BoxCox::new().ignore_nans(true);
         let expected = vec![0.0, 0.8284271247461903, f64::NAN, 1.4641016151377544];
         box_cox.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
@@ -574,7 +574,7 @@ mod test {
     #[test]
     fn yeo_johnson_fit_transform_ignore_nans() {
         let mut data = vec![-1.0, 0.0, f64::NAN, 1.0];
-        let mut yeo_johnson = YeoJohnson::new().with_ignore_nans(true);
+        let mut yeo_johnson = YeoJohnson::new().ignore_nans(true);
         let expected = vec![-1.0000010312156777, 0.0, f64::NAN, 0.9999989687856643];
         yeo_johnson.fit_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
