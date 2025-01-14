@@ -33,9 +33,7 @@ pub enum Transform {
 impl Transform {
     fn into_transformer(self) -> Box<dyn Transformer> {
         match self {
-            Transform::MinMaxScaler => {
-                Box::new(MinMaxScaler::new())
-            },
+            Transform::MinMaxScaler => Box::new(MinMaxScaler::new()),
             Transform::StandardScaler { ignore_nans } => {
                 Box::new(StandardScaler::new().ignore_nans(ignore_nans))
             }
