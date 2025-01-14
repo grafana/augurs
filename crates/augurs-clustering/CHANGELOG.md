@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/grafana/augurs/compare/augurs-clustering-v0.8.1...augurs-clustering-v0.9.0) - 2025-01-14
+
+### Other
+
+- *(clustering)* [**breaking**] use new DbscanCluster type instead of isize (#233)
+
 ## [0.5.2](https://github.com/grafana/augurs/compare/augurs-clustering-v0.5.1...augurs-clustering-v0.5.2) - 2024-10-25
 
 ### Other

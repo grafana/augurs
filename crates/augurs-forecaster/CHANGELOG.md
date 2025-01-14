@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.8.1...augurs-forecaster-v0.9.0) - 2025-01-14
+
+### Added
+
+- allow ignoring NaNs in power transforms (#234)
+- *(forecaster)* add NaN handling to MinMaxScaler and StandardScaler (#227)
+
 ## [0.8.1](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.8.0...augurs-forecaster-v0.8.1) - 2025-01-07
 
 ### Other
