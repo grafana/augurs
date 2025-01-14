@@ -195,7 +195,7 @@ impl LoadedOutlierDetector {
     /// are incompatible.
     #[wasm_bindgen(js_name = "updateDetector")]
     pub fn update_detector(&mut self, options: OutlierDetectorOptions) -> Result<(), JsError> {
-        match &mut self.detector {
+        match self.detector {
             LoadedDetector::Dbscan {
                 ref mut detector, ..
             } => {

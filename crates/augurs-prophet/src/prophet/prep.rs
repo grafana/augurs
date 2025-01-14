@@ -1058,7 +1058,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     macro_rules! concat_all {
-        ($($x:expr),+ $(,)?) => {{
+        ($($x:expr_2021),+ $(,)?) => {{
             let mut result = Vec::new();
             $(
                 result.extend($x.iter().cloned());

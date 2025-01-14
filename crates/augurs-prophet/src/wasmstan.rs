@@ -59,7 +59,7 @@ pub enum Error {
 }
 
 #[allow(missing_docs)]
-mod gen {
+mod r#gen {
     use wasmtime::component::bindgen;
 
     bindgen!({
@@ -71,7 +71,7 @@ mod gen {
     });
 }
 
-use gen::*;
+use r#gen::*;
 
 /// State required to run the WASI module. Will be stored in the `Store` while
 /// the module is running.

@@ -28,7 +28,7 @@ pub fn assert_all_close(actual: &[f64], expected: &[f64]) {
 /// Assert that a is within (tol * 100)% of b.
 #[macro_export]
 macro_rules! assert_within_pct {
-    ($a:expr, $b:expr, $tol:expr) => {
+    ($a:expr_2021, $b:expr_2021, $tol:expr_2021) => {
         if $a == 0.0 {
             assert!(
                 ($b as f64).abs() < $tol,

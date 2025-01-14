@@ -154,7 +154,7 @@ impl DbscanClusterer {
             dists
                 .iter()
                 .enumerate()
-                .filter(|(j, &x)| i != *j && x <= self.epsilon)
+                .filter(|&(ref j, &x)| i != *j && x <= self.epsilon)
                 .map(|(j, _)| j),
         );
     }

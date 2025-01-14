@@ -88,7 +88,7 @@ impl Periodogram {
     ///
     /// The peaks are defined as the periods which have a power greater than `threshold` times the
     /// maximum power in the periodogram.
-    pub fn peaks(&self, threshold: f64) -> impl Iterator<Item = Period> {
+    pub fn peaks(&self, threshold: f64) -> impl Iterator<Item = Period> + use<> {
         // Scale the threshold so that it's relative to the maximum power.
         let keep = self
             .powers

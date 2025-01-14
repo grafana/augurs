@@ -174,7 +174,7 @@ impl FittedMSTLModel {
     fn add_seasonal_in_sample(&self, trend: &mut Forecast) {
         self.fit().seasonal().iter().for_each(|component| {
             let period_contributions = component.iter().zip(trend.point.iter_mut());
-            match &mut trend.intervals {
+            match trend.intervals {
                 None => period_contributions.for_each(|(c, p)| *p += *c as f64),
                 Some(ForecastIntervals {
                     ref mut lower,
@@ -210,7 +210,7 @@ impl FittedMSTLModel {
                     .skip(component.len() - period)
                     .cycle()
                     .zip(trend.point.iter_mut());
-                match &mut trend.intervals {
+                match trend.intervals {
                     None => period_contributions.for_each(|(c, p)| *p += c as f64),
                     Some(ForecastIntervals {
                         ref mut lower,

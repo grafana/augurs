@@ -227,7 +227,7 @@ impl<O> Prophet<O> {
     }
 
     /// Evaluate the flat trend function.
-    fn flat_trend(t: &[f64], m: f64) -> impl Iterator<Item = f64> {
+    fn flat_trend(t: &[f64], m: f64) -> impl Iterator<Item = f64> + use<O> {
         std::iter::repeat(m).take(t.len())
     }
 
