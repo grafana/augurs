@@ -14,7 +14,7 @@ use augurs_forecaster::transforms::{MinMaxScaler, StandardScaler, Transformer, Y
 #[serde(rename_all = "camelCase", tag = "type")]
 #[tsify(from_wasm_abi)]
 pub enum Transform {
-    /// Scale the data to a given range.
+    /// Scale the data to the range [0, 1].
     MinMaxScaler,
     /// Standardize the data such that it has zero mean and unit variance.
     StandardScaler {
