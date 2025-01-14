@@ -19,11 +19,22 @@ test:
     --exclude *-js \
     --exclude pyaugurs
 
-# Run all unit and integration tests, plus examples and benchmarks, except for those which require `iai` (which isn't available on all platforms) and the Prophet benchmarks which require a STAN installation.
+# Run all unit and integration tests, plus examples, except for those which require `iai` (which isn't available on all platforms) and the Prophet benchmarks which require a STAN installation.
 test-all:
   cargo nextest run \
     --all-features \
     --all-targets \
+    --workspace \
+    --exclude *-js \
+    --exclude pyaugurs \
+    -E 'not (binary(/iai/) | binary(/prophet-cmdstan/) | kind(bench))'
+
+# Run benchmarks in "test mode" (but with optimizations) using nextest.
+test-bench:
+  cargo nextest run \
+    --release \
+    --all-features \
+    --benches \
     --workspace \
     --exclude *-js \
     --exclude pyaugurs \
