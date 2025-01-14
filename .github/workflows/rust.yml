@@ -45,6 +45,27 @@ jobs:
       - name: Run doc tests
         run: just doctest
 
+  bench:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: cargo-nextest,just
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Download the Prophet Stan model since an example requires it.
+      - name: Download Prophet Stan model
+        run: just download-prophet-stan-model
+
+      - name: Run benchmarks in test mode
+        run: just test-bench
+
   test-book:
     name: Test Book
     runs-on: ubuntu-latest
