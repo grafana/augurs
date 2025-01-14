@@ -13,8 +13,8 @@ pub enum Error {
     /// The transform has not been fitted yet.
     #[error("transform has not been fitted yet")]
     NotFitted,
-    /// The input data is empty.
-    #[error("data must not be empty")]
+    /// The input data is empty, or contains only NaN values.
+    #[error("input data is empty, or contains only NaN values")]
     EmptyData,
     /// The input data contains non-positive values.
     #[error("data contains non-positive values")]

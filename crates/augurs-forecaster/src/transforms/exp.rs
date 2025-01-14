@@ -109,6 +109,11 @@ mod test {
     }
 
     #[test]
+    fn test_logistic_nan() {
+        assert!(logistic(f64::NAN).is_nan());
+    }
+
+    #[test]
     fn test_logit() {
         let x = 0.5;
         let expected = 0.0;
@@ -122,6 +127,11 @@ mod test {
         let expected = (0.25_f64 / (1.0 - 0.25)).ln();
         let actual = logit(x);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_logit_nan() {
+        assert!(logit(f64::NAN).is_nan());
     }
 
     #[test]
