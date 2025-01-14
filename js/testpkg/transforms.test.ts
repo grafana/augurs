@@ -41,8 +41,20 @@ describe('transforms', () => {
   });
 
   describe('pipeline', () => {
-    it('works with arrays', () => {
+    it('works with arrays std scaled', () => {
       const pt = new Pipeline([{ type: "standardScaler" }, { type: "yeoJohnson" }]);
+      const transformed = pt.fitTransform(y);
+      expect(transformed).toBeInstanceOf(Float64Array);
+      expect(transformed).toHaveLength(y.length);
+      const inverse = pt.inverseTransform(transformed);
+      expect(inverse).toBeInstanceOf(Float64Array);
+      expect(inverse).toHaveLength(y.length);
+      //@ts-ignore
+      expect(Array.from(inverse)).toAllBeCloseTo(y);
+    });
+
+    it('works with arrays minmax scaled', () => {
+      const pt = new Pipeline([{ type: "minMaxScaler" }, { type: "yeoJohnson" }]);
       const transformed = pt.fitTransform(y);
       expect(transformed).toBeInstanceOf(Float64Array);
       expect(transformed).toHaveLength(y.length);
@@ -69,7 +81,7 @@ describe('transforms', () => {
     yWithNaNs[10] = NaN;
     yWithNaNs[20] = NaN;
 
-    it('works with arrays', () => {
+    it('works with arrays std scaled', () => {
       const pt = new Pipeline([{ type: "standardScaler", ignoreNaNs: true }, { type: "yeoJohnson", ignoreNaNs: true }]);
       const transformed = pt.fitTransform(yWithNaNs);
       expect(transformed).toBeInstanceOf(Float64Array);
@@ -79,6 +91,18 @@ describe('transforms', () => {
       expect(inverse).toHaveLength(yWithNaNs.length);
       //@ts-ignore
       expect(Array.from(inverse)).toAllBeCloseTo(yWithNaNs);
+    });
+
+    it('works with arrays minmax scaled', () => {
+      const pt = new Pipeline([{ type: "minMaxScaler" }, { type: "yeoJohnson" }]);
+      const transformed = pt.fitTransform(y);
+      expect(transformed).toBeInstanceOf(Float64Array);
+      expect(transformed).toHaveLength(y.length);
+      const inverse = pt.inverseTransform(transformed);
+      expect(inverse).toBeInstanceOf(Float64Array);
+      expect(inverse).toHaveLength(y.length);
+      //@ts-ignore
+      expect(Array.from(inverse)).toAllBeCloseTo(y);
     });
 
     it('handles empty pipeline', () => {

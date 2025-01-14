@@ -5,7 +5,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use augurs_core_js::VecF64;
-use augurs_forecaster::transforms::{StandardScaler, Transformer, YeoJohnson};
+use augurs_forecaster::transforms::{MinMaxScaler, StandardScaler, Transformer, YeoJohnson};
 
 /// A transformation to be applied to the data.
 ///
@@ -14,6 +14,8 @@ use augurs_forecaster::transforms::{StandardScaler, Transformer, YeoJohnson};
 #[serde(rename_all = "camelCase", tag = "type")]
 #[tsify(from_wasm_abi)]
 pub enum Transform {
+    /// Scale the data to a given range.
+    MinMaxScaler,
     /// Standardize the data such that it has zero mean and unit variance.
     StandardScaler {
         /// Whether to ignore NaNs.
@@ -31,6 +33,9 @@ pub enum Transform {
 impl Transform {
     fn into_transformer(self) -> Box<dyn Transformer> {
         match self {
+            Transform::MinMaxScaler => {
+                Box::new(MinMaxScaler::new())
+            },
             Transform::StandardScaler { ignore_nans } => {
                 Box::new(StandardScaler::new().ignore_nans(ignore_nans))
             }
