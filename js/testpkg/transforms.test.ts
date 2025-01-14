@@ -40,14 +40,12 @@ describe('transforms', () => {
     }
   });
 
-
   describe('pipeline', () => {
     it('works with arrays', () => {
-      const pt = new Pipeline(["standardScaler", "yeoJohnson"]);
+      const pt = new Pipeline([{ type: "standardScaler" }, { type: "yeoJohnson" }]);
       const transformed = pt.fitTransform(y);
       expect(transformed).toBeInstanceOf(Float64Array);
       expect(transformed).toHaveLength(y.length);
-      console.log(transformed);
       const inverse = pt.inverseTransform(transformed);
       expect(inverse).toBeInstanceOf(Float64Array);
       expect(inverse).toHaveLength(y.length);
@@ -58,6 +56,34 @@ describe('transforms', () => {
     it('handles empty pipeline', () => {
       const pt = new Pipeline([]);
       expect(() => pt.fitTransform(y)).not.toThrow();
+    });
+
+    it('handles invalid transforms', () => {
+      // @ts-ignore
+      expect(() => new Pipeline(["invalidTransform"])).toThrow();
+    });
+  });
+
+  describe('pipeline with nans', () => {
+    const yWithNaNs = [...y];
+    yWithNaNs[10] = NaN;
+    yWithNaNs[20] = NaN;
+
+    it('works with arrays', () => {
+      const pt = new Pipeline([{ type: "standardScaler", ignoreNaNs: true }, { type: "yeoJohnson", ignoreNaNs: true }]);
+      const transformed = pt.fitTransform(yWithNaNs);
+      expect(transformed).toBeInstanceOf(Float64Array);
+      expect(transformed).toHaveLength(yWithNaNs.length);
+      const inverse = pt.inverseTransform(transformed);
+      expect(inverse).toBeInstanceOf(Float64Array);
+      expect(inverse).toHaveLength(yWithNaNs.length);
+      //@ts-ignore
+      expect(Array.from(inverse)).toAllBeCloseTo(yWithNaNs);
+    });
+
+    it('handles empty pipeline', () => {
+      const pt = new Pipeline([]);
+      expect(() => pt.fitTransform(yWithNaNs)).not.toThrow();
     });
 
     it('handles invalid transforms', () => {

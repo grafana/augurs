@@ -11,20 +11,32 @@ use augurs_forecaster::transforms::{StandardScaler, Transformer, YeoJohnson};
 ///
 /// @experimental
 #[derive(Debug, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "type")]
 #[tsify(from_wasm_abi)]
 pub enum Transform {
     /// Standardize the data such that it has zero mean and unit variance.
-    StandardScaler,
+    StandardScaler {
+        /// Whether to ignore NaNs.
+        #[serde(default, rename = "ignoreNaNs")]
+        ignore_nans: bool,
+    },
     /// The Yeo-Johnson transform.
-    YeoJohnson,
+    YeoJohnson {
+        /// Whether to ignore NaNs.
+        #[serde(default, rename = "ignoreNaNs")]
+        ignore_nans: bool,
+    },
 }
 
 impl Transform {
     fn into_transformer(self) -> Box<dyn Transformer> {
         match self {
-            Transform::StandardScaler => Box::new(StandardScaler::new()),
-            Transform::YeoJohnson => Box::new(YeoJohnson::new()),
+            Transform::StandardScaler { ignore_nans } => {
+                Box::new(StandardScaler::new().ignore_nans(ignore_nans))
+            }
+            Transform::YeoJohnson { ignore_nans } => {
+                Box::new(YeoJohnson::new().ignore_nans(ignore_nans))
+            }
         }
     }
 }
