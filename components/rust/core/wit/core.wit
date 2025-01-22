@@ -1,0 +1,18 @@
+package augurs:core;
+
+interface types {
+    /// A sequence of floats comprising a time series.
+    type time-series = list<f64>;
+
+    /// A matrix of pairwise distances between time series.
+    type distance-matrix = list<list<f64>>;
+
+    variant error {
+        /// The distance matrix is not square.
+        invalid-distance-matrix,
+    }
+}
+
+world core {
+    export types;
+}

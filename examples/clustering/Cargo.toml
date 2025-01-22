@@ -1,5 +1,5 @@
 [package]
-name = "clustering"
+name = "clustering-example"
 description = "Example of time series clustering using augurs"
 license.workspace = true
 authors.workspace = true

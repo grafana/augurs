@@ -1,5 +1,5 @@
 [package]
-name = "forecasting"
+name = "forecasting-example"
 description = "Example of forecasting using augurs"
 license.workspace = true
 authors.workspace = true

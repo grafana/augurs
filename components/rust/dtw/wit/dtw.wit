@@ -1,0 +1,41 @@
+package augurs:dtw;
+
+/// Dynamic Time Warping.
+interface dtw {
+    use augurs:core/types.{time-series, distance-matrix};
+
+    /// Options for the DTW algorithm.
+    record dtw-opts {
+        /// The size of the Sakoe-Chiba warping window, `w`.
+        ///
+        /// Using a window limits shifts up to this amount away from the diagonal.
+        window: option<u32>,
+
+        max-distance: option<f64>,
+
+        lower-bound: option<f64>,
+
+        upper-bound: option<f64>,
+    }
+
+    /// A Dynamic Time Warping calculator.
+    resource dtw {
+        /// Create a new DTW calculator using the Euclidean distance.
+        euclidean: static func(opts: option<dtw-opts>) -> dtw;
+
+        /// Create a new DTW calculator using the Manhattan distance.
+        manhattan: static func(opts: option<dtw-opts>) -> dtw;
+
+        /// Compute the distance between two sequences under Dynamic Time Warping.
+        distance: func(s: time-series, t: time-series) -> f64;
+
+        /// Compute the distance matrix between all pairs of series.
+        ///
+        /// The series do not all have to be the same length.
+        distance-matrix: func(series: list<time-series>) -> distance-matrix;
+    }
+}
+
+world component {
+    export dtw;
+}

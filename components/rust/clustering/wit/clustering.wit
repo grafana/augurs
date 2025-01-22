@@ -1,0 +1,43 @@
+package augurs:clustering;
+
+/// Time series clustering using DBSCAN.
+interface dbscan {
+    use augurs:core/types.{distance-matrix, error};
+
+    /// Options for DBSCAN clustering.
+    record options {
+        /// The maximum distance between two series for them to be considered as in the same cluster.
+        epsilon: f64,
+        /// The minimum number of series before a cluster is considered core.
+        minimum-cluster-size: u32,
+    }
+
+    /// A cluster identified by DBSCAN.
+    variant dbscan-cluster {
+        /// A cluster of series with a given ID.
+        cluster(u32),
+        /// A 'noise' cluster, indicating that the series is not part of any cluster.
+        noise,
+    }
+
+    /// A DBSCAN clusterer.
+    resource dbscan-clusterer {
+        /// Create a new DBSCAN clusterer.
+        constructor(options: options);
+
+        /// Run DBSCAN clustering on a distance matrix.
+        fit: func(matrix: distance-matrix) -> result<list<dbscan-cluster>, error>;
+    }
+
+}
+
+world component {
+    export dbscan;
+}
+
+
+
+
+
+
+

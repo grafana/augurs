@@ -1,0 +1,6 @@
+*/interfaces
+*/node_modules
+*.wasm
+*.ts
+*.js
+*.tgz

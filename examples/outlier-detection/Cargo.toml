@@ -1,5 +1,5 @@
 [package]
-name = "outlier-detection"
+name = "outlier-detection-example"
 description = "Example of time series outlier detection using augurs"
 license.workspace = true
 authors.workspace = true
