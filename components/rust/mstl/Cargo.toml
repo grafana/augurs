@@ -1,0 +1,32 @@
+[package]
+name = "mstl"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+
+[dependencies]
+augurs-core = { workspace = true }
+augurs-ets = { workspace = true, features = ["mstl"] }
+augurs-mstl = { workspace = true }
+wit-bindgen-rt = { workspace = true, features = ["bitflags"] }
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.component]
+package = "augurs:mstl"
+
+[package.metadata.component.bindings]
+ownership = "borrowing-duplicate-if-necessary"
+
+[package.metadata.component.target]
+path = "wit"
+world = "component"
+
+[package.metadata.component.target.dependencies]
+"augurs:core" = { path = "../core/wit" }
+

@@ -1,0 +1,22 @@
+package augurs:mstl;
+
+/// Time series forecasting using MSTL.
+interface mstl {
+    use augurs:core/types.{forecast, error};
+
+    /// Options for the MSTL algorithm.
+    record options {
+    }
+
+    resource mstl {
+        /// Create a new MSTL model with an ETS trend model.
+        ets: static func(periods: list<u32>, opts: option<ets-opts>) -> mstl;
+
+        fit: func() -> result<, error>
+    }
+
+}
+
+world component {
+    export mstl;
+}
