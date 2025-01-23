@@ -10,9 +10,36 @@ interface types {
     variant error {
         /// The distance matrix is not square.
         invalid-distance-matrix,
+
+        /// An error occurred while fitting the model.
+        fit(string),
+
+        /// An error occurred while predicting with the model.
+        predict(string),
+    }
+
+    record forecast {
+        point: time-series,
+        intervals: option<forecast-intervals>,
+    }
+
+    record forecast-intervals {
+        level: f64,
+        lower: time-series,
+        upper: time-series,
+    }
+
+    resource fitted-trend-model {
+        predict-in-sample: func(level: option<f64>) -> result<forecast, error>;
+
+        predict: func(horizon: u32, level: option<f64>) -> result<forecast, error>;
+    }
+
+    resource trend-model {
+        fit: func(y: time-series) -> result<fitted-trend-model, error>;
     }
 }
 
-world core {
+world component {
     export types;
 }

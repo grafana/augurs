@@ -1,0 +1,12 @@
+package augurs:ets;
+
+interface ets {
+    resource ets {
+
+    }
+}
+
+world component {
+    export augurs:core/trend-model;
+    export ets;
+}

@@ -1,5 +1,5 @@
 [package]
-name = "mstl"
+name = "ets"
 license.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -10,8 +10,7 @@ keywords.workspace = true
 
 [dependencies]
 augurs-core = { workspace = true }
-# augurs-ets = { workspace = true, features = ["mstl"] }
-augurs-mstl = { workspace = true }
+augurs-ets = { workspace = true }
 getrandom.workspace = true
 wit-bindgen-rt = { workspace = true, features = ["bitflags"] }
 
@@ -19,7 +18,7 @@ wit-bindgen-rt = { workspace = true, features = ["bitflags"] }
 crate-type = ["cdylib"]
 
 [package.metadata.component]
-package = "augurs:mstl"
+package = "augurs:ets"
 
 [package.metadata.component.bindings]
 ownership = "borrowing-duplicate-if-necessary"

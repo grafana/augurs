@@ -73,10 +73,13 @@ pub mod exports {
                             .finish()
                     }
                 }
+                /// A cluster identified by DBSCAN.
                 #[derive(Clone, Copy)]
                 pub enum DbscanCluster {
-                    Noise,
+                    /// A cluster of series with a given ID.
                     Cluster(u32),
+                    /// A 'noise' cluster, indicating that the series is not part of any cluster.
+                    Noise,
                 }
                 impl ::core::fmt::Debug for DbscanCluster {
                     fn fmt(
@@ -84,11 +87,11 @@ pub mod exports {
                         f: &mut ::core::fmt::Formatter<'_>,
                     ) -> ::core::fmt::Result {
                         match self {
-                            DbscanCluster::Noise => {
-                                f.debug_tuple("DbscanCluster::Noise").finish()
-                            }
                             DbscanCluster::Cluster(e) => {
                                 f.debug_tuple("DbscanCluster::Cluster").field(e).finish()
+                            }
+                            DbscanCluster::Noise => {
+                                f.debug_tuple("DbscanCluster::Noise").finish()
                             }
                         }
                     }
@@ -96,37 +99,37 @@ pub mod exports {
                 /// A DBSCAN clusterer.
                 #[derive(Debug)]
                 #[repr(transparent)]
-                pub struct Dbscan {
-                    handle: _rt::Resource<Dbscan>,
+                pub struct DbscanClusterer {
+                    handle: _rt::Resource<DbscanClusterer>,
                 }
-                type _DbscanRep<T> = Option<T>;
-                impl Dbscan {
+                type _DbscanClustererRep<T> = Option<T>;
+                impl DbscanClusterer {
                     /// Creates a new resource from the specified representation.
                     ///
                     /// This function will create a new resource handle by moving `val` onto
                     /// the heap and then passing that heap pointer to the component model to
-                    /// create a handle. The owned handle is then returned as `Dbscan`.
-                    pub fn new<T: GuestDbscan>(val: T) -> Self {
+                    /// create a handle. The owned handle is then returned as `DbscanClusterer`.
+                    pub fn new<T: GuestDbscanClusterer>(val: T) -> Self {
                         Self::type_guard::<T>();
-                        let val: _DbscanRep<T> = Some(val);
-                        let ptr: *mut _DbscanRep<T> = _rt::Box::into_raw(
+                        let val: _DbscanClustererRep<T> = Some(val);
+                        let ptr: *mut _DbscanClustererRep<T> = _rt::Box::into_raw(
                             _rt::Box::new(val),
                         );
                         unsafe { Self::from_handle(T::_resource_new(ptr.cast())) }
                     }
                     /// Gets access to the underlying `T` which represents this resource.
-                    pub fn get<T: GuestDbscan>(&self) -> &T {
+                    pub fn get<T: GuestDbscanClusterer>(&self) -> &T {
                         let ptr = unsafe { &*self.as_ptr::<T>() };
                         ptr.as_ref().unwrap()
                     }
                     /// Gets mutable access to the underlying `T` which represents this
                     /// resource.
-                    pub fn get_mut<T: GuestDbscan>(&mut self) -> &mut T {
+                    pub fn get_mut<T: GuestDbscanClusterer>(&mut self) -> &mut T {
                         let ptr = unsafe { &mut *self.as_ptr::<T>() };
                         ptr.as_mut().unwrap()
                     }
                     /// Consumes this resource and returns the underlying `T`.
-                    pub fn into_inner<T: GuestDbscan>(self) -> T {
+                    pub fn into_inner<T: GuestDbscanClusterer>(self) -> T {
                         let ptr = unsafe { &mut *self.as_ptr::<T>() };
                         ptr.take().unwrap()
                     }
@@ -164,22 +167,26 @@ pub mod exports {
                     #[doc(hidden)]
                     pub unsafe fn dtor<T: 'static>(handle: *mut u8) {
                         Self::type_guard::<T>();
-                        let _ = _rt::Box::from_raw(handle as *mut _DbscanRep<T>);
+                        let _ = _rt::Box::from_raw(
+                            handle as *mut _DbscanClustererRep<T>,
+                        );
                     }
-                    fn as_ptr<T: GuestDbscan>(&self) -> *mut _DbscanRep<T> {
-                        Dbscan::type_guard::<T>();
+                    fn as_ptr<T: GuestDbscanClusterer>(
+                        &self,
+                    ) -> *mut _DbscanClustererRep<T> {
+                        DbscanClusterer::type_guard::<T>();
                         T::_resource_rep(self.handle()).cast()
                     }
                 }
-                /// A borrowed version of [`Dbscan`] which represents a borrowed value
+                /// A borrowed version of [`DbscanClusterer`] which represents a borrowed value
                 /// with the lifetime `'a`.
                 #[derive(Debug)]
                 #[repr(transparent)]
-                pub struct DbscanBorrow<'a> {
+                pub struct DbscanClustererBorrow<'a> {
                     rep: *mut u8,
-                    _marker: core::marker::PhantomData<&'a Dbscan>,
+                    _marker: core::marker::PhantomData<&'a DbscanClusterer>,
                 }
-                impl<'a> DbscanBorrow<'a> {
+                impl<'a> DbscanClustererBorrow<'a> {
                     #[doc(hidden)]
                     pub unsafe fn lift(rep: usize) -> Self {
                         Self {
@@ -188,16 +195,16 @@ pub mod exports {
                         }
                     }
                     /// Gets access to the underlying `T` in this resource.
-                    pub fn get<T: GuestDbscan>(&self) -> &T {
+                    pub fn get<T: GuestDbscanClusterer>(&self) -> &T {
                         let ptr = unsafe { &mut *self.as_ptr::<T>() };
                         ptr.as_ref().unwrap()
                     }
-                    fn as_ptr<T: 'static>(&self) -> *mut _DbscanRep<T> {
-                        Dbscan::type_guard::<T>();
+                    fn as_ptr<T: 'static>(&self) -> *mut _DbscanClustererRep<T> {
+                        DbscanClusterer::type_guard::<T>();
                         self.rep.cast()
                     }
                 }
-                unsafe impl _rt::WasmResource for Dbscan {
+                unsafe impl _rt::WasmResource for DbscanClusterer {
                     #[inline]
                     unsafe fn drop(_handle: u32) {
                         #[cfg(not(target_arch = "wasm32"))]
@@ -208,7 +215,7 @@ pub mod exports {
                                 wasm_import_module = "[export]augurs:clustering/dbscan"
                             )]
                             extern "C" {
-                                #[link_name = "[resource-drop]dbscan"]
+                                #[link_name = "[resource-drop]dbscan-clusterer"]
                                 fn drop(_: u32);
                             }
                             drop(_handle);
@@ -217,12 +224,11 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn _export_constructor_dbscan_cabi<T: GuestDbscan>(
-                    arg0: f64,
-                    arg1: i32,
-                ) -> i32 {
+                pub unsafe fn _export_constructor_dbscan_clusterer_cabi<
+                    T: GuestDbscanClusterer,
+                >(arg0: f64, arg1: i32) -> i32 {
                     #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let result0 = Dbscan::new(
+                    let result0 = DbscanClusterer::new(
                         T::new(Options {
                             epsilon: arg0,
                             minimum_cluster_size: arg1 as u32,
@@ -232,11 +238,9 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn _export_method_dbscan_fit_cabi<T: GuestDbscan>(
-                    arg0: *mut u8,
-                    arg1: *mut u8,
-                    arg2: usize,
-                ) -> *mut u8 {
+                pub unsafe fn _export_method_dbscan_clusterer_fit_cabi<
+                    T: GuestDbscanClusterer,
+                >(arg0: *mut u8, arg1: *mut u8, arg2: usize) -> *mut u8 {
                     #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
                     let base3 = arg1;
                     let len3 = arg2;
@@ -253,7 +257,7 @@ pub mod exports {
                     }
                     _rt::cabi_dealloc(base3, len3 * 8, 4);
                     let result4 = T::fit(
-                        DbscanBorrow::lift(arg0 as u32 as usize).get(),
+                        DbscanClustererBorrow::lift(arg0 as u32 as usize).get(),
                         result3,
                     );
                     let ptr5 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
@@ -279,12 +283,12 @@ pub mod exports {
                                 let base = result6.add(i * 8);
                                 {
                                     match e {
-                                        DbscanCluster::Noise => {
-                                            *base.add(0).cast::<u8>() = (0i32) as u8;
-                                        }
                                         DbscanCluster::Cluster(e) => {
-                                            *base.add(0).cast::<u8>() = (1i32) as u8;
+                                            *base.add(0).cast::<u8>() = (0i32) as u8;
                                             *base.add(4).cast::<i32>() = _rt::as_i32(e);
+                                        }
+                                        DbscanCluster::Noise => {
+                                            *base.add(0).cast::<u8>() = (1i32) as u8;
                                         }
                                     }
                                 }
@@ -306,9 +310,9 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn __post_return_method_dbscan_fit<T: GuestDbscan>(
-                    arg0: *mut u8,
-                ) {
+                pub unsafe fn __post_return_method_dbscan_clusterer_fit<
+                    T: GuestDbscanClusterer,
+                >(arg0: *mut u8) {
                     let l0 = i32::from(*arg0.add(0).cast::<u8>());
                     match l0 {
                         0 => {
@@ -322,9 +326,9 @@ pub mod exports {
                     }
                 }
                 pub trait Guest {
-                    type Dbscan: GuestDbscan;
+                    type DbscanClusterer: GuestDbscanClusterer;
                 }
-                pub trait GuestDbscan: 'static {
+                pub trait GuestDbscanClusterer: 'static {
                     #[doc(hidden)]
                     unsafe fn _resource_new(val: *mut u8) -> u32
                     where
@@ -341,7 +345,7 @@ pub mod exports {
                                 wasm_import_module = "[export]augurs:clustering/dbscan"
                             )]
                             extern "C" {
-                                #[link_name = "[resource-new]dbscan"]
+                                #[link_name = "[resource-new]dbscan-clusterer"]
                                 fn new(_: *mut u8) -> u32;
                             }
                             new(val)
@@ -363,7 +367,7 @@ pub mod exports {
                                 wasm_import_module = "[export]augurs:clustering/dbscan"
                             )]
                             extern "C" {
-                                #[link_name = "[resource-rep]dbscan"]
+                                #[link_name = "[resource-rep]dbscan-clusterer"]
                                 fn rep(_: u32) -> *mut u8;
                             }
                             unsafe { rep(handle) }
@@ -371,6 +375,7 @@ pub mod exports {
                     }
                     /// Create a new DBSCAN clusterer.
                     fn new(options: Options) -> Self;
+                    /// Run DBSCAN clustering on a distance matrix.
                     fn fit(
                         &self,
                         matrix: DistanceMatrix,
@@ -380,25 +385,30 @@ pub mod exports {
                 macro_rules! __export_augurs_clustering_dbscan_cabi {
                     ($ty:ident with_types_in $($path_to_types:tt)*) => {
                         const _ : () = { #[export_name =
-                        "augurs:clustering/dbscan#[constructor]dbscan"] unsafe extern "C"
-                        fn export_constructor_dbscan(arg0 : f64, arg1 : i32,) -> i32 {
-                        $($path_to_types)*:: _export_constructor_dbscan_cabi::<<$ty as
-                        $($path_to_types)*:: Guest >::Dbscan > (arg0, arg1) }
-                        #[export_name = "augurs:clustering/dbscan#[method]dbscan.fit"]
-                        unsafe extern "C" fn export_method_dbscan_fit(arg0 : * mut u8,
-                        arg1 : * mut u8, arg2 : usize,) -> * mut u8 {
-                        $($path_to_types)*:: _export_method_dbscan_fit_cabi::<<$ty as
-                        $($path_to_types)*:: Guest >::Dbscan > (arg0, arg1, arg2) }
+                        "augurs:clustering/dbscan#[constructor]dbscan-clusterer"] unsafe
+                        extern "C" fn export_constructor_dbscan_clusterer(arg0 : f64,
+                        arg1 : i32,) -> i32 { $($path_to_types)*::
+                        _export_constructor_dbscan_clusterer_cabi::<<$ty as
+                        $($path_to_types)*:: Guest >::DbscanClusterer > (arg0, arg1) }
                         #[export_name =
-                        "cabi_post_augurs:clustering/dbscan#[method]dbscan.fit"] unsafe
-                        extern "C" fn _post_return_method_dbscan_fit(arg0 : * mut u8,) {
-                        $($path_to_types)*:: __post_return_method_dbscan_fit::<<$ty as
-                        $($path_to_types)*:: Guest >::Dbscan > (arg0) } const _ : () = {
-                        #[doc(hidden)] #[export_name =
-                        "augurs:clustering/dbscan#[dtor]dbscan"] #[allow(non_snake_case)]
-                        unsafe extern "C" fn dtor(rep : * mut u8) { $($path_to_types)*::
-                        Dbscan::dtor::< <$ty as $($path_to_types)*:: Guest >::Dbscan >
-                        (rep) } }; };
+                        "augurs:clustering/dbscan#[method]dbscan-clusterer.fit"] unsafe
+                        extern "C" fn export_method_dbscan_clusterer_fit(arg0 : * mut u8,
+                        arg1 : * mut u8, arg2 : usize,) -> * mut u8 {
+                        $($path_to_types)*::
+                        _export_method_dbscan_clusterer_fit_cabi::<<$ty as
+                        $($path_to_types)*:: Guest >::DbscanClusterer > (arg0, arg1,
+                        arg2) } #[export_name =
+                        "cabi_post_augurs:clustering/dbscan#[method]dbscan-clusterer.fit"]
+                        unsafe extern "C" fn
+                        _post_return_method_dbscan_clusterer_fit(arg0 : * mut u8,) {
+                        $($path_to_types)*::
+                        __post_return_method_dbscan_clusterer_fit::<<$ty as
+                        $($path_to_types)*:: Guest >::DbscanClusterer > (arg0) } const _
+                        : () = { #[doc(hidden)] #[export_name =
+                        "augurs:clustering/dbscan#[dtor]dbscan-clusterer"]
+                        #[allow(non_snake_case)] unsafe extern "C" fn dtor(rep : * mut
+                        u8) { $($path_to_types)*:: DbscanClusterer::dtor::< <$ty as
+                        $($path_to_types)*:: Guest >::DbscanClusterer > (rep) } }; };
                     };
                 }
                 #[doc(hidden)]
@@ -595,20 +605,20 @@ pub(crate) use __export_component_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:augurs:clustering:component:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 577] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xc1\x03\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 607] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xdf\x03\x01A\x02\x01\
 A\x06\x01B\x07\x01pu\x04\0\x0btime-series\x03\0\0\x01pu\x01p\x02\x04\0\x0fdistan\
 ce-matrix\x03\0\x03\x01q\x01\x17invalid-distance-matrix\0\0\x04\0\x05error\x03\0\
 \x05\x03\0\x11augurs:core/types\x05\0\x02\x03\0\0\x0fdistance-matrix\x02\x03\0\0\
 \x05error\x01B\x11\x02\x03\x02\x01\x01\x04\0\x0fdistance-matrix\x03\0\0\x02\x03\x02\
 \x01\x02\x04\0\x05error\x03\0\x02\x01r\x02\x07epsilonu\x14minimum-cluster-sizey\x04\
-\0\x07options\x03\0\x04\x01q\x02\x05noise\0\0\x07cluster\x01y\0\x04\0\x0edbscan-\
-cluster\x03\0\x06\x04\0\x06dbscan\x03\x01\x01i\x08\x01@\x01\x07options\x05\0\x09\
-\x04\0\x13[constructor]dbscan\x01\x0a\x01h\x08\x01p\x07\x01j\x01\x0c\x01\x03\x01\
-@\x02\x04self\x0b\x06matrix\x01\0\x0d\x04\0\x12[method]dbscan.fit\x01\x0e\x04\0\x18\
-augurs:clustering/dbscan\x05\x03\x04\0\x1baugurs:clustering/component\x04\0\x0b\x0f\
-\x01\0\x09component\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-compo\
-nent\x070.220.0\x10wit-bindgen-rust\x060.35.0";
+\0\x07options\x03\0\x04\x01q\x02\x07cluster\x01y\0\x05noise\0\0\x04\0\x0edbscan-\
+cluster\x03\0\x06\x04\0\x10dbscan-clusterer\x03\x01\x01i\x08\x01@\x01\x07options\
+\x05\0\x09\x04\0\x1d[constructor]dbscan-clusterer\x01\x0a\x01h\x08\x01p\x07\x01j\
+\x01\x0c\x01\x03\x01@\x02\x04self\x0b\x06matrix\x01\0\x0d\x04\0\x1c[method]dbsca\
+n-clusterer.fit\x01\x0e\x04\0\x18augurs:clustering/dbscan\x05\x03\x04\0\x1baugur\
+s:clustering/component\x04\0\x0b\x0f\x01\0\x09component\x03\0\0\0G\x09producers\x01\
+\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

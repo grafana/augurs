@@ -2,17 +2,19 @@ package augurs:mstl;
 
 /// Time series forecasting using MSTL.
 interface mstl {
-    use augurs:core/types.{forecast, error};
-
-    /// Options for the MSTL algorithm.
-    record options {
-    }
+    use augurs:core/types.{error, forecast, time-series, trend-model};
 
     resource mstl {
-        /// Create a new MSTL model with an ETS trend model.
-        ets: static func(periods: list<u32>, opts: option<ets-opts>) -> mstl;
+        // /// Create a new MSTL model with an ETS trend model.
+        // ets: static func(periods: list<u32>, opts: option<ets-opts>) -> mstl;
 
-        fit: func() -> result<, error>
+        constructor(periods: list<u32>, trend-model: trend-model);
+
+        fit: func(y: time-series) -> result<fitted-mstl, error>;
+    }
+
+    resource fitted-mstl {
+        predict: func(horizon: u32, level: option<f64>) -> result<forecast, error>;
     }
 
 }

@@ -2,11 +2,10 @@
 #[rustfmt::skip]
 mod bindings;
 
-use augurs_clustering::DbscanClusterer;
 use bindings::{
     augurs::core::types::{DistanceMatrix, Error},
     exports::augurs::clustering::dbscan::{
-        DbscanCluster, Guest, GuestDbscan, Options as DbscanOptions,
+        DbscanCluster, Guest, GuestDbscanClusterer, Options as DbscanOptions,
     },
 };
 
@@ -22,17 +21,20 @@ impl From<augurs_clustering::DbscanCluster> for DbscanCluster {
 struct Component;
 
 impl Guest for Component {
-    type Dbscan = Dbscan;
+    type DbscanClusterer = DbscanClusterer;
 }
 
-struct Dbscan {
-    inner: DbscanClusterer,
+struct DbscanClusterer {
+    inner: augurs_clustering::DbscanClusterer,
 }
 
-impl GuestDbscan for Dbscan {
+impl GuestDbscanClusterer for DbscanClusterer {
     fn new(options: DbscanOptions) -> Self {
         Self {
-            inner: DbscanClusterer::new(options.epsilon, options.minimum_cluster_size as usize),
+            inner: augurs_clustering::DbscanClusterer::new(
+                options.epsilon,
+                options.minimum_cluster_size as usize,
+            ),
         }
     }
 
