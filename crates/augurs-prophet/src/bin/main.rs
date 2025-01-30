@@ -46,19 +46,22 @@ fn wheel_url() -> Result<&'static str> {
 
 fn download(url: &str, dest: &Path) -> Result<()> {
     let resp = ureq::get(url)
-        .set("User-Agent", "augurs-prophet")
+        .header("User-Agent", "augurs-prophet")
         .call()
         .with_context(|| format!("error fetching url {url}"))?;
     let len: u64 = resp
-        .header("Content-Length")
+        .headers()
+        .get("Content-Length")
         .context("missing content-length header")?
+        .to_str()
+        .context("invalid content-length header")?
         .parse()
         .context("invalid content-length header")?;
 
     let mut file = File::create(dest)
         .with_context(|| format!("couldn't create file at {}", dest.display()))?;
 
-    let mut body = resp.into_reader().take(len);
+    let mut body = resp.into_body().into_reader().take(len);
     io::copy(&mut body, &mut file).context("error writing wheel to file")?;
     Ok(())
 }
