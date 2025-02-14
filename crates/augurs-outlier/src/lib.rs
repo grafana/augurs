@@ -223,7 +223,7 @@ pub trait OutlierDetector {
     /// change. For example, if the input data is the same but the sensitivity
     /// changes, the outlier detection calculation can be rerun without
     /// reprocessing the input data.
-    fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error>;
+    fn preprocess(y: &[&[f64]]) -> Result<Self::PreprocessedData, Error>;
 
     /// Detect outliers in the given slice of series.
     ///
@@ -243,7 +243,7 @@ mod test {
     impl OutlierDetector for DummyDetector {
         type PreprocessedData = Vec<Vec<f64>>;
 
-        fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
+        fn preprocess(y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
             Ok(y.iter().map(|x| x.to_vec()).collect())
         }
 

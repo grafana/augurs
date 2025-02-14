@@ -52,7 +52,7 @@ pub struct DbscanDetector {
 
 impl OutlierDetector for DbscanDetector {
     type PreprocessedData = Data;
-    fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
+    fn preprocess(y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
         Ok(Data::from_row_major(y))
     }
 
@@ -558,7 +558,7 @@ mod tests {
         ];
         let detector =
             DbscanDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
-        let processed = detector.preprocess(data).unwrap();
+        let processed = DbscanDetector::preprocess(data).unwrap();
         let outliers = detector.detect(&processed).unwrap();
 
         assert_eq!(outliers.outlying_series.len(), 1);
@@ -594,7 +594,7 @@ mod tests {
     #[test]
     fn test_realistic() {
         let dbscan = DbscanDetector::with_sensitivity(0.8).unwrap();
-        let data = dbscan.preprocess(crate::testing::SERIES).unwrap();
+        let data = DbscanDetector::preprocess(crate::testing::SERIES).unwrap();
         let results = dbscan.detect(&data).unwrap();
         assert!(!results.outlying_series.contains(&0));
         assert!(!results.outlying_series.contains(&1));
@@ -630,7 +630,7 @@ mod tests {
             &[1.5, 2.1, 6.4, 8.5],
         ];
         let dbscan = DbscanDetector::with_epsilon(1.0);
-        let processed = dbscan.preprocess(data).unwrap();
+        let processed = DbscanDetector::preprocess(data).unwrap();
         // Should not panic.
         let results = dbscan.detect(&processed).unwrap();
 
@@ -648,7 +648,7 @@ mod tests {
             &[7.0, 8.0, 9.0, 10.0],
         ];
         let dbscan = DbscanDetector::with_epsilon(1.0);
-        let processed = dbscan.preprocess(data).unwrap();
+        let processed = DbscanDetector::preprocess(data).unwrap();
         let results = dbscan.detect(&processed).unwrap();
         assert!(results.cluster_band.is_none());
     }
@@ -657,7 +657,7 @@ mod tests {
     fn test_no_cluster_band_two_series() {
         let data: &[&[f64]] = &[&[1.0, 2.0, 3.0, 4.0], &[4.0, 5.0, 6.0, 7.0]];
         let dbscan = DbscanDetector::with_epsilon(4.0);
-        let processed = dbscan.preprocess(data).unwrap();
+        let processed = DbscanDetector::preprocess(data).unwrap();
         let results = dbscan.detect(&processed).unwrap();
         assert!(results.cluster_band.is_none());
     }

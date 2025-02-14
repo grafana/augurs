@@ -149,7 +149,6 @@ impl MADDetector {
     }
 
     fn calculate_mad(
-        &self,
         data: &[&[f64]],
         Medians {
             global,
@@ -180,20 +179,6 @@ impl MADDetector {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()
-    }
-
-    fn preprocess_impl(&self, y: &[&[f64]]) -> Result<PreprocessedData, PreprocessingError> {
-        let medians = self
-            .medians
-            .clone()
-            .map(Ok)
-            .unwrap_or_else(|| Self::calculate_double_medians(y))
-            .map_err(|x| PreprocessingError::from(Box::new(x) as Box<dyn std::error::Error>))?;
-        let mad_scores = self.calculate_mad(y, &medians);
-        Ok(PreprocessedData {
-            medians,
-            mad_scores,
-        })
     }
 
     fn detect_impl(
@@ -255,8 +240,14 @@ pub struct PreprocessedData {
 
 impl OutlierDetector for MADDetector {
     type PreprocessedData = PreprocessedData;
-    fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
-        Ok(self.preprocess_impl(y)?)
+    fn preprocess(y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
+        let medians = Self::calculate_double_medians(y)
+            .map_err(|x| PreprocessingError::from(Box::new(x) as Box<dyn std::error::Error>))?;
+        let mad_scores = Self::calculate_mad(y, &medians);
+        Ok(PreprocessedData {
+            medians,
+            mad_scores,
+        })
     }
 
     fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error> {
@@ -625,7 +616,7 @@ mod test {
             .clone()
             .map(Ok)
             .unwrap_or_else(|| MADDetector::calculate_double_medians(&[tc.data]))
-            .map(|medians| mad.calculate_mad(&[tc.data], &medians));
+            .map(|medians| MADDetector::calculate_mad(&[tc.data], &medians));
         match &tc.expected {
             Ok(Expected { outliers, .. }) => {
                 assert!(
@@ -698,8 +689,7 @@ mod test {
         for tc in MAD_TEST_CASES {
             let sensitivity = 0.5;
             let mad = MADDetector::with_sensitivity(sensitivity).unwrap();
-            let result = mad
-                .preprocess(&[tc.data])
+            let result = MADDetector::preprocess(&[tc.data])
                 .and_then(|preprocessed| mad.detect(&preprocessed));
             match &tc.expected {
                 Ok(Expected { intervals, .. }) => {
