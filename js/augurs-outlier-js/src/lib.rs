@@ -27,14 +27,14 @@ impl Detector {
         let series: Vec<_> = series.iter().map(|x| x.as_slice()).collect();
         match self {
             Self::Dbscan(detector) => {
-                let data = detector.preprocess(&series)?;
+                let data = augurs_outlier::DbscanDetector::preprocess(&series)?;
                 Ok(LoadedDetector::Dbscan {
                     detector: detector.clone(),
                     data,
                 })
             }
             Self::Mad(detector) => {
-                let data = detector.preprocess(&series)?;
+                let data = augurs_outlier::MADDetector::preprocess(&series)?;
                 Ok(LoadedDetector::Mad {
                     detector: detector.clone(),
                     data,
@@ -48,11 +48,11 @@ impl Detector {
         let series: Vec<_> = series.iter().map(|x| x.as_slice()).collect();
         match self {
             Self::Dbscan(detector) => {
-                let data = detector.preprocess(&series)?;
+                let data = augurs_outlier::DbscanDetector::preprocess(&series)?;
                 Ok(detector.detect(&data)?.into())
             }
             Self::Mad(detector) => {
-                let data = detector.preprocess(&series)?;
+                let data = augurs_outlier::MADDetector::preprocess(&series)?;
                 Ok(detector.detect(&data)?.into())
             }
         }
