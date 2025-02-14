@@ -34,7 +34,7 @@ fn main() {
 
     // Preprocess the data using the detector.
     // This function will return an error if the input data is invalid.
-    let processed = detector.preprocess(SERIES).expect("input data is valid");
+    let processed = DbscanDetector::preprocess(SERIES).expect("input data is valid");
 
     // Note: we could also have created the preprocessed data from 'column major' data,
     // using `DbscanData::from_column_major`.

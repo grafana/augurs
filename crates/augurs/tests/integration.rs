@@ -1,5 +1,7 @@
 //! Integration tests for the augurs wrapper crate.
 
+use augurs_outlier::{DbscanDetector, MADDetector};
+
 #[cfg(feature = "changepoint")]
 #[test]
 fn test_changepoint() {
@@ -209,7 +211,7 @@ fn test_outlier_dbscan() {
     ];
     let detector =
         DbscanDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
-    let processed = detector.preprocess(data).unwrap();
+    let processed = DbscanDetector::preprocess(data).unwrap();
     let outliers = detector.detect(&processed).unwrap();
 
     assert_eq!(outliers.outlying_series.len(), 1);
@@ -229,7 +231,7 @@ fn test_outlier_mad() {
         &[1.5, 2.1, 6.4, 8.5],
     ];
     let detector = MADDetector::with_sensitivity(0.5).unwrap();
-    let processed = detector.preprocess(data).unwrap();
+    let processed = MADDetector::preprocess(data).unwrap();
     let outliers = detector.detect(&processed).unwrap();
 
     assert_eq!(outliers.outlying_series.len(), 1);

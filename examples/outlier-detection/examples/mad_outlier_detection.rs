@@ -30,7 +30,7 @@ fn main() {
 
     // Preprocess the data using the detector.
     // This function will return an error if the input data is invalid.
-    let processed = detector.preprocess(SERIES).expect("input data is valid");
+    let processed = MADDetector::preprocess(SERIES).expect("input data is valid");
 
     // Detect outliers in the preprocessed data.
     // This function will return an error if the detection fails; this may be impossible
