@@ -89,6 +89,16 @@ impl MADDetector {
         })
     }
 
+    /// Set threshold for the MAD detector.
+    pub fn set_threshold(&mut self, threshold: f64) {
+        self.threshold_or_sensitivity = ThresholdOrSensitivity::Threshold(threshold);
+    }
+
+    /// Set sensitivity for the MAD detector.
+    pub fn set_sensitivity(&mut self, sensitivity: f64) {
+        self.threshold_or_sensitivity = ThresholdOrSensitivity::Sensitivity(sensitivity.try_into().unwrap());
+    }
+    
     /// Set the precalculated medians.
     ///
     /// The medians can be calculated using [`MADDetector::calculate_double_medians`].
