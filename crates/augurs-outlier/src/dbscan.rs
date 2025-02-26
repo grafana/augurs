@@ -90,7 +90,8 @@ impl DbscanDetector {
     /// Set sensitivity for the DBSCAN algorithm.
     pub fn set_sensitivity(&mut self, sensitivity: f64) -> Result<(), Error> {
         self.epsilon_or_sensitivity =
-            EpsilonOrSensitivity::Sensitivity(Sensitivity::try_from(sensitivity).unwrap());
+            EpsilonOrSensitivity::Sensitivity(Sensitivity::try_from(sensitivity)?);
+            Ok(())
     }
 
     /// Parallelize the DBSCAN algorithm.
