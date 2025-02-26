@@ -90,11 +90,29 @@ impl MADDetector {
     }
 
     /// Set threshold for the MAD detector.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use augurs::outlier::MADDetector;
+    ///
+    /// let mut detector = MADDetector::with_threshold(1.0);
+    /// detector.set_threshold(3.0);
+    /// ```
     pub fn set_threshold(&mut self, threshold: f64) {
         self.threshold_or_sensitivity = ThresholdOrSensitivity::Threshold(threshold);
     }
 
     /// Set sensitivity for the MAD detector.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use augurs::outlier::MADDetector;
+    ///
+    /// let mut detector = MADDetector::with_sensitivity(0.5).expect("sensitivity is between 0.0 and 1.0");
+    /// detector.set_sensitivity(0.1).expect("sensitivity is between 0.0 and 1.0");
+    /// ```
     pub fn set_sensitivity(&mut self, sensitivity: f64) -> Result<(), Error> {
         self.threshold_or_sensitivity =
             ThresholdOrSensitivity::Sensitivity(sensitivity.try_into()?);
