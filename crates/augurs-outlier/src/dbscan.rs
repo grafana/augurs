@@ -83,7 +83,7 @@ impl DbscanDetector {
     }
 
     /// Set epsilon for the DBSCAN algorithm.
-    pub fn set_epsilon(mut self, epsilon: f64) {
+    pub fn set_epsilon(&mut self, epsilon: f64) {
         self.epsilon_or_sensitivity = EpsilonOrSensitivity::Epsilon(epsilon);
     }
 
