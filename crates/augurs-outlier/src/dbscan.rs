@@ -82,6 +82,36 @@ impl DbscanDetector {
         })
     }
 
+    /// Set epsilon for the DBSCAN algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use augurs::outlier::DbscanDetector;
+    ///
+    /// let mut dbscan = DbscanDetector::with_epsilon(0.1);
+    /// dbscan.set_epsilon(0.2);
+    /// ```
+    pub fn set_epsilon(&mut self, epsilon: f64) {
+        self.epsilon_or_sensitivity = EpsilonOrSensitivity::Epsilon(epsilon);
+    }
+
+    /// Set sensitivity for the DBSCAN algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use augurs::outlier::DbscanDetector;
+    ///
+    /// let mut dbscan = DbscanDetector::with_sensitivity(0.1).expect("sensitivity is between 0.0 and 1.0");
+    /// dbscan.set_sensitivity(0.2).expect("sensitivity is between 0.0 and 1.0");
+    /// ```
+    pub fn set_sensitivity(&mut self, sensitivity: f64) -> Result<(), Error> {
+        self.epsilon_or_sensitivity =
+            EpsilonOrSensitivity::Sensitivity(Sensitivity::try_from(sensitivity)?);
+        Ok(())
+    }
+
     /// Parallelize the DBSCAN algorithm.
     ///
     /// This requires the `parallel` feature to be enabled, otherwise it will be ignored.
