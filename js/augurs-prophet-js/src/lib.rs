@@ -1,5 +1,5 @@
 //! JS bindings for the Prophet model.
-use std::{collections::HashMap, num::TryFromIntError};
+use std::{collections::HashMap, num::NonZeroU32, num::TryFromIntError};
 
 use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
@@ -161,6 +161,66 @@ impl Prophet {
             data.map(TryInto::try_into).transpose()?;
         let predictions = self.inner.predict(data)?;
         Ok(Predictions::from((self.level, predictions)))
+    }
+
+    /// Add a custom seasonality to the model
+    #[wasm_bindgen(js_name = "addSeasonality")]
+    pub fn add_seasonality(
+        &mut self,
+        name: String,
+        seasonality: Seasonality,
+    ) -> Result<(), JsError> {
+        self.inner.add_seasonality(name, seasonality.into())?;
+        Ok(())
+    }
+}
+
+/// Can be used to specify custom seasonality
+#[derive(Debug, Clone, Deserialize, Serialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+#[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
+pub struct Seasonality {
+    /// The period of the seasonality we expect the time series to have.
+    /// For e.g. 365.25 for yearly seasonality and 7 for weekly seasonality,
+    /// when the time variable is scaled to days
+    #[tsify(type = "number")]
+    period: PositiveFloat,
+
+    /// Fourier order for the seasonality.
+    /// Increasing this allows for fitting seasonal patterns that change more quickly,
+    /// albeit with increased risk of overfitting.
+    #[tsify(type = "number")]
+    fourier_order: NonZeroU32,
+
+    /// The prior scale for the seasonality.
+    /// A large value allows the seasonality to fit large fluctuations,
+    /// a small value shrinks the magnitude of the seasonality.
+    #[tsify(optional, type = "number")]
+    prior_scale: Option<PositiveFloat>,
+
+    /// The mode of the seasonality.
+    #[tsify(optional)]
+    mode: Option<FeatureMode>,
+
+    /// The condition column name for the seasonality.
+    /// The seasonality will only be applied to dates where the condition name column is True
+    #[tsify(optional)]
+    condition_name: Option<String>,
+}
+
+impl From<Seasonality> for augurs_prophet::Seasonality {
+    fn from(seasonality: Seasonality) -> Self {
+        let mut s = Self::new(seasonality.period, seasonality.fourier_order);
+        if let Some(ps) = seasonality.prior_scale {
+            s = s.with_prior_scale(ps);
+        }
+        if let Some(mode) = seasonality.mode {
+            s = s.with_mode(mode.into());
+        }
+        if let Some(condition_name) = seasonality.condition_name {
+            s = s.with_condition(condition_name);
+        }
+        s
     }
 }
 
@@ -1197,7 +1257,7 @@ impl From<EstimationMode> for augurs_prophet::EstimationMode {
 }
 
 /// The mode of a seasonality, regressor, or holiday.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub enum FeatureMode {
