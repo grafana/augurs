@@ -1,5 +1,8 @@
 //! JS bindings for the Prophet model.
-use std::{collections::HashMap, num::NonZeroU32, num::TryFromIntError};
+use std::{
+    collections::HashMap,
+    num::{NonZeroU32, TryFromIntError},
+};
 
 use js_sys::Float64Array;
 use serde::{Deserialize, Serialize};
