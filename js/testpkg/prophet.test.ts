@@ -4,9 +4,9 @@ import {
   Prophet,
   ProphetHoliday,
   ProphetHolidayOccurrence,
-  initSync,
   ProphetSeasonality,
-  ProphetSeasonalityOption
+  ProphetSeasonalityOption,
+  initSync
 } from '@bsull/augurs/prophet';
 import { optimizer } from '@bsull/augurs-prophet-wasmstan';
 
