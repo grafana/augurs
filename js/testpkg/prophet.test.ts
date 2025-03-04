@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 
-import { Prophet, ProphetHoliday, ProphetHolidayOccurrence, initSync } from '@bsull/augurs/prophet';
+import {
+  Prophet,
+  ProphetHoliday,
+  ProphetHolidayOccurrence,
+  ProphetSeasonality,
+  ProphetSeasonalityOption,
+  initSync
+} from '@bsull/augurs/prophet';
 import { optimizer } from '@bsull/augurs-prophet-wasmstan';
 
 import { describe, expect, it } from 'vitest';
@@ -60,4 +67,13 @@ describe('Prophet', () => {
       new Prophet({ optimizer, holidays });
     });
   })
+
+  describe('seasonality', () => {
+    it('can be set', () => {
+        const dailySeasonality: ProphetSeasonalityOption = { type: "manual", enabled: false };
+        const prophet = new Prophet({ optimizer, dailySeasonality });
+        const seasonality: ProphetSeasonality = { period: 30.5, fourierOrder: 5 };
+        prophet.addSeasonality('daily', seasonality);
+    });
+  });
 });
