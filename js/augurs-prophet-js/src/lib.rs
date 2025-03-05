@@ -176,6 +176,14 @@ impl Prophet {
         self.inner.add_seasonality(name, seasonality.into())?;
         Ok(())
     }
+
+    /// Add a regressor to the model. Name should be one of the column names.
+    /// The extra regressor must be known for both the history and for future dates.
+    #[wasm_bindgen(js_name = "addRegressor")]
+    pub fn add_regressor(&mut self, name: String, regressor: Regressor) -> Result<(), JsError> {
+        self.inner.add_regressor(name, regressor.into());
+        Ok(())
+    }
 }
 
 /// Can be used to specify custom seasonality
@@ -224,6 +232,61 @@ impl From<Seasonality> for augurs_prophet::Seasonality {
             s = s.with_condition(condition_name);
         }
         s
+    }
+}
+
+/// Can be used to specify custom regressors
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+#[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
+pub struct Regressor {
+    mode: FeatureMode,
+
+    #[tsify(optional, type = "number")]
+    prior_scale: Option<PositiveFloat>,
+
+    standardize: Standardize,
+}
+
+impl From<Regressor> for augurs_prophet::Regressor {
+    fn from(regressor: Regressor) -> Self {
+        let mut r;
+        match regressor.mode {
+            FeatureMode::Additive => r = Self::additive(),
+            FeatureMode::Multiplicative => r = Self::multiplicative(),
+        }
+        if let Some(ps) = regressor.prior_scale {
+            r = r.with_prior_scale(ps);
+        }
+        r = r.with_standardize(regressor.standardize.into());
+        r
+    }
+}
+
+/// Whether to standardize a regressor.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Serialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
+pub enum Standardize {
+    /// Automatically determine whether to standardize.
+    ///
+    /// Numeric regressors will be standardized while
+    /// binary regressors will not.
+    #[default]
+    Auto,
+    /// Standardize this regressor.
+    Yes,
+    /// Do not standardize this regressor.
+    No,
+}
+
+impl From<Standardize> for augurs_prophet::Standardize {
+    fn from(standardize: Standardize) -> Self {
+        match standardize {
+            Standardize::Auto => Self::Auto,
+            Standardize::Yes => Self::Yes,
+            Standardize::No => Self::No,
+        }
     }
 }
 
