@@ -240,6 +240,10 @@ impl From<Seasonality> for augurs_prophet::Seasonality {
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
 pub struct Regressor {
+    /// The mode of this regressor.
+    ///
+    /// Defaults to "additive".
+    #[serde(default)]
     mode: FeatureMode,
 
     #[tsify(optional, type = "number")]
