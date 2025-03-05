@@ -180,8 +180,13 @@ impl Prophet {
     /// Add a regressor to the model. Name should be one of the column names.
     /// The extra regressor must be known for both the history and for future dates.
     #[wasm_bindgen(js_name = "addRegressor")]
-    pub fn add_regressor(&mut self, name: String, regressor: Regressor) -> Result<(), JsError> {
-        self.inner.add_regressor(name, regressor.into());
+    pub fn add_regressor(
+        &mut self,
+        name: String,
+        regressor: Option<Regressor>,
+    ) -> Result<(), JsError> {
+        self.inner
+            .add_regressor(name, regressor.unwrap_or_default().into());
         Ok(())
     }
 }
@@ -246,9 +251,18 @@ pub struct Regressor {
     #[serde(default)]
     mode: FeatureMode,
 
+    /// The prior scale of this regressor.
+    ///
+    /// Defaults to the `seasonality_prior_scale` of the Prophet model
+    /// the regressor is added to.
     #[tsify(optional, type = "number")]
     prior_scale: Option<PositiveFloat>,
 
+    /// Whether to standardize this regressor.
+    ///
+    /// The default is to use automatic standardization, which will standardize
+    /// numeric regressors and leave binary regressors alone.
+    #[serde(default)]
     standardize: Standardize,
 }
 

@@ -84,5 +84,16 @@ describe('Prophet', () => {
       const prophet = new Prophet({optimizer});
       prophet.addRegressor('feature1', reg);
     });
+
+    it('can be set with just name', () => {
+      const prophet = new Prophet({optimizer});
+      prophet.addRegressor('feature1');
+    });
+
+    it('can be set with name using mode', () => {
+      const reg: ProphetRegressor = {mode: "multiplicative"};
+      const prophet = new Prophet({optimizer});
+      prophet.addRegressor('feature1', reg);
+    });
   });
 });
