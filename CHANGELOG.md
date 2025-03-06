@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-prophet` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.9.0...augurs-prophet-v0.9.1) - 2025-03-06
+
+### Other
+- *(deps)* update ureq requirement from 2.10.1 to 3.0.0 ([#245](https://github.com/grafana/augurs/pull/245))
+- *(deps)* update wasmtime requirement from 28 to 29 ([#247](https://github.com/grafana/augurs/pull/247))
+
+## `augurs-outlier` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.9.0...augurs-outlier-v0.9.1) - 2025-03-06
+
+### Added
+- *(outlier)* add setters for parameters ([#253](https://github.com/grafana/augurs/pull/253))
+
 ## `augurs-changepoint` - [0.9.0](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.8.1...augurs-changepoint-v0.9.0) - 2025-01-14
 
 No changes in this release.
