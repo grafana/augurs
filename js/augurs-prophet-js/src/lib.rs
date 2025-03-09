@@ -189,6 +189,18 @@ impl Prophet {
             .add_regressor(name, regressor.unwrap_or_default().into());
         Ok(())
     }
+
+    #[wasm_bindgen(js_name = "makeFutureDataFrame")]
+    pub fn make_future_dataframe(
+        &self,
+        horizon: u32,
+        include_history: Option<IncludeHistory>,
+    ) -> Result<PredictionData, JsError> {
+        let horizon = NonZeroU32::new(horizon).ok_or(JsError::new("Horizon must be greater than 0"))?;
+
+        let future_dataframe = self.inner.make_future_dataframe(horizon, include_history.unwrap_or_default().into())?;
+        Ok(future_dataframe.into())
+    }
 }
 
 /// Can be used to specify custom seasonality
@@ -847,9 +859,9 @@ impl TryFrom<TrainingData> for augurs_prophet::TrainingData {
 ///
 /// That is, if your model used certain seasonality conditions or
 /// regressors, you must include them in the prediction data.
-#[derive(Clone, Debug, Default, Deserialize, Tsify)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
-#[tsify(from_wasm_abi, type_prefix = "Prophet")]
+#[tsify(from_wasm_abi, into_wasm_abi, type_prefix = "Prophet")]
 pub struct PredictionData {
     /// The timestamps of the time series.
     ///
@@ -903,6 +915,18 @@ impl TryFrom<PredictionData> for augurs_prophet::PredictionData {
             pd = pd.with_regressors(x)?;
         }
         Ok(pd)
+    }
+}
+
+impl From<augurs_prophet::PredictionData> for PredictionData {
+    fn from(value: augurs_prophet::PredictionData) -> Self {
+        Self {
+            ds: value.ds,
+            cap: value.cap,
+            floor: value.floor,
+            seasonality_conditions: Some(value.seasonality_conditions),
+            x: Some(value.x),
+        }
     }
 }
 
@@ -1006,6 +1030,36 @@ impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
                 .into_iter()
                 .map(|(k, v)| (k, make_forecast(level, v)))
                 .collect(),
+        }
+    }
+}
+
+/// Whether to include the historical dates in the future dataframe for predictions.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+#[tsify(from_wasm_abi, type_prefix = "Prophet")]
+pub enum IncludeHistory {
+    /// Include the historical dates in the future dataframe.
+    #[default]
+    Yes,
+    /// Do not include the historical dates in the future data frame.
+    No,
+}
+
+impl From<IncludeHistory> for augurs_prophet::IncludeHistory {
+    fn from(value: IncludeHistory) -> Self {
+        match value {
+            IncludeHistory::Yes => Self::Yes,
+            IncludeHistory::No => Self::No,
+        }
+    }
+}
+
+impl From<augurs_prophet::IncludeHistory> for IncludeHistory {
+    fn from(value: augurs_prophet::IncludeHistory) -> Self {
+        match value {
+            augurs_prophet::IncludeHistory::Yes => Self::Yes,
+            augurs_prophet::IncludeHistory::No => Self::No,
         }
     }
 }
