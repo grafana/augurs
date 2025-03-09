@@ -190,6 +190,8 @@ impl Prophet {
         Ok(())
     }
 
+    /// Create dates to use for predictions.
+    /// Returns an error if the model has not been fit.
     #[wasm_bindgen(js_name = "makeFutureDataFrame")]
     pub fn make_future_dataframe(
         &self,
