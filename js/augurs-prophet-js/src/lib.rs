@@ -196,7 +196,7 @@ impl Prophet {
     pub fn make_future_dataframe(
         &self,
         horizon: u32,
-        include_history: Option<IncludeHistory>,
+        include_history: Option<IncludeHistoryOptions>,
     ) -> Result<PredictionData, JsError> {
         let horizon = NonZeroU32::new(horizon).ok_or(JsError::new("Horizon must be greater than 0"))?;
 
@@ -1036,32 +1036,38 @@ impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
     }
 }
 
-/// Whether to include the historical dates in the future dataframe for predictions.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Deserialize, Tsify)]
+/// Options to specify whether to include the historical dates in the future dataframe for predictions.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
-pub enum IncludeHistory {
-    /// Include the historical dates in the future dataframe.
-    #[default]
-    Yes,
-    /// Do not include the historical dates in the future data frame.
-    No,
+pub struct IncludeHistoryOptions {
+    /// Whether to include the historical dates in the future dataframe.
+    include_history: bool,
 }
 
-impl From<IncludeHistory> for augurs_prophet::IncludeHistory {
-    fn from(value: IncludeHistory) -> Self {
-        match value {
-            IncludeHistory::Yes => Self::Yes,
-            IncludeHistory::No => Self::No,
+impl Default for IncludeHistoryOptions {
+    fn default() -> Self {
+        Self {
+            include_history: true,
         }
     }
 }
 
-impl From<augurs_prophet::IncludeHistory> for IncludeHistory {
+impl From<IncludeHistoryOptions> for augurs_prophet::IncludeHistory {
+    fn from(value: IncludeHistoryOptions) -> Self {
+        if value.include_history {
+            Self::Yes
+        } else {
+            Self::No
+        }
+    }
+}
+
+impl From<augurs_prophet::IncludeHistory> for IncludeHistoryOptions {
     fn from(value: augurs_prophet::IncludeHistory) -> Self {
         match value {
-            augurs_prophet::IncludeHistory::Yes => Self::Yes,
-            augurs_prophet::IncludeHistory::No => Self::No,
+            augurs_prophet::IncludeHistory::Yes => Self { include_history: true },
+            augurs_prophet::IncludeHistory::No => Self { include_history: false },
         }
     }
 }

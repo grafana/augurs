@@ -101,7 +101,7 @@ describe('Prophet', () => {
       const prophet = new Prophet({ optimizer });
       prophet.fit({ ds, y });
 
-      const future = prophet.makeFutureDataFrame(10, 'no');
+      const future = prophet.makeFutureDataframe(10, {includeHistory: false});
       expect(future.ds).toHaveLength(10);
 
       const fullSeries = [...ds, ...future.ds];
@@ -114,7 +114,7 @@ describe('Prophet', () => {
       const prophet = new Prophet({ optimizer });
       prophet.fit({ ds, y });
 
-      const future = prophet.makeFutureDataFrame(10);
+      const future = prophet.makeFutureDataframe(10);
       expect(future.ds).toHaveLength(10 + TOTAL_LENGTH);
 
       for (let i = 1; i < future.ds.length; i++) {
