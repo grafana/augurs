@@ -1036,7 +1036,7 @@ impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
     }
 }
 
-/// Options to specify whether to include the historical dates in the future dataframe for predictions.
+/// Options for `makeFutureDataframe`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
