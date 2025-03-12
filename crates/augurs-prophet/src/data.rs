@@ -235,12 +235,37 @@ impl TrainingData {
 /// regressors, you must include them in the prediction data.
 #[derive(Clone, Debug)]
 pub struct PredictionData {
-    pub(crate) n: usize,
-    pub(crate) ds: Vec<TimestampSeconds>,
-    pub(crate) cap: Option<Vec<f64>>,
-    pub(crate) floor: Option<Vec<f64>>,
-    pub(crate) seasonality_conditions: HashMap<String, Vec<bool>>,
-    pub(crate) x: HashMap<String, Vec<f64>>,
+    /// The number of time points in the prediction data.
+    pub n: usize,
+
+    /// The timestamps of the time series.
+    ///
+    /// These should be in seconds since the epoch.
+    pub ds: Vec<TimestampSeconds>,
+
+    /// Optionally, an upper bound (cap) on the values of the time series.
+    ///
+    /// Only used if the model's growth type is `logistic`.
+    pub cap: Option<Vec<f64>>,
+
+    /// Optionally, a lower bound (floor) on the values of the time series.
+    ///
+    /// Only used if the model's growth type is `logistic`.
+    pub floor: Option<Vec<f64>>,
+
+    /// Indicator variables for conditional seasonalities.
+    ///
+    /// The keys of the map are the names of the seasonality components,
+    /// and the values are boolean arrays of length `n` where `true` indicates
+    /// that the component is active for the corresponding time point.
+    pub seasonality_conditions: HashMap<String, Vec<bool>>,
+
+    /// Exogenous regressors.
+    ///
+    /// The keys of the map are the names of the regressors,
+    /// and the values are arrays of length `n` containing the regressor values
+    /// for each time point.
+    pub x: HashMap<String, Vec<f64>>,
 }
 
 impl PredictionData {
