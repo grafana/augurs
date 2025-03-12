@@ -198,9 +198,12 @@ impl Prophet {
         horizon: u32,
         opts: Option<MakeFutureDataframeOptions>,
     ) -> Result<PredictionData, JsError> {
-        let horizon = NonZeroU32::new(horizon).ok_or(JsError::new("Horizon must be greater than 0"))?;
+        let horizon =
+            NonZeroU32::new(horizon).ok_or(JsError::new("Horizon must be greater than 0"))?;
 
-        let future_dataframe = self.inner.make_future_dataframe(horizon, opts.unwrap_or_default().into())?;
+        let future_dataframe = self
+            .inner
+            .make_future_dataframe(horizon, opts.unwrap_or_default().into())?;
         Ok(future_dataframe.into())
     }
 }
@@ -1038,18 +1041,12 @@ impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
 
 /// Options for `makeFutureDataframe`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Tsify)]
+#[serde(default)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct MakeFutureDataframeOptions {
     /// Whether to include the historical dates in the future dataframe.
-    #[serde(default = "MakeFutureDataframeOptions::default_include_history")]
     include_history: bool,
-}
-
-impl MakeFutureDataframeOptions {
-    fn default_include_history() -> bool {
-        true
-    }
 }
 
 impl Default for MakeFutureDataframeOptions {
@@ -1073,8 +1070,12 @@ impl From<MakeFutureDataframeOptions> for augurs_prophet::IncludeHistory {
 impl From<augurs_prophet::IncludeHistory> for MakeFutureDataframeOptions {
     fn from(value: augurs_prophet::IncludeHistory) -> Self {
         match value {
-            augurs_prophet::IncludeHistory::Yes => Self { include_history: true },
-            augurs_prophet::IncludeHistory::No => Self { include_history: false },
+            augurs_prophet::IncludeHistory::Yes => Self {
+                include_history: true,
+            },
+            augurs_prophet::IncludeHistory::No => Self {
+                include_history: false,
+            },
         }
     }
 }

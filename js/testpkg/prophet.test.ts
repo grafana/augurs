@@ -110,7 +110,7 @@ describe('Prophet', () => {
       }
     });
 
-    it('can be called with horizon with history as default option', () => {
+    it('can be called with only horizon and no options argument', () => {
       const prophet = new Prophet({ optimizer });
       prophet.fit({ ds, y });
 
@@ -120,6 +120,14 @@ describe('Prophet', () => {
       for (let i = 1; i < future.ds.length; i++) {
         expect(future.ds[i] - future.ds[i - 1]).toBe(NINE_DAYS);
       }
+    });
+
+    it('can be called with horizon and empty options argument', () => {
+      const prophet = new Prophet({ optimizer });
+      prophet.fit({ ds, y });
+
+      const future = prophet.makeFutureDataframe(10, {});
+      expect(future.ds).toHaveLength(10 + TOTAL_LENGTH);
     });
   });
 });
