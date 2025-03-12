@@ -1042,8 +1042,14 @@ impl From<(Option<f64>, augurs_prophet::Predictions)> for Predictions {
 #[tsify(from_wasm_abi, type_prefix = "Prophet")]
 pub struct MakeFutureDataframeOptions {
     /// Whether to include the historical dates in the future dataframe.
-    #[serde(default)]
+    #[serde(default = "MakeFutureDataframeOptions::default_include_history")]
     include_history: bool,
+}
+
+impl MakeFutureDataframeOptions {
+    fn default_include_history() -> bool {
+        true
+    }
 }
 
 impl Default for MakeFutureDataframeOptions {
