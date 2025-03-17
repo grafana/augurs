@@ -17,3 +17,7 @@ updates:
     # Check for updates every Monday
     schedule:
       interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/js/testpkg"
+    schedule:
+      interval: "weekly"
