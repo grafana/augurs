@@ -4,6 +4,7 @@
 [![Rust](https://github.com/grafana/augurs/actions/workflows/rust.yml/badge.svg)](https://github.com/grafana/augurs/actions/workflows/rust.yml)
 [![docs.rs](https://docs.rs/augurs-core/badge.svg)](https://docs.rs/augurs-core)
 [![crates.io](https://img.shields.io/crates/v/augurs-core.svg)](https://crates.io/crates/augurs-core)
+[![libs.tech recommends](https://libs.tech/project/647966617/badge.svg)](https://libs.tech/project/647966617/augurs)
 
 This repository contains `augurs`, a time series toolkit built in Rust.
 It aims to provide some useful primitives for working with time series,
