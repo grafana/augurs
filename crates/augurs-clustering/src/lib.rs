@@ -71,9 +71,9 @@ impl DbscanClusterer {
     ///
     /// # Arguments
     /// * `epsilon` - The maximum distance between two samples for one to be considered as in the
-    ///     neighborhood of the other.
+    ///   neighborhood of the other.
     /// * `min_cluster_size` - The number of samples in a neighborhood for a point to be considered as a core
-    ///     point.
+    ///   point.
     pub fn new(epsilon: f64, min_cluster_size: usize) -> Self {
         Self {
             epsilon,

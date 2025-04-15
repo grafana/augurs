@@ -27,8 +27,8 @@ impl ProphetForecaster {
     /// # Parameters
     ///
     /// - `opts`: The options to use for fitting the model.
-    ///           Note that `uncertainty_samples` will be set to 1000 if it is 0,
-    ///           to facilitate generating prediction intervals.
+    ///   Note that `uncertainty_samples` will be set to 1000 if it is 0,
+    ///   to facilitate generating prediction intervals.
     /// - `optimizer`: The optimizer to use for fitting the model.
     /// - `optimize_opts`: The options to use for optimizing the model.
     pub fn new<T: Optimizer + 'static>(

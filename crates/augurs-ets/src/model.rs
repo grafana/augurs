@@ -559,7 +559,7 @@ impl Unfit {
                 let X = DMatrix::from_iterator(
                     max_n,
                     2,
-                    std::iter::repeat(1.0)
+                    std::iter::repeat_n(1.0, max_n)
                         .take(max_n)
                         .chain((1..(max_n + 1)).map(|x| x as f64)),
                 );
@@ -1333,7 +1333,7 @@ impl Forecast<'_> {
                 // Class 2 models.
                 // MNN
                 (EC::Multiplicative, TC::None, SC::None, false) => {
-                    let cvals = std::iter::repeat(*alpha).take(horizon);
+                    let cvals = std::iter::repeat_n(*alpha, horizon);
                     let sigma_h = self.compute_sigma_h(sigma, cvals, horizon);
                     self.compute_intervals(level, sigma_h.into_iter())
                 }
