@@ -171,7 +171,7 @@ impl<O> Prophet<O> {
         // Repeat each changepoint effect `n` times so we can zip it up.
         let changepoints_repeated = changepoints_t
             .iter()
-            .flat_map(|x| std::iter::repeat(*x).take(t.len()));
+            .flat_map(|x| std::iter::repeat_n(*x, t.len()));
         let indexes = (0..t.len()).cycle();
         // `k_m_t` is a contiguous array where each element contains the rate and offset to
         // apply at each time point.
@@ -228,7 +228,7 @@ impl<O> Prophet<O> {
 
     /// Evaluate the flat trend function.
     fn flat_trend(t: &[f64], m: f64) -> impl Iterator<Item = f64> {
-        std::iter::repeat(m).take(t.len())
+        std::iter::repeat_n(m, t.len())
     }
 
     /// Predict seasonality, holidays and added regressors.

@@ -713,7 +713,7 @@ impl<O> Prophet<O> {
             let prior_scale = seasonality
                 .prior_scale
                 .unwrap_or(self.opts.seasonality_prior_scale);
-            prior_scales.extend(std::iter::repeat(prior_scale).take(n_new));
+            prior_scales.extend(std::iter::repeat_n(prior_scale, n_new));
             modes.insert(
                 seasonality.mode.unwrap_or(self.opts.seasonality_mode),
                 ComponentName::Seasonality(name.clone()),
