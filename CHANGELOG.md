@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-prophet` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.9.0...augurs-prophet-v0.9.1) - 2025-04-15
+
+### Other
+- pin zip to 2.5.0 for now ([#268](https://github.com/grafana/augurs/pull/268))
+- Add JS bindings for Prophet make_future_dataframe ([#257](https://github.com/grafana/augurs/pull/257))
+- *(deps)* update ureq requirement from 2.10.1 to 3.0.0 ([#245](https://github.com/grafana/augurs/pull/245))
+- *(deps)* update wasmtime requirement from 28 to 29 ([#247](https://github.com/grafana/augurs/pull/247))
+
+## `augurs-outlier` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.9.0...augurs-outlier-v0.9.1) - 2025-04-15
+
+### Added
+- *(outlier)* add setters for parameters ([#253](https://github.com/grafana/augurs/pull/253))
+
+## `augurs-ets` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.9.0...augurs-ets-v0.9.1) - 2025-04-15
+
+### Other
+- pin zip to 2.5.0 for now ([#268](https://github.com/grafana/augurs/pull/268))
+
+## `augurs-clustering` - [0.9.1](https://github.com/grafana/augurs/compare/augurs-clustering-v0.9.0...augurs-clustering-v0.9.1) - 2025-04-15
+
+### Other
+- pin zip to 2.5.0 for now ([#268](https://github.com/grafana/augurs/pull/268))
+
 ## `augurs-changepoint` - [0.9.0](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.8.1...augurs-changepoint-v0.9.0) - 2025-01-14
 
 No changes in this release.
