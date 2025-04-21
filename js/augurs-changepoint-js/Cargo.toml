@@ -20,7 +20,7 @@ test = false
 [dependencies]
 augurs-core-js.workspace = true
 augurs-changepoint = { workspace = true, features = ["serde"] }
-getrandom = { version = "0.2.10", features = ["js"] }
+getrandom = { version = "0.3.2", features = ["js"] }
 js-sys = "0.3.64"
 serde.workspace = true
 serde-wasm-bindgen = "0.6.0"
