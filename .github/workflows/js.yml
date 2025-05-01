@@ -2,40 +2,45 @@ name: augurs-js
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 env:
   CARGO_TERM_COLOR: always
+
+permissions: {}
 
 jobs:
   test:
     name: JS tests
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout sources
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
-    - uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: nightly-2024-09-01
-        targets: wasm32-unknown-unknown
-    - uses: taiki-e/install-action@33734a118689b0b418824fb78ea2bf18e970b43b # v2.50.4
-      with:
-        tool: just,wasm-pack
+      - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
+        with:
+          toolchain: nightly-2024-09-01
+          targets: wasm32-unknown-unknown
 
-    - name: Build augurs-js
-      run: just build-augurs-js
+      - uses: taiki-e/install-action@33734a118689b0b418824fb78ea2bf18e970b43b # v2.50.4
+        with:
+          tool: just,wasm-pack
 
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-      with:
-        node-version-file: js/.node-version
-    - name: Install dependencies
-      run: npm ci
-      working-directory: js/testpkg
-    - name: Run typecheck
-      run: npm run typecheck
-      working-directory: js/testpkg
-    - name: Run tests
-      run: npm run test:ci
-      working-directory: js/testpkg
+      - name: Build augurs-js
+        run: just build-augurs-js
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: js/.node-version
+      - name: Install dependencies
+        run: npm ci
+        working-directory: js/testpkg
+      - name: Run typecheck
+        run: npm run typecheck
+        working-directory: js/testpkg
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: js/testpkg
