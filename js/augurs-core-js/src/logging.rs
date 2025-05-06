@@ -102,17 +102,17 @@ pub struct LogConfig {
 #[wasm_bindgen(js_name = "initLogging")]
 pub fn init_logging(config: Option<LogConfig>) -> Result<(), JsError> {
     let config = config.unwrap_or_default();
-    let config = WasmLayerConfig {
-        report_logs_in_timings: matches!(config.target, LogTarget::Performance),
-        show_fields: config.show_detailed_fields,
-        console: if config.color {
+    let mut layer_config = WasmLayerConfig::new();
+    layer_config
+        .set_max_level(config.max_level.into())
+        .set_show_fields(config.show_detailed_fields)
+        .set_report_logs_in_timings(matches!(config.target, LogTarget::Performance))
+        .set_console_config(if config.color {
             ConsoleConfig::ReportWithConsoleColor
         } else {
             ConsoleConfig::ReportWithoutConsoleColor
-        },
-        max_level: config.max_level.into(),
-        show_origin: false,
-    };
-    tracing::subscriber::set_global_default(Registry::default().with(WasmLayer::new(config)))
+        })
+        .set_show_origin(false);
+    tracing::subscriber::set_global_default(Registry::default().with(WasmLayer::new(layer_config)))
         .map_err(|_| JsError::new("logging already initialized"))
 }
