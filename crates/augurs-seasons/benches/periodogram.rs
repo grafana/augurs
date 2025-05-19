@@ -1,7 +1,6 @@
 #![allow(missing_docs)]
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use pprof::criterion::{Output, PProfProfiler};
 
 use augurs_seasons::{Detector, PeriodogramDetector};
 use augurs_testing::data::SEASON_EIGHT;
@@ -16,7 +15,7 @@ fn season_eight(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Protobuf));
+    config = Criterion::default();
     targets = season_eight
 }
 criterion_main!(benches);
