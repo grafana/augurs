@@ -31,7 +31,6 @@ serde = ["dep:serde"]
 augurs-testing.workspace = true
 criterion.workspace = true
 iai.workspace = true
-pprof.workspace = true
 
 [lib]
 bench = false

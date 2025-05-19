@@ -23,7 +23,6 @@ welch-sde = "0.1.0"
 augurs.workspace = true
 augurs-testing.workspace = true
 criterion.workspace = true
-pprof.workspace = true
 
 [[bench]]
 name = "periodogram"

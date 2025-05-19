@@ -1,7 +1,6 @@
 #![allow(missing_docs)]
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use pprof::criterion::{Output, PProfProfiler};
 
 use augurs_core::Fit;
 use augurs_mstl::{MSTLModel, NaiveTrend};
@@ -36,7 +35,7 @@ fn vic_elec(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Protobuf));
+    config = Criterion::default();
     targets = vic_elec
 }
 criterion_main!(benches);

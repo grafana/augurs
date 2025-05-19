@@ -1,7 +1,6 @@
 #![allow(missing_docs)]
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use pprof::criterion::{Output, PProfProfiler};
 
 use augurs_core::{Fit, Predict};
 use augurs_ets::{
@@ -60,8 +59,7 @@ fn forecast(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    // config = Criterion::default();
-    config = Criterion::default().with_profiler(PProfProfiler::new(10000, Output::Protobuf));
+    config = Criterion::default();
     targets = auto_fit, fit, forecast,
 }
 criterion_main!(benches);
