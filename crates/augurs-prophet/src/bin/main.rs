@@ -108,7 +108,7 @@ fn unzip(dest: &Path) -> Result<()> {
     anyhow::bail!("could not find one or more of prophet_model.bin or libtbb.so");
 }
 
-fn write(dest: &Path, file: ZipFile<'_>) -> Result<()> {
+fn write<R: Read>(dest: &Path, file: ZipFile<'_, R>) -> Result<()> {
     let file_path = file.enclosed_name().context("invalid file name in wheel")?;
     let name = file_path.file_name().context("file has no name?")?;
     let path = dest.join(name);
