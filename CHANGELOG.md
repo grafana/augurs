@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-dtw` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-dtw-v0.10.0...augurs-dtw-v0.10.1) - 2025-05-19
+
+### Other
+- update Cargo.toml dependencies
+
 ## [0.10.0](https://github.com/grafana/augurs/compare/augurs-v0.9.0...augurs-v0.10.0) - 2025-05-19
 
 ### `augurs-seasons`
