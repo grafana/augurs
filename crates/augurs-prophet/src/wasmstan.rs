@@ -23,7 +23,7 @@ use wasmtime::{
     component::{Component, Linker},
     Engine, Store,
 };
-use wasmtime_wasi::{ResourceTable, WasiCtx, WasiView};
+use wasmtime_wasi::{IoView, ResourceTable, WasiCtx, WasiView};
 
 use crate::{
     optimizer::{self, Data, InitialParams, OptimizeOpts, OptimizedParams},
@@ -94,6 +94,9 @@ impl WasiView for WasiState {
     fn ctx(&mut self) -> &mut WasiCtx {
         &mut self.ctx
     }
+}
+
+impl IoView for WasiState {
     fn table(&mut self) -> &mut ResourceTable {
         &mut self.table
     }
