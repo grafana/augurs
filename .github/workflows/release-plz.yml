@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'grafana' }}
     permissions:
+      # Required to get secrets from Vault.
+      id-token: write
       contents: write
     steps:
       - name: Checkout repository
@@ -25,19 +27,27 @@ jobs:
         uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
           toolchain: stable
+
+      - id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@5d7e361bc7e0a183cde8afe9899fb7b596d2659b # get-vault-secrets-v1.2.0
+        with:
+          # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
+          repo_secrets: |
+            CARGO_REGISTRY_TOKEN=crates-io:api-token
+            GITHUB_TOKEN=github:token
+
       - name: Run release-plz
         uses: release-plz/action@dde7b63054529c440305a924e5849c68318bcc9a # v0.5.107
         with:
           command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # Create a PR with the new versions and changelog, preparing the next release.
   release-plz-pr:
     name: Release-plz PR
     runs-on: ubuntu-latest
     permissions:
+      # Required to get secrets from Vault.
+      id-token: write
       contents: write
       pull-requests: write
     concurrency:
@@ -53,10 +63,16 @@ jobs:
         uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
           toolchain: stable
+
+      - id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@5d7e361bc7e0a183cde8afe9899fb7b596d2659b # get-vault-secrets-v1.2.0
+        with:
+          # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
+          repo_secrets: |
+            CARGO_REGISTRY_TOKEN=crates-io:api-token
+            GITHUB_TOKEN=github:token
+
       - name: Run release-plz
         uses: release-plz/action@dde7b63054529c440305a924e5849c68318bcc9a # v0.5.107
         with:
           command: release-pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
