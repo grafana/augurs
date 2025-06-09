@@ -742,7 +742,7 @@ impl<O> Prophet<O> {
             prior_scales.push(
                 regressor
                     .prior_scale
-                    .unwrap_or(self.opts.seasonality_prior_scale),
+                    .unwrap_or(self.opts.holidays_prior_scale),
             );
             modes.insert(regressor.mode, ComponentName::Regressor(name.clone()));
         }
@@ -1588,5 +1588,47 @@ mod test {
         let reg_scales = &prophet.scales.unwrap().regressors["constant_feature"];
         assert_approx_eq!(reg_scales.mu, 0.0);
         assert_approx_eq!(reg_scales.std, 1.0);
+    }
+
+    #[test]
+    fn regressor_defaults_to_holiday_prior_scale() {
+        let data = daily_univariate_ts();
+        let n = data.len();
+        let data = data
+            .with_regressors(
+                HashMap::from([("test_regressor".to_string(), vec![1.0; n])])
+                    .into_iter()
+                    .collect(),
+            )
+            .unwrap();
+
+        let opts = ProphetOptions {
+            holidays_prior_scale: 50.0.try_into().unwrap(),
+            seasonality_prior_scale: 20.0.try_into().unwrap(),
+            ..Default::default()
+        };
+
+        let mut prophet = Prophet::new(opts, MockOptimizer::new());
+        prophet.add_regressor("test_regressor".to_string(), Regressor::additive());
+
+        // Fit the data to get processed data
+        prophet.fit(data, Default::default()).unwrap();
+
+        let features = prophet
+            .make_all_features(&prophet.processed.as_ref().unwrap().history)
+            .unwrap();
+
+        // Find the prior scale for the regressor
+        let regressor_index = features
+            .features
+            .names
+            .iter()
+            .position(|name| matches!(name, FeatureName::Regressor(n) if n == "test_regressor"))
+            .unwrap();
+
+        let regressor_prior_scale = features.prior_scales[regressor_index];
+
+        // Should be 50.0 (holiday prior scale), not 20.0 (seasonality prior scale)
+        assert_approx_eq!(*regressor_prior_scale, 50.0);
     }
 }

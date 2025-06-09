@@ -192,7 +192,7 @@ impl Default for RegressorScale {
 
 /// An exogynous regressor.
 ///
-/// By default, regressors inherit the `seasonality_prior_scale`
+/// By default, regressors inherit the `holidays_prior_scale`
 /// configured on the Prophet model as their prior scale.
 #[derive(Debug, Clone, Default)]
 pub struct Regressor {
@@ -220,7 +220,7 @@ impl Regressor {
 
     /// Set the prior scale of this regressor.
     ///
-    /// By default, regressors inherit the `seasonality_prior_scale`
+    /// By default, regressors inherit the `holidays_prior_scale`
     /// configured on the Prophet model as their prior scale.
     pub fn with_prior_scale(mut self, prior_scale: PositiveFloat) -> Self {
         self.prior_scale = Some(prior_scale);
