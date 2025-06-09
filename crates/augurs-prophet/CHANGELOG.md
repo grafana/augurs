@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- fix regressors defaulting to seasonality prior scale instead of holiday prior scale (#256)
+
 ## [0.8.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.8.0...augurs-prophet-v0.8.1) - 2025-01-07
 
 ### Fixed
