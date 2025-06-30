@@ -88,8 +88,7 @@ impl FromStr for DistanceFn {
             "euclidean" => Ok(DistanceFn::Euclidean),
             "manhattan" => Ok(DistanceFn::Manhattan),
             _ => Err(PyValueError::new_err(format!(
-                "Invalid distance function: {}",
-                s
+                "Invalid distance function: {s}",
             ))),
         }
     }

@@ -252,8 +252,7 @@ mod test {
                     .map(|x| x.period)
                     .collect_vec(),
                 *expected,
-                "Test case {}",
-                i
+                "Test case {i}"
             );
         }
     }

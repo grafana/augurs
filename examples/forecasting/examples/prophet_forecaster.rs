@@ -40,12 +40,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let predictions = forecaster.predict_in_sample(0.95)?;
     assert_eq!(predictions.point.len(), y.len());
     assert!(predictions.intervals.is_some());
-    println!("In-sample predictions: {:?}", predictions);
+    println!("In-sample predictions: {predictions:?}");
 
     // Generate 10 out-of-sample predictions with 95% prediction intervals.
     let predictions = forecaster.predict(10, 0.95)?;
     assert_eq!(predictions.point.len(), 10);
     assert!(predictions.intervals.is_some());
-    println!("Out-of-sample predictions: {:?}", predictions);
+    println!("Out-of-sample predictions: {predictions:?}");
     Ok(())
 }
