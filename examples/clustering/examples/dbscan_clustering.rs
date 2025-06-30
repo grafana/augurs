@@ -53,7 +53,7 @@ fn main() {
 
     // Run DBSCAN clustering on the distance matrix.
     let clusters = DbscanClusterer::new(epsilon, min_cluster_size).fit(&distance_matrix);
-    println!("Clusters: {:?}", clusters);
+    println!("Clusters: {clusters:?}");
     assert_eq!(
         clusters,
         vec![

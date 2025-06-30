@@ -604,17 +604,13 @@ mod test {
                 ("N", _, _) => {
                     assert!(
                         matches!(spec, Err(Error::InvalidErrorComponentString(_))),
-                        "{:?}, case {}",
-                        spec,
-                        case
+                        "{spec:?}, case {case}"
                     );
                 }
                 ("A", "M", _) | ("A", _, "M") | ("M", "M", "M") => {
                     assert!(
                         matches!(spec, Err(Error::InvalidModelSpec(_))),
-                        "{:?}, case {}",
-                        spec,
-                        case
+                        "{spec:?}, case {case}"
                     );
                 }
                 _ => {

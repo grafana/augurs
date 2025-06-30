@@ -82,7 +82,7 @@ impl augurs_prophet::Optimizer for JsOptimizer {
         let result = self
             .func
             .call3(&this, &init, &data_s, &opts)
-            .map_err(|x| augurs_prophet::optimizer::Error::string(format!("{:?}", x)))?;
+            .map_err(|x| augurs_prophet::optimizer::Error::string(format!("{x:?}")))?;
         let result: OptimizeOutput = serde_wasm_bindgen::from_value(result)
             .map_err(augurs_prophet::optimizer::Error::custom)?;
 

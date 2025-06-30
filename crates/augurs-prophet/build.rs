@@ -40,7 +40,7 @@ fn compile_cmdstan_model() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Compiling Prophet model to {}", tmp_exe_path.display());
     let mut cmd = Command::new("make");
     cmd.current_dir(cmdstan_bin_path).arg(&tmp_exe_path);
-    eprintln!("Executing {:?}", cmd);
+    eprintln!("Executing {cmd:?}");
     let output = cmd.output()?;
     if !output.status.success() {
         return Err(format!("make failed: {}", String::from_utf8_lossy(&output.stderr)).into());

@@ -75,7 +75,7 @@ pub enum Error {
         source: io::Error,
     },
     /// An error occurred when running the Prophet model executable.
-    #[error("Error {}running Prophet command ({command}): {stdout}\n{stderr}", code.map(|c| format!("code {}", c)).unwrap_or_default())]
+    #[error("Error {}running Prophet command ({command}): {stdout}\n{stderr}", code.map(|c| format!("code {c}")).unwrap_or_default())]
     ProphetExeError {
         /// The stringified command that was attempted.
         command: String,
@@ -392,7 +392,7 @@ impl OptimizeCommand<'_> {
         let mut command = self.command(&data_path, &init_path, &output_path);
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
         let mut handle = command.spawn().map_err(|source| Error::ProphetIOError {
-            command: format!("{:?}", command),
+            command: format!("{command:?}"),
             source,
         })?;
         // Capture the output.
@@ -419,7 +419,7 @@ impl OptimizeCommand<'_> {
                     // If the child exited with a non-zero status, return an error.
                     if !status.success() {
                         return Err(Error::ProphetExeError {
-                            command: format!("{:?}", command),
+                            command: format!("{command:?}"),
                             code: status.code(),
                             stdout: stdout_reader.all_stdout,
                             stderr: stderr_reader.all_stdout,
@@ -430,7 +430,7 @@ impl OptimizeCommand<'_> {
                 Err(e) => {
                     // Error while waiting for child, return an error.
                     return Err(Error::ProphetIOError {
-                        command: format!("{:?}", command),
+                        command: format!("{command:?}"),
                         source: e,
                     });
                 }
@@ -638,12 +638,12 @@ impl CmdstanOptimizer {
         let mut command = prophet_installation.command();
         command.arg("help");
         let output = command.output().map_err(|source| Error::ProphetIOError {
-            command: format!("{:?}", command),
+            command: format!("{command:?}"),
             source,
         })?;
         if !output.status.success() {
             return Err(Error::ProphetExeError {
-                command: format!("{:?}", command),
+                command: format!("{command:?}"),
                 code: output.status.code(),
                 stdout: String::from_utf8_lossy(&output.stdout).to_string(),
                 stderr: String::from_utf8_lossy(&output.stderr).to_string(),

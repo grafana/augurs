@@ -28,7 +28,7 @@ fn distance_euclidean(c: &mut Criterion) {
     let windows = [None, Some(2), Some(5), Some(10), Some(20), Some(50)];
     for window in windows {
         group.bench_with_input(
-            BenchmarkId::from_parameter(format!("{:?}", window)),
+            BenchmarkId::from_parameter(format!("{window:?}")),
             &(s, t),
             |b, (s, t)| {
                 b.iter(|| {
@@ -52,8 +52,7 @@ fn distance_matrix_euclidean(c: &mut Criterion) {
     for (window, parallelize) in windows.into_iter().cartesian_product(parallelize) {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!(
-                "window: {:?}, parallelize: {:?}",
-                window, parallelize
+                "window: {window:?}, parallelize: {parallelize:?}"
             )),
             &examples,
             |b, examples| {
