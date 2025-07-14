@@ -25,7 +25,7 @@ jobs:
           toolchain: nightly-2024-09-01
           targets: wasm32-unknown-unknown
 
-      - uses: taiki-e/install-action@9ba3ac3fd006a70c6e186a683577abc1ccf0ff3a # v2.54.0
+      - uses: taiki-e/install-action@c07504cae06f832dc8de08911c9a9c5cddb0d2d3 # v2.56.13
         with:
           tool: just,wasm-pack
 
