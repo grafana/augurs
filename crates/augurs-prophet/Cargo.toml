@@ -39,12 +39,12 @@ tempfile = { version = "3.13.0", optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 ureq = { version = "3.0.0", optional = true }
-wasmtime = { version = "32", features = [
+wasmtime = { version = "35", features = [
     "runtime",
     "component-model",
 ], optional = true }
-wasmtime-wasi = { version = "32", optional = true }
-zip = { version = "3", optional = true }
+wasmtime-wasi = { version = "35", optional = true }
+zip = { version = "4", optional = true }
 
 [dev-dependencies]
 augurs.workspace = true
