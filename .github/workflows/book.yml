@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taiki-e/install-action@a416ddeedbd372e614cc1386e8b642692f66865e # v2.57.1
+      - uses: taiki-e/install-action@c6d88ff920e4bf8eba13a133da5f45ab2ab88890 # v2.58.8
         with:
           tool: mdbook
         env:
