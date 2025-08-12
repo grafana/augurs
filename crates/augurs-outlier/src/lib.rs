@@ -238,6 +238,8 @@ pub trait OutlierDetector {
 mod test {
     use super::*;
 
+    // Keeping this here as an example of how to implement an outlier detector.
+    #[allow(dead_code)]
     struct DummyDetector;
 
     impl OutlierDetector for DummyDetector {
