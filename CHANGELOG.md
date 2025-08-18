@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-seasons` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.0...augurs-seasons-v0.10.1) - 2025-08-18
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
+## `augurs-prophet` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.0...augurs-prophet-v0.10.1) - 2025-08-18
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+- *(prophet)* use holiday prior scale for regressors ([#305](https://github.com/grafana/augurs/pull/305))
+
+## `augurs-outlier` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.0...augurs-outlier-v0.10.1) - 2025-08-18
+
+### Other
+- allow dead code in outlier detector test to serve as example
+
+## `augurs-ets` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.10.0...augurs-ets-v0.10.1) - 2025-08-18
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
+## `augurs-dtw` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-dtw-v0.10.0...augurs-dtw-v0.10.1) - 2025-08-18
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
 ## [0.10.0](https://github.com/grafana/augurs/compare/augurs-v0.9.0...augurs-v0.10.0) - 2025-05-19
 
 ### `augurs-seasons`
