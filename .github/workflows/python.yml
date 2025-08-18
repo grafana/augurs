@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Build wheels
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
@@ -76,7 +76,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Build wheels
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
@@ -105,7 +105,7 @@ jobs:
           python-version: 3.x
           architecture: ${{ matrix.platform.target }}
       - name: Build wheels
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 --manifest-path crates/pyaugurs/Cargo.toml
@@ -132,7 +132,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Build wheels
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
@@ -149,7 +149,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build sdist
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           command: sdist
           args: --out dist --manifest-path crates/pyaugurs/Cargo.toml
@@ -186,7 +186,7 @@ jobs:
             MATURIN_PYPI_TOKEN=pypi:api-token
 
       - name: Publish to PyPI
-        uses: PyO3/maturin-action@35be3186fc8e037e329f06b68dcd807d83dcc6dc # v1.49.2
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
