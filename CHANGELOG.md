@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-seasons` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.0...augurs-seasons-v0.10.1) - 2025-09-08
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
+## `augurs-prophet` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.0...augurs-prophet-v0.10.1) - 2025-09-08
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+- *(prophet)* use holiday prior scale for regressors ([#305](https://github.com/grafana/augurs/pull/305))
+
+### Other
+- *(deps)* bump the rust-dependencies group across 1 directory with 10 updates ([#346](https://github.com/grafana/augurs/pull/346))
+
+## `augurs-outlier` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.0...augurs-outlier-v0.10.1) - 2025-09-08
+
+### Other
+- allow dead code in outlier detector test to serve as example
+
+## `augurs-ets` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-ets-v0.10.0...augurs-ets-v0.10.1) - 2025-09-08
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
+### Other
+- *(deps)* bump the rust-dependencies group across 1 directory with 10 updates ([#346](https://github.com/grafana/augurs/pull/346))
+
+## `augurs-mstl` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-mstl-v0.10.0...augurs-mstl-v0.10.1) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-dtw` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-dtw-v0.10.0...augurs-dtw-v0.10.1) - 2025-09-08
+
+### Fixed
+- fix clippy lints for Rust 1.88 ([#315](https://github.com/grafana/augurs/pull/315))
+
+## `augurs-clustering` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-clustering-v0.10.0...augurs-clustering-v0.10.1) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-changepoint` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.10.0...augurs-changepoint-v0.10.1) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
 ## [0.10.0](https://github.com/grafana/augurs/compare/augurs-v0.9.0...augurs-v0.10.0) - 2025-05-19
 
 ### `augurs-seasons`
