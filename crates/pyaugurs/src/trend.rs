@@ -52,7 +52,7 @@ impl PyTrendModel {
 
 impl TrendModel for PyTrendModel {
     fn name(&self) -> std::borrow::Cow<'_, str> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.model
                 .bind(py)
                 .get_type()
@@ -69,7 +69,7 @@ impl TrendModel for PyTrendModel {
         Box<dyn FittedTrendModel + Sync + Send>,
         Box<dyn std::error::Error + Send + Sync + 'static>,
     > {
-        let model = Python::with_gil(|py| {
+        let model = Python::attach(|py| {
             let np = y.to_pyarray(py);
             self.model.call_method1(py, "fit", (np,))?;
             Ok::<_, PyErr>(self.model.clone_ref(py))
@@ -91,7 +91,7 @@ impl FittedTrendModel for PyFittedTrendModel {
         level: Option<f64>,
         forecast: &mut augurs_core::Forecast,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let preds = self
                 .model
                 .call_method1(py, "predict", (horizon, level))
@@ -107,7 +107,7 @@ impl FittedTrendModel for PyFittedTrendModel {
         level: Option<f64>,
         forecast: &mut augurs_core::Forecast,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let preds = self
                 .model
                 .call_method1(py, "predict_in_sample", (level,))

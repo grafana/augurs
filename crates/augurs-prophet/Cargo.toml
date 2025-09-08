@@ -44,6 +44,7 @@ wasmtime = { version = "36", features = [
     "component-model",
 ], optional = true }
 wasmtime-wasi = { version = "36", optional = true }
+wasmtime-wasi-io = { version = "36", optional = true }
 zip = { version = "5", optional = true }
 
 [dev-dependencies]
@@ -64,7 +65,7 @@ compile-cmdstan = ["cmdstan", "dep:tempfile"]
 download = ["dep:ureq", "dep:zip"]
 serde = ["dep:serde"]
 wasmstan = ["wasmstan-min"]
-wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "serde"]
+wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "dep:wasmtime-wasi-io", "serde"]
 
 # Ignore cmdstan compilation or wasmstan copying in the build script.
 # This should only be used for developing the library, not by

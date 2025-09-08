@@ -23,7 +23,8 @@ use wasmtime::{
     component::{Component, Linker},
     Engine, Store,
 };
-use wasmtime_wasi::{IoView, ResourceTable, WasiCtx, WasiView};
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxView, WasiView};
+use wasmtime_wasi_io::IoView;
 
 use crate::{
     optimizer::{self, Data, InitialParams, OptimizeOpts, OptimizedParams},
@@ -91,8 +92,11 @@ impl Default for WasiState {
 
 /// View of the WASI state, required to call `wasmtime_wasi::add_to_linker_sync`.
 impl WasiView for WasiState {
-    fn ctx(&mut self) -> &mut WasiCtx {
-        &mut self.ctx
+    fn ctx(&mut self) -> WasiCtxView<'_> {
+        WasiCtxView {
+            ctx: &mut self.ctx,
+            table: &mut self.table,
+        }
     }
 }
 
@@ -170,7 +174,7 @@ impl WasmstanOptimizer {
 
         // Create a linker, which will add WASI imports to the component.
         let mut linker = Linker::new(&engine);
-        wasmtime_wasi::add_to_linker_sync(&mut linker).map_err(Error::Linking)?;
+        wasmtime_wasi::p2::add_to_linker_sync(&mut linker).map_err(Error::Linking)?;
 
         // Create a pre-instantiated component.
         // This does as much work as possible here, so that `optimize` can

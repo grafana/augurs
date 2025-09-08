@@ -17,7 +17,7 @@ itertools.workspace = true
 lstsq = "0.7.0"
 nalgebra = "0.34.0"
 rand.workspace = true
-rand_distr = "0.5.1"
+rand_distr = "0.4.3"
 roots.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
 thiserror.workspace = true
