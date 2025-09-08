@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-mstl` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-mstl-v0.10.1...augurs-mstl-v0.10.2) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-clustering` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-clustering-v0.10.1...augurs-clustering-v0.10.2) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-changepoint` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.10.1...augurs-changepoint-v0.10.2) - 2025-09-08
+
+### Other
+- update Cargo.toml dependencies
+
 ## `augurs-seasons` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.0...augurs-seasons-v0.10.1) - 2025-09-08
 
 ### Fixed
