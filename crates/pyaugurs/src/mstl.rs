@@ -57,7 +57,7 @@ impl MSTL {
         periods: Vec<usize>,
         trend_model: Py<PyAny>,
     ) -> Self {
-        let trend_model_name = Python::with_gil(|py| {
+        let trend_model_name = Python::attach(|py| {
             let trend_model = trend_model.bind(py).get_type();
             trend_model
                 .name()

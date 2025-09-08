@@ -39,12 +39,13 @@ tempfile = { version = "3.13.0", optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 ureq = { version = "3.0.0", optional = true }
-wasmtime = { version = "32", features = [
+wasmtime = { version = "36", features = [
     "runtime",
     "component-model",
 ], optional = true }
-wasmtime-wasi = { version = "32", optional = true }
-zip = { version = "3", optional = true }
+wasmtime-wasi = { version = "36", optional = true }
+wasmtime-wasi-io = { version = "36", optional = true }
+zip = { version = "5", optional = true }
 
 [dev-dependencies]
 augurs.workspace = true
@@ -64,7 +65,7 @@ compile-cmdstan = ["cmdstan", "dep:tempfile"]
 download = ["dep:ureq", "dep:zip"]
 serde = ["dep:serde"]
 wasmstan = ["wasmstan-min"]
-wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "serde"]
+wasmstan-min = ["dep:serde_json", "dep:wasmtime", "dep:wasmtime-wasi", "dep:wasmtime-wasi-io", "serde"]
 
 # Ignore cmdstan compilation or wasmstan copying in the build script.
 # This should only be used for developing the library, not by
