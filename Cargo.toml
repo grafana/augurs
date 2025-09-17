@@ -96,12 +96,21 @@ inherits = "release"
 debug = true
 
 [patch.crates-io]
+# rand 0.9 merged into main, waiting for a new release.
 argmin = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
 argmin-math = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
-cap-rand = { git = "https://github.com/sd2k/cap-std", branch = "bump-rand" }
+
+# Depends on rv PR and release (see below).
 changepoint = { git = "https://github.com/sd2k/changepoint", branch = "patched-deps-to-bump-rand" }
+# See PR at https://github.com/promised-ai/rv/pull/48.
 rv = { git = "https://github.com/sd2k/rv", branch = "bump-rand-dependency" }
+
+# See PR at https://github.com/statrs-dev/statrs/pull/331.
 statrs = { git = "https://github.com/RobertJacobsonCDC/statrs", branch = "update_rand_to_09" }
+
+# Depends on cap-rand PR/release (see below).
 wasmtime = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
 wasmtime-wasi = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
 wasmtime-wasi-io = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+# See PR at https://github.com/bytecodealliance/cap-std/pull/394
+cap-rand = { git = "https://github.com/sd2k/cap-std", branch = "bump-rand" }
