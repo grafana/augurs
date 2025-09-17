@@ -48,11 +48,12 @@ argmin = "0.10.0"
 bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
-getrandom = { version = "0.2.10", features = ["js"] }
+getrandom = "0.3"
 itertools = "0.14.0"
 js-sys = "0.3.64"
 num-traits = "0.2.19"
-rand = "0.8.5"
+rand = "0.9.0"
+rand_distr = "0.5.1"
 roots = "0.0.8"
 serde = { version = "1.0.166", features = ["derive"] }
 statrs = "0.18.0"
@@ -64,6 +65,11 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", default-features = false }
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
 wasm-bindgen = "0.2.99"
+wasmtime = "38"
+wasmtime-wasi = "38"
+wasmtime-wasi-io = "38"
+wit-bindgen = "0.46.0"
+wit-component = "0.239.0"
 
 assert_approx_eq = "1.1.0"
 criterion = "0.7.0"
@@ -88,3 +94,14 @@ lto = false
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[patch.crates-io]
+argmin = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
+argmin-math = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
+cap-rand = { git = "https://github.com/sd2k/cap-std", branch = "bump-rand" }
+changepoint = { git = "https://github.com/sd2k/changepoint", branch = "patched-deps-to-bump-rand" }
+rv = { git = "https://github.com/sd2k/rv", branch = "bump-rand-dependency" }
+statrs = { git = "https://github.com/RobertJacobsonCDC/statrs", branch = "update_rand_to_09" }
+wasmtime = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+wasmtime-wasi = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+wasmtime-wasi-io = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
