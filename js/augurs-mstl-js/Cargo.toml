@@ -22,7 +22,7 @@ augurs-core-js.workspace = true
 augurs-ets = { workspace = true, features = ["mstl"] }
 augurs-forecaster.workspace = true
 augurs-mstl.workspace = true
-getrandom.workspace = true
+getrandom = { version = "0.3", features = ["wasm_js"] }
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 tsify-next.workspace = true

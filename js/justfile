@@ -15,7 +15,7 @@ build: \
 build-inner target args='':
   cd augurs-{{target}}-js && \
     rm -rf ./pkg && \
-    wasm-pack build \
+    RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack build \
       --scope bsull \
       --out-name {{target}} \
       --release \
@@ -44,4 +44,3 @@ test:
 publish:
   cd augurs && \
     npm publish --access public
-

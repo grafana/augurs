@@ -55,7 +55,7 @@ use std::{
     time::Duration,
 };
 
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 
 use crate::{optimizer, Optimizer, PositiveFloat, TryFromFloatError};
 
@@ -526,8 +526,8 @@ impl OptimizeCommand<'_> {
         command.arg(format!(
             "seed={}",
             self.opts.seed.unwrap_or_else(|| {
-                let mut rng = thread_rng();
-                rng.gen_range(1..99999)
+                let mut rng = rng();
+                rng.random_range(1..99999)
             })
         ));
         command.arg("data");

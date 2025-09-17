@@ -20,7 +20,7 @@ test = false
 [dependencies]
 augurs-core-js.workspace = true
 augurs-outlier = { workspace = true, features = ["serde"] }
-getrandom.workspace = true
+getrandom = { workspace = true, features = ["wasm_js"] }
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 tsify-next.workspace = true

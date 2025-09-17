@@ -524,7 +524,7 @@ mod test {
     ];
 
     fn gen_multi_modal_data() -> Vec<f64> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let lower = rv::dist::Uniform::new_unchecked(0., 100.).sample(100, &mut rng);
         let upper = rv::dist::Uniform::new_unchecked(1000., 1100.).sample(100, &mut rng);
         lower.into_iter().interleave(upper).collect()

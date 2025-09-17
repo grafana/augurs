@@ -16,7 +16,6 @@ bench = false
 itertools.workspace = true
 rayon = { version = "1.10.0", optional = true }
 roots.workspace = true
-rand.workspace = true
 rustc-hash = "2.0.0"
 rv = { version = "0.18.0", default-features = false }
 serde = { workspace = true, features = ["derive"], optional = true }
@@ -26,6 +25,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 augurs.workspace = true
+rand.workspace = true
 serde_json.workspace = true
 
 [features]
