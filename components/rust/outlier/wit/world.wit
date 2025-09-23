@@ -1,0 +1,87 @@
+/// The outlier detector world.
+package augurs:outlier;
+
+// TODO: uncomment and use when Gravity supports user defined complex types.
+// /// Types used by the outlier detector world.
+// interface types {
+//     /// The input for the outlier detector.
+//     ///
+//     /// Currently this is represented as a string because Gravity
+//     /// does not yet support more complex types.
+//     ///
+//     /// It should be a JSON object with the following fields:
+//     type input = string;
+
+//     /// The output for the outlier detector.
+//     ///
+//     /// Currently this is represented as a string because Gravity
+//     /// does not yet support more complex types.
+//     ///
+//     /// It should be a JSON object with the following fields:
+//     type output = string;
+
+//     /// Errors that can occur during outlier detection.
+//     ///
+//     /// Currently this is represented as a string because Gravity
+//     /// does not yet support more complex types.
+//     type error = string;
+
+//     /// The epsilon or sensitivity parameter for the DBSCAN algorithm.
+//     variant epsilon-or-sensitivity {
+//         /// A scale-invariant sensitivity parameter.
+//         ///
+//         /// This must be in (0, 1) and will be used to estimate a sensible
+//         /// value of epsilon based on the data at detection-time.
+//         sensitivity(f64),
+//         /// The maximum distance between points in a cluster.
+//         epsilon(f64),
+//     }
+
+//     /// The parameters for the DBSCAN algorithm.
+//     record dbscan-params {
+//         /// Either the epsilon or sensitivity for the algorithm.
+//         epsilon-or-sensitivity: epsilon-or-sensitivity,
+//     }
+
+//     /// Either a scale-invariant sensitivity parameter or a threshold.
+//     variant threshold-or-sensitivity {
+//         /// A scale-invariant sensitivity parameter.
+//         ///
+//         /// This must be in (0, 1) and will be used to estimate a sensible
+//         /// threshold at detection-time.
+//         sensitivity(f64),
+//         /// The threshold above which points are considered anomalous.
+//         threshold(f64),
+//     }
+
+//     /// The parameters for the MAD algorithm.
+//     record mad-params {
+//         /// Either the threshold or sensitivity for the algorithm.
+//         threshold-or-sensitivity: threshold-or-sensitivity,
+//     }
+
+//     /// The algorithm to use for outlier detection.
+//     variant algorithm {
+//         /// The DBSCAN algorithm.
+//         ///
+//         /// This algorithm is a density-based algorithm that uses a
+//         /// clustering algorithm to group together points that are
+//         /// close to each other.
+//         dbscan(dbscan-params),
+
+//         /// The MAD algorithm.
+//         ///
+//         /// This algorithm is a density-based algorithm that uses a
+//         /// clustering algorithm to group together points that are
+//         /// close to each other.
+//         mad(mad-params),
+//     }
+// }
+
+/// The outlier detector world.
+world outlier {
+    // export types;
+
+    /// Detect outliers in the input.
+    export detect: func(input: string) -> result<string, string>;
+}

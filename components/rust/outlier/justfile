@@ -1,0 +1,14 @@
+# Build the Rust code.
+build-wasm:
+    RUSTFLAGS='--cfg getrandom_backend="custom"' cargo build --target wasm32-unknown-unknown --release
+
+# Generate the Go code from the Wasm file using Gravity.
+gen-go:
+    gravity \
+        ../../../target/wasm32-unknown-unknown/release/outlier.wasm \
+        --world outlier \
+        --output outlier.go
+
+# Test the generated Go code.
+test-go:
+    go test ./...

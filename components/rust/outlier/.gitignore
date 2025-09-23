@@ -1,0 +1,4 @@
+# outlier.wasm is compiled from the Rust source.
+outlier.wasm
+# outlier.go is generated from the Wasm file.
+outlier.go
