@@ -1,0 +1,141 @@
+/// The augurs package.
+package grafana:augurs;
+
+/// Types used by the outlier detector world.
+interface types {
+    /// The input for the outlier detector.
+    ///
+    /// Currently this is represented as a string because Gravity
+    /// does not yet support more complex types.
+    ///
+    /// It should be a JSON object with the following fields:
+    record input {
+        /// The data to detect outliers in.
+        data: list<list<f64>>,
+
+        /// The algorithm to use, with the params.
+        algorithm: algorithm,
+    }
+
+    /// The output of an outlier detector
+    record output {
+        /// The indexes of the series considered outliers.
+        ///
+        /// This is a `BTreeSet` to ensure that the order of the series is preserved.
+        outlying-series: list<u32>,
+
+        /// The results of the detection for each series.
+        series-results: list<series>,
+
+        /// The band indicating the min and max value considered outlying
+        /// at each timestamp.
+        ///
+        /// This may be `None` if no cluster was found (for example if
+        /// there were fewer than 3 series in the input data in the case of
+        /// DBSCAN).
+        cluster-band: option<band>,
+    }
+
+    /// A potentially outlying series.
+    record series {
+        /// Whether the series is an outlier for at least one of the samples.
+        is-outlier: bool,
+        /// The intervals of the samples that are considered outliers.
+        outlier-intervals: list<outlier-interval>,
+        /// The outlier scores of the series for each sample.
+        ///
+        /// The higher the score, the more likely the series is an outlier.
+        /// Note that some implementations may not provide continuous scores
+        /// but rather a binary classification. In this case, the scores will
+        /// be 0.0 for non-outliers and 1.0 for outliers.
+        scores: list<f64>,
+    }
+
+    /// A single outlier interval.
+    ///
+    /// An outlier interval is a contiguous range of indices in a time series
+    /// where an outlier is detected.
+    record outlier-interval {
+        /// The start index of the interval.
+        start: u32,
+        /// The end index of the interval, if it exists.
+        ///
+        /// If the interval is open-ended, this will be `None`.
+        end: option<u32>,
+    }
+
+    /// A band indicating the min and max value considered outlying
+    /// at each timestamp.
+    record band {
+        /// The minimum value considered outlying at each timestamp.
+        min: list<f64>,
+        /// The maximum value considered outlying at each timestamp.
+        max: list<f64>,
+    }
+
+    /// Errors that can occur during outlier detection.
+    ///
+    /// Currently this is represented as a string because Gravity
+    /// does not yet support more complex types.
+    type error = string;
+
+    /// The epsilon or sensitivity parameter for the DBSCAN algorithm.
+    variant epsilon-or-sensitivity {
+        /// A scale-invariant sensitivity parameter.
+        ///
+        /// This must be in (0, 1) and will be used to estimate a sensible
+        /// value of epsilon based on the data at detection-time.
+        sensitivity(f64),
+        /// The maximum distance between points in a cluster.
+        epsilon(f64),
+    }
+
+    /// The parameters for the DBSCAN algorithm.
+    record dbscan-params {
+        /// Either the epsilon or sensitivity for the algorithm.
+        epsilon-or-sensitivity: epsilon-or-sensitivity,
+    }
+
+    /// Either a scale-invariant sensitivity parameter or a threshold.
+    variant threshold-or-sensitivity {
+        /// A scale-invariant sensitivity parameter.
+        ///
+        /// This must be in (0, 1) and will be used to estimate a sensible
+        /// threshold at detection-time.
+        sensitivity(f64),
+        /// The threshold above which points are considered anomalous.
+        threshold(f64),
+    }
+
+    /// The parameters for the MAD algorithm.
+    record mad-params {
+        /// Either the threshold or sensitivity for the algorithm.
+        threshold-or-sensitivity: threshold-or-sensitivity,
+    }
+
+    /// The algorithm to use for outlier detection.
+    variant algorithm {
+        /// The DBSCAN algorithm.
+        ///
+        /// This algorithm is a density-based algorithm that uses a
+        /// clustering algorithm to group together points that are
+        /// close to each other.
+        dbscan(dbscan-params),
+
+        /// The MAD algorithm.
+        ///
+        /// This algorithm is a density-based algorithm that uses a
+        /// clustering algorithm to group together points that are
+        /// close to each other.
+        mad(mad-params),
+    }
+}
+
+/// The outlier detector world.
+world outlier {
+    // export types;
+    use types.{input, output};
+
+    /// Detect outliers in the input.
+    export detect: func(input: input) -> result<output, string>;
+}

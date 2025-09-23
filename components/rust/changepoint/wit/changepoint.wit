@@ -1,0 +1,118 @@
+/// The augurs package.
+package grafana:augurs;
+
+/// Types used by the changepoint detector world.
+interface types {
+    /// The input to changepoint detection.
+    record input {
+        /// The data to detect changepoints in.
+        data: list<f64>,
+
+        /// The algorithm to use.
+        algorithm: algorithm,
+    }
+
+    /// The indices of the most likely changepoints.
+    type output = list<u32>;
+
+    /// The parameters for the logistic hazard function.
+    ///
+    /// Any unset parameters will use the default values.
+    record logistic-hazard {
+        /// Logit scaled, scaling factor for the logistic hazard function.
+        ///
+        /// Increasing increases hazard over the whole space; more negative numbers
+        /// result in larger run lengths.
+        ///
+        /// Defaults to -5.0.
+        h: option<f64>,
+        /// Scale term. Roughly, the slope of the logistic hazard function.
+        ///
+        /// Higher numbers increase the variance of run-lengths.
+        ///
+        /// Defaults to 1.0.
+        a: option<f64>,
+        /// Translation term (increasing moves the logistic to the left).
+        ///
+        /// Defaults to 1.0.
+        b: option<f64>,
+    }
+
+    /// The parameters for the Autoregressive Gaussian Process Changepoint Detection (Argpcp) algorithm.
+    ///
+    /// Any unset parameters will use the default values.
+    record argpcp-params {
+        /// The value of the constant kernel.
+        constant-value: option<f64>,
+        /// The length scale of the RBF kernel.
+        length-scale: option<f64>,
+        /// The noise level of the white kernel.
+        noise-level: option<f64>,
+        /// The maximum autoregressive lag.
+        max-lag: option<u32>,
+        /// The scale Gamma distribution alpha parameter.
+        alpha0: option<f64>,
+        /// The scale Gamma distribution beta parameter.
+        beta0: option<f64>,
+
+        /// The logistic hazard function parameters.
+        logistic-hazard: logistic-hazard,
+    }
+
+    /// The parameters for the Normal Gamma prior.
+    ///
+    /// Any unset parameters will use the default values.
+    record normal-gamma-params {
+        /// The prior mean.
+        ///
+        /// Defaults to 0.0.
+        mu: option<f64>,
+        /// The relative precision of μ versus data.
+        ///
+        /// Defaults to 1.0.
+        rho: option<f64>,
+        /// The mean of rho (the precision) is v/s.
+        ///
+        /// Defaults to 1.0.
+        s: option<f64>,
+        /// The degrees of freedom of precision of rho.
+        ///
+        /// Defaults to 1.0.
+        v: option<f64>,
+    }
+
+    /// The parameters for the Bayesian Online Changepoint Detection (BOCPD) algorithm.
+    ///
+    /// Any unset parameters will use the default values.
+    record bocpd-params {
+        /// The hazard lambda.
+        ///
+        /// `1/hazard` is the probability of the next step being a changepoint.
+        /// Therefore, the larger the value, the lower the prior probability
+        /// is for the any point to be a change-point.
+        /// Mean run-length is lambda - 1.
+        ///
+        /// Defaults to 250.0.
+        hazard-lambda: option<f64>,
+
+        /// The parameters of the Normal Gamma prior.
+        normal-gamma-params: option<normal-gamma-params>,
+    }
+
+    /// A changepoint detection algorithm.
+    variant algorithm {
+        /// The Autoregressive Gaussian Process Changepoint Detection (Argpcp) algorithm.
+        argpcp(argpcp-params),
+        /// The Bayesian Online Changepoint Detection (BOCPD) algorithm.
+        ///
+        /// The algorithm is created with a Normal Gamma prior. Other priors
+        /// are not yet supported.
+        bocpd(bocpd-params),
+    }
+}
+
+world changepoint {
+    use types.{input, output};
+    /// Detect changepoints in the input.
+    export detect: func(input: input) -> result<output, string>;
+}
