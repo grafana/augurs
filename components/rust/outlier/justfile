@@ -4,10 +4,7 @@ build-wasm:
 
 # Generate the Go code from the Wasm file using Gravity.
 gen-go:
-    gravity \
-        ../../../target/wasm32-unknown-unknown/release/outlier.wasm \
-        --world outlier \
-        --output outlier.go
+    go generate
 
 # Test the generated Go code.
 test-go:

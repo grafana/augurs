@@ -47,3 +47,6 @@ jobs:
 
       - name: Test Go bindings
         run: just components/rust/outlier/test-go
+
+      - name: Ensure no diffs
+        run: git diff --exit-code -- components/rust/outlier
