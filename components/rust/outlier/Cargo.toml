@@ -14,8 +14,6 @@ crate-type = ["cdylib"]
 [dependencies]
 augurs-outlier = { workspace = true, features = ["serde"] }
 getrandom = { version = "0.3" }
-serde.workspace = true
-serde_json.workspace = true
 wit-bindgen.workspace = true
 wit-component.workspace = true
 

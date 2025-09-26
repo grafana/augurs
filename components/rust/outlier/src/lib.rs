@@ -4,7 +4,6 @@ use std::fmt;
 
 use augurs_outlier::{DbscanDetector, MADDetector, OutlierDetector};
 use getrandom::Error;
-use serde::Deserialize;
 
 // It looks like some dependency or other is importing getrandom despite not actually
 // using it, so we can just provide a dummy implementation here.
@@ -22,62 +21,27 @@ mod bindings {
         default_bindings_module: "bindings",
     });
 }
-use bindings::{export, Guest};
+use bindings::{
+    augurs::outlier::types::{
+        Algorithm, Band, EpsilonOrSensitivity, Input, OutlierInterval, Output, Series,
+        ThresholdOrSensitivity,
+    },
+    export, Guest,
+};
 
 struct OutlierWorld;
 export!(OutlierWorld);
 
 impl Guest for OutlierWorld {
-    fn detect(input: String) -> Result<String, String> {
+    fn detect(input: Input) -> Result<Output, String> {
         detect(input).map_err(|e| e.to_string())
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(untagged, rename_all = "camelCase")]
-enum Algorithm {
-    Dbscan(DbscanParams),
-    Mad(MadParams),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DbscanParams {
-    epsilon_or_sensitivity: EpsilonOrSensitivity,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-enum EpsilonOrSensitivity {
-    Sensitivity(f64),
-    Epsilon(f64),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct MadParams {
-    threshold_or_sensitivity: ThresholdOrSensitivity,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-enum ThresholdOrSensitivity {
-    Sensitivity(f64),
-    Threshold(f64),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-struct Input {
-    algorithm: Algorithm,
-    data: Vec<Vec<f64>>,
-}
-
 #[derive(Debug)]
 enum TypedError {
-    InvalidInputJSON(serde_json::Error),
     InvalidSensitivity(augurs_outlier::Error),
-    InvalidOutputJSON(serde_json::Error),
+    TryFromIntError(std::num::TryFromIntError),
 }
 
 impl From<augurs_outlier::Error> for TypedError {
@@ -86,23 +50,26 @@ impl From<augurs_outlier::Error> for TypedError {
     }
 }
 
+impl From<std::num::TryFromIntError> for TypedError {
+    fn from(value: std::num::TryFromIntError) -> Self {
+        Self::TryFromIntError(value)
+    }
+}
+
 impl fmt::Display for TypedError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidInputJSON(e) => write!(f, "invalid input JSON: {}", e),
             Self::InvalidSensitivity(e) => write!(f, "invalid sensitivity: {}", e),
-            Self::InvalidOutputJSON(e) => write!(f, "invalid output JSON: {}", e),
+            Self::TryFromIntError(e) => write!(f, "overflow converting to u32: {}", e),
         }
     }
 }
 
 impl std::error::Error for TypedError {}
 
-fn detect(input: String) -> Result<String, TypedError> {
-    let Input { algorithm, data } =
-        serde_json::from_str(&input).map_err(TypedError::InvalidInputJSON)?;
-    let data_ref: Vec<_> = data.iter().map(|v| v.as_slice()).collect();
-    let output = match algorithm {
+fn detect(input: Input) -> Result<Output, TypedError> {
+    let data_ref: Vec<_> = input.data.iter().map(|v| v.as_slice()).collect();
+    let output = match input.algorithm {
         Algorithm::Dbscan(params) => {
             let detector = match params.epsilon_or_sensitivity {
                 EpsilonOrSensitivity::Sensitivity(s) => DbscanDetector::with_sensitivity(s)?,
@@ -120,5 +87,36 @@ fn detect(input: String) -> Result<String, TypedError> {
             detector.detect(&preprocessed)?
         }
     };
-    serde_json::to_string(&output).map_err(TypedError::InvalidOutputJSON)
+    Ok(Output {
+        outlying_series: output
+            .outlying_series
+            .into_iter()
+            .map(TryInto::<u32>::try_into)
+            .collect::<Result<_, _>>()?,
+        series_results: output
+            .series_results
+            .into_iter()
+            .map(|series| {
+                Ok(Series {
+                    is_outlier: series.is_outlier,
+                    outlier_intervals: series
+                        .outlier_intervals
+                        .intervals
+                        .into_iter()
+                        .map(|interval| {
+                            Ok(OutlierInterval {
+                                start: interval.start.try_into()?,
+                                end: interval.end.map(TryInto::try_into).transpose()?,
+                            })
+                        })
+                        .collect::<Result<_, TypedError>>()?,
+                    scores: series.scores,
+                })
+            })
+            .collect::<Result<_, TypedError>>()?,
+        cluster_band: output.cluster_band.map(|band| Band {
+            min: band.min,
+            max: band.max,
+        }),
+    })
 }
