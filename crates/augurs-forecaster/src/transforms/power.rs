@@ -303,7 +303,7 @@ fn yeo_johnson_log_likelihood(data: &[f64], lambda: f64) -> Result<f64, Error> {
 
     let additional_term: f64 = data
         .iter()
-        .map(|&x| (x.signum() * (x.abs() + 1.0).ln()))
+        .map(|&x| x.signum() * (x.abs() + 1.0).ln())
         .sum::<f64>()
         * (lambda - 1.0);
 
