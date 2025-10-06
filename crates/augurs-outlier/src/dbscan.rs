@@ -363,15 +363,47 @@ impl Data {
     }
 
     /// Create a `Data` struct from column-major data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `data` is empty or if all columns do not have the same length.
+    /// Use [`try_from_column_major`](Self::try_from_column_major) for a fallible version.
     #[instrument(skip(data))]
     pub fn from_column_major(data: &[&[f64]]) -> Self {
+        Self::try_from_column_major(data).expect("all columns in data must have the same length")
+    }
+
+    /// Try to create a `Data` struct from column-major data.
+    ///
+    /// Returns an error if `data` is empty or if all columns do not have the same length.
+    #[instrument(skip(data))]
+    pub fn try_from_column_major(data: &[&[f64]]) -> Result<Self, Error> {
+        if data.is_empty() {
+            return Err(Error::Preprocessing(
+                Box::<dyn std::error::Error>::from("data must not be empty").into(),
+            ));
+        }
+
+        let n_series = data[0].len();
+
+        // Validate that all columns have the same length (skip first column since it's our reference).
+        for (i, col) in data.iter().enumerate().skip(1) {
+            if col.len() != n_series {
+                return Err(Error::Preprocessing(
+                    Box::<dyn std::error::Error>::from(format!(
+                        "all columns must have the same length: column 0 has {} elements, but column {} has {} elements",
+                        n_series, i, col.len()
+                    ))
+                    .into(),
+                ));
+            }
+        }
+
         let mut sorted = Vec::with_capacity(data.len());
-        let mut n_series = 0;
         for ts in data {
             sorted.push(SortedData::new(ts.to_vec()));
-            n_series = n_series.max(ts.len());
         }
-        Self { sorted, n_series }
+        Ok(Self { sorted, n_series })
     }
 
     /// Calculate the span of the data: the difference between the highest and lowest values.
@@ -750,6 +782,44 @@ mod tests {
     fn test_from_row_major_rectangular_data_succeeds() {
         let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0, 6.0], &[7.0, 8.0, 9.0]];
         let result = Data::try_from_row_major(data);
+        assert!(result.is_ok());
+        let data_struct = result.unwrap();
+        assert_eq!(data_struct.n_series, 3);
+    }
+
+    #[test]
+    fn test_try_from_column_major_empty_data() {
+        let data: &[&[f64]] = &[];
+        let result = Data::try_from_column_major(data);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("data must not be empty"));
+    }
+
+    #[test]
+    fn test_try_from_column_major_non_rectangular_data() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0], &[7.0, 8.0, 9.0]];
+        let result = Data::try_from_column_major(data);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("all columns must have the same length"));
+        assert!(err.contains("column 0 has 3 elements"));
+        assert!(err.contains("column 1 has 2 elements"));
+    }
+
+    #[test]
+    #[should_panic(expected = "all columns in data must have the same length")]
+    fn test_from_column_major_panics_on_non_rectangular_data() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0]];
+        Data::from_column_major(data);
+    }
+
+    #[test]
+    fn test_from_column_major_rectangular_data_succeeds() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0, 6.0], &[7.0, 8.0, 9.0]];
+        let result = Data::try_from_column_major(data);
         assert!(result.is_ok());
         let data_struct = result.unwrap();
         assert_eq!(data_struct.n_series, 3);
