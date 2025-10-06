@@ -53,7 +53,7 @@ pub struct DbscanDetector {
 impl OutlierDetector for DbscanDetector {
     type PreprocessedData = Data;
     fn preprocess(&self, y: &[&[f64]]) -> Result<Self::PreprocessedData, Error> {
-        Ok(Data::from_row_major(y))
+        Data::try_from_row_major(y)
     }
 
     fn detect(&self, y: &Self::PreprocessedData) -> Result<OutlierOutput, Error> {
@@ -312,29 +312,54 @@ pub struct Data {
 
 impl Data {
     /// Create a `Data` struct from row-major data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `data` is empty or if all rows do not have the same length.
+    /// Use [`try_from_row_major`](Self::try_from_row_major) for a fallible version.
     #[instrument(skip(data))]
     pub fn from_row_major(data: &[&[f64]]) -> Self {
+        Self::try_from_row_major(data).expect("all rows in data must have the same length")
+    }
+
+    /// Try to create a `Data` struct from row-major data.
+    ///
+    /// Returns an error if `data` is empty or if all rows do not have the same length.
+    #[instrument(skip(data))]
+    pub fn try_from_row_major(data: &[&[f64]]) -> Result<Self, Error> {
+        if data.is_empty() {
+            return Err(Error::Preprocessing(
+                Box::<dyn std::error::Error>::from("data must not be empty").into(),
+            ));
+        }
+
         let n_series = data.len();
         let n_timestamps = data[0].len();
-        // First transpose the data.
+
+        // Validate that all rows have the same length (skip first row since it's our reference).
+        for (i, row) in data.iter().enumerate().skip(1) {
+            if row.len() != n_timestamps {
+                return Err(Error::Preprocessing(
+                    Box::<dyn std::error::Error>::from(format!(
+                        "all rows must have the same length: row 0 has {} elements, but row {} has {} elements",
+                        n_timestamps, i, row.len()
+                    ))
+                    .into(),
+                ));
+            }
+        }
+
+        // Transpose the data.
         let mut transposed = vec![vec![f64::NAN; n_series]; n_timestamps];
         data.iter().enumerate().for_each(|(i, chunk)| {
             chunk.iter().enumerate().for_each(|(j, value)| {
                 transposed[j][i] = *value;
             })
         });
-        // Check that the transposition worked.
-        debug_assert_eq!(transposed.len(), n_timestamps);
-        #[cfg(debug_assertions)]
-        transposed.iter().for_each(|row| {
-            debug_assert_eq!(row.len(), n_series);
-        });
-        transposed.iter().for_each(|row| {
-            debug_assert_eq!(row.len(), n_series);
-        });
+
         // Then sort values at each timestamp.
         let sorted = transposed.into_iter().map(SortedData::new).collect();
-        Self { sorted, n_series }
+        Ok(Self { sorted, n_series })
     }
 
     /// Create a `Data` struct from column-major data.
@@ -690,5 +715,43 @@ mod tests {
         let processed = dbscan.preprocess(data).unwrap();
         let results = dbscan.detect(&processed).unwrap();
         assert!(results.cluster_band.is_none());
+    }
+
+    #[test]
+    fn test_try_from_row_major_empty_data() {
+        let data: &[&[f64]] = &[];
+        let result = Data::try_from_row_major(data);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("data must not be empty"));
+    }
+
+    #[test]
+    fn test_try_from_row_major_non_rectangular_data() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0], &[7.0, 8.0, 9.0]];
+        let result = Data::try_from_row_major(data);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("all rows must have the same length"));
+        assert!(err.contains("row 0 has 3 elements"));
+        assert!(err.contains("row 1 has 2 elements"));
+    }
+
+    #[test]
+    #[should_panic(expected = "all rows in data must have the same length")]
+    fn test_from_row_major_panics_on_non_rectangular_data() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0]];
+        Data::from_row_major(data);
+    }
+
+    #[test]
+    fn test_from_row_major_rectangular_data_succeeds() {
+        let data: &[&[f64]] = &[&[1.0, 2.0, 3.0], &[4.0, 5.0, 6.0], &[7.0, 8.0, 9.0]];
+        let result = Data::try_from_row_major(data);
+        assert!(result.is_ok());
+        let data_struct = result.unwrap();
+        assert_eq!(data_struct.n_series, 3);
     }
 }
