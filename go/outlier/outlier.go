@@ -60,8 +60,6 @@ type Band struct {
 // The output of an outlier detector
 type Output struct {
 	// The indexes of the series considered outliers.
-	//
-	// This is a `BTreeSet` to ensure that the order of the series is preserved.
 	OutlyingSeries []uint32
 
 	// The results of the detection for each series.
