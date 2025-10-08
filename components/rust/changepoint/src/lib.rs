@@ -56,7 +56,7 @@ impl fmt::Display for ChangepointError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NormalGammaError(e) => write!(f, "invalid Normal Gamma distribution: {}", e),
-            Self::TryFromIntError(e) => write!(f, "overflow converting to u32: {}", e),
+            Self::TryFromIntError(e) => write!(f, "overflow converting to usize: {}", e),
             Self::InvalidMaxLag(ml) => write!(f, "invalid max lag: {}", ml),
         }
     }
