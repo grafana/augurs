@@ -1,0 +1,12 @@
+build-wasm:
+    RUSTFLAGS='--cfg getrandom_backend="custom"' cargo build \
+        --target wasm32-unknown-unknown \
+        --release \
+        -p augurs-outlier-component \
+        -p augurs-changepoint-component
+
+generate: build-wasm
+    go generate ./...
+
+test:
+    go test -v ./...

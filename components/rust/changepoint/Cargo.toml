@@ -1,0 +1,21 @@
+[package]
+name = "augurs-changepoint-component"
+license.workspace = true
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+augurs-changepoint.workspace = true
+wit-bindgen.workspace = true
+wit-component.workspace = true
+
+[lints]
+workspace = true

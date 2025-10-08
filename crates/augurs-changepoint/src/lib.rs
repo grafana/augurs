@@ -162,6 +162,54 @@ impl DefaultArgpcpDetectorBuilder {
         self.constant_value = cv;
         self
     }
+
+    /// Set the length scale of the RBF kernel.
+    pub fn length_scale(mut self, ls: f64) -> Self {
+        self.length_scale = ls;
+        self
+    }
+
+    /// Set the noise level of the white kernel.
+    pub fn noise_level(mut self, nl: f64) -> Self {
+        self.noise_level = nl;
+        self
+    }
+
+    /// Set the maximum autoregressive lag.
+    pub fn max_lag(mut self, ml: NonZeroUsize) -> Self {
+        self.max_lag = ml;
+        self
+    }
+
+    /// Set the scale Gamma distribution alpha parameter.
+    pub fn alpha0(mut self, a0: f64) -> Self {
+        self.alpha0 = a0;
+        self
+    }
+
+    /// Set the scale Gamma distribution beta parameter.
+    pub fn beta0(mut self, b0: f64) -> Self {
+        self.beta0 = b0;
+        self
+    }
+
+    /// Set the logistic hazard function parameters.
+    pub fn logistic_hazard_h(mut self, h: f64) -> Self {
+        self.logistic_hazard_h = h;
+        self
+    }
+
+    /// Set the logistic hazard function parameters.
+    pub fn logistic_hazard_a(mut self, a: f64) -> Self {
+        self.logistic_hazard_a = a;
+        self
+    }
+
+    /// Set the logistic hazard function parameters.
+    pub fn logistic_hazard_b(mut self, b: f64) -> Self {
+        self.logistic_hazard_b = b;
+        self
+    }
 }
 
 impl Default for DefaultArgpcpDetectorBuilder {

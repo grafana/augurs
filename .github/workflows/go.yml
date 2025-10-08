@@ -1,0 +1,52 @@
+name: Go
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
+
+jobs:
+  go-bindings:
+    name: Go bindings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        with:
+          channel: nightly-2025-09-21
+          targets: x86_64-unknown-linux-gnu,wasm32-unknown-unknown
+          bins: just
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Go toolchain
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version: "1.25"
+          cache-dependency-path: go/go.sum
+
+      - name: Install gravity
+        # Use a custom fork of gravity with a bunch of extra features.
+        run: cargo install --git https://github.com/sd2k/gravity --rev 20dee8fd100bb70274c7c05f37cc8bde1059bae0
+
+      - name: Build Wasm components
+        run: just go/build-wasm
+
+      - name: Generate Go bindings
+        run: just go/generate
+
+      - name: Test Go bindings
+        run: just go/test
+
+      - name: Ensure no diffs
+        run: git diff --exit-code -- ./go/*/*.go

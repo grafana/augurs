@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "components/rust/*",
   "crates/*",
   "examples/*",
   "js/*",
@@ -56,9 +57,9 @@ rand = "0.9.0"
 rand_distr = "0.5.1"
 roots = "0.0.8"
 serde = { version = "1.0.166", features = ["derive"] }
-statrs = "0.18.0"
 serde_json = "1.0.128"
 serde-wasm-bindgen = "0.6.0"
+statrs = "0.18.0"
 thiserror = "2.0.3"
 tinyvec = "1.6.0"
 tracing = "0.1.40"
@@ -97,8 +98,9 @@ debug = true
 
 [patch.crates-io]
 # rand 0.9 merged into main, waiting for a new release.
-argmin = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
-argmin-math = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
+# meanwhile, had to fork to add a feature flag for timers
+argmin = { git = "https://github.com/sd2k/argmin", branch = "timer-feature" }
+argmin-math = { git = "https://github.com/sd2k/argmin", branch = "timer-feature" }
 
 # Depends on rv PR and release (see below).
 changepoint = { git = "https://github.com/sd2k/changepoint", branch = "patched-deps-to-bump-rand" }

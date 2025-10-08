@@ -102,7 +102,6 @@ impl ChangepointDetector {
 }
 
 /// Parameters for the Normal Gamma prior.
-/// Options for the ETS MSTL model.
 #[derive(Debug, Deserialize, Serialize, Tsify)]
 #[serde(rename_all = "camelCase")]
 #[tsify(from_wasm_abi, into_wasm_abi)]
