@@ -4,11 +4,8 @@ package grafana:augurs;
 /// Types used by the outlier detector world.
 interface types {
     /// The input for the outlier detector.
-    ///
-    /// Currently this is represented as a string because Gravity
-    /// does not yet support more complex types.
-    ///
-    /// It should be a JSON object with the following fields:
+    /// The data is provided as a nested list of f64 values
+    /// (array of arrays of numbers).
     record input {
         /// The data to detect outliers in.
         data: list<list<f64>>,
