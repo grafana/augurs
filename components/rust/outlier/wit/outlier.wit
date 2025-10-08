@@ -68,12 +68,6 @@ interface types {
         max: list<f64>,
     }
 
-    /// Errors that can occur during outlier detection.
-    ///
-    /// Currently this is represented as a string because Gravity
-    /// does not yet support more complex types.
-    type error = string;
-
     /// The epsilon or sensitivity parameter for the DBSCAN algorithm.
     variant epsilon-or-sensitivity {
         /// A scale-invariant sensitivity parameter.

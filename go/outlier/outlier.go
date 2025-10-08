@@ -74,12 +74,6 @@ type Output struct {
 	ClusterBand *Band
 }
 
-// Errors that can occur during outlier detection.
-//
-// Currently this is represented as a string because Gravity
-// does not yet support more complex types.
-type Error = string
-
 // The epsilon or sensitivity parameter for the DBSCAN algorithm.
 type EpsilonOrSensitivity interface {
 	isEpsilonOrSensitivity()
@@ -139,18 +133,18 @@ func (AlgorithmDbscan) isAlgorithm() {}
 
 // The MAD algorithm.
 //
-// This algorithm is a density-based algorithm that uses a
-// clustering algorithm to group together points that are
-// close to each other.
+// This algorithm implements Median Absolute Deviation thresholding.
+// It computes the median of the data, measures the absolute deviations
+// from the median, and flags points beyond a configurable threshold
+// (sensitivity) as outliers. MAD is robust to outliers in the data.
+// The threshold parameter controls strictness: higher values detect
+// fewer outliers, while lower values detect more.
 type AlgorithmMad MadParams
 func (AlgorithmMad) isAlgorithm() {}
 
 // The input for the outlier detector.
-//
-// Currently this is represented as a string because Gravity
-// does not yet support more complex types.
-//
-// It should be a JSON object with the following fields:
+// The data is provided as a nested list of f64 values
+// (array of arrays of numbers).
 type Input struct {
 	// The data to detect outliers in.
 	Data [][]float64
@@ -243,7 +237,7 @@ func (i *OutlierInstance) Detect(
 ) (Output, error) {
 	arg0 := input
 	// GetArg { nth: 0 }
-	// RecordLower { record: Record { fields: [Field { name: "data", ty: Id(Id { idx: 16 }), docs: Docs { contents: Some("The data to detect outliers in.") } }, Field { name: "algorithm", ty: Id(Id { idx: 15 }), docs: Docs { contents: Some("The algorithm to use, with the params.") } }] }, name: "input", ty: Id { idx: 17 } }
+	// RecordLower { record: Record { fields: [Field { name: "data", ty: Id(Id { idx: 15 }), docs: Docs { contents: Some("The data to detect outliers in.") } }, Field { name: "algorithm", ty: Id(Id { idx: 14 }), docs: Docs { contents: Some("The algorithm to use, with the params.") } }] }, name: "input", ty: Id { idx: 16 } }
 	data0 := arg0.Data
 	algorithm0 := arg0.Algorithm
 	// ListLower { element: Id(Id { idx: 3 }), realloc: Some("cabi_realloc") }
@@ -284,7 +278,7 @@ func (i *OutlierInstance) Detect(
 		// PointerStore { offset: 0 }
 		i.module.Memory().WriteUint32Le(uint32(base+0), uint32(ptr2))
 	}
-	// VariantLower { variant: Variant { cases: [Case { name: "dbscan", ty: Some(Id(Id { idx: 12 })), docs: Docs { contents: Some("The DBSCAN algorithm.\n\nThis algorithm is a density-based algorithm that uses a\nclustering algorithm to group together points that are\nclose to each other.") } }, Case { name: "mad", ty: Some(Id(Id { idx: 14 })), docs: Docs { contents: Some("The MAD algorithm.\n\nThis algorithm is a density-based algorithm that uses a\nclustering algorithm to group together points that are\nclose to each other.") } }] }, name: "algorithm", ty: Id { idx: 15 }, results: [I32, I32, F64] }
+	// VariantLower { variant: Variant { cases: [Case { name: "dbscan", ty: Some(Id(Id { idx: 11 })), docs: Docs { contents: Some("The DBSCAN algorithm.\n\nThis algorithm is a density-based algorithm that uses a\nclustering algorithm to group together points that are\nclose to each other.") } }, Case { name: "mad", ty: Some(Id(Id { idx: 13 })), docs: Docs { contents: Some("The MAD algorithm.\n\nThis algorithm implements Median Absolute Deviation thresholding.\nIt computes the median of the data, measures the absolute deviations\nfrom the median, and flags points beyond a configurable threshold\n(sensitivity) as outliers. MAD is robust to outliers in the data.\nThe threshold parameter controls strictness: higher values detect\nfewer outliers, while lower values detect more.") } }] }, name: "algorithm", ty: Id { idx: 14 }, results: [I32, I32, F64] }
 	var variant12_0 uint64
 	var variant12_1 uint64
 	var variant12_2 uint64
@@ -292,9 +286,9 @@ func (i *OutlierInstance) Detect(
 		case AlgorithmDbscan:
 			// VariantPayloadName
 			// I32Const { val: 0 }
-			// RecordLower { record: Record { fields: [Field { name: "epsilon-or-sensitivity", ty: Id(Id { idx: 11 }), docs: Docs { contents: Some("Either the epsilon or sensitivity for the algorithm.") } }] }, name: "dbscan-params", ty: Id { idx: 12 } }
+			// RecordLower { record: Record { fields: [Field { name: "epsilon-or-sensitivity", ty: Id(Id { idx: 10 }), docs: Docs { contents: Some("Either the epsilon or sensitivity for the algorithm.") } }] }, name: "dbscan-params", ty: Id { idx: 11 } }
 			epsilonOrSensitivity4 := variantPayload.EpsilonOrSensitivity
-			// VariantLower { variant: Variant { cases: [Case { name: "sensitivity", ty: Some(F64), docs: Docs { contents: Some("A scale-invariant sensitivity parameter.\n\nThis must be in (0, 1) and will be used to estimate a sensible\nvalue of epsilon based on the data at detection-time.") } }, Case { name: "epsilon", ty: Some(F64), docs: Docs { contents: Some("The maximum distance between points in a cluster.") } }] }, name: "epsilon-or-sensitivity", ty: Id { idx: 11 }, results: [I32, F64] }
+			// VariantLower { variant: Variant { cases: [Case { name: "sensitivity", ty: Some(F64), docs: Docs { contents: Some("A scale-invariant sensitivity parameter.\n\nThis must be in (0, 1) and will be used to estimate a sensible\nvalue of epsilon based on the data at detection-time.") } }, Case { name: "epsilon", ty: Some(F64), docs: Docs { contents: Some("The maximum distance between points in a cluster.") } }] }, name: "epsilon-or-sensitivity", ty: Id { idx: 10 }, results: [I32, F64] }
 			var variant7_0 uint64
 			var variant7_1 uint64
 			switch variantPayload := epsilonOrSensitivity4.(type) {
@@ -322,9 +316,9 @@ func (i *OutlierInstance) Detect(
 		case AlgorithmMad:
 			// VariantPayloadName
 			// I32Const { val: 1 }
-			// RecordLower { record: Record { fields: [Field { name: "threshold-or-sensitivity", ty: Id(Id { idx: 13 }), docs: Docs { contents: Some("Either the threshold or sensitivity for the algorithm.") } }] }, name: "mad-params", ty: Id { idx: 14 } }
+			// RecordLower { record: Record { fields: [Field { name: "threshold-or-sensitivity", ty: Id(Id { idx: 12 }), docs: Docs { contents: Some("Either the threshold or sensitivity for the algorithm.") } }] }, name: "mad-params", ty: Id { idx: 13 } }
 			thresholdOrSensitivity8 := variantPayload.ThresholdOrSensitivity
-			// VariantLower { variant: Variant { cases: [Case { name: "sensitivity", ty: Some(F64), docs: Docs { contents: Some("A scale-invariant sensitivity parameter.\n\nThis must be in (0, 1) and will be used to estimate a sensible\nthreshold at detection-time.") } }, Case { name: "threshold", ty: Some(F64), docs: Docs { contents: Some("The threshold above which points are considered anomalous.") } }] }, name: "threshold-or-sensitivity", ty: Id { idx: 13 }, results: [I32, F64] }
+			// VariantLower { variant: Variant { cases: [Case { name: "sensitivity", ty: Some(F64), docs: Docs { contents: Some("A scale-invariant sensitivity parameter.\n\nThis must be in (0, 1) and will be used to estimate a sensible\nthreshold at detection-time.") } }, Case { name: "threshold", ty: Some(F64), docs: Docs { contents: Some("The threshold above which points are considered anomalous.") } }] }, name: "threshold-or-sensitivity", ty: Id { idx: 12 }, results: [I32, F64] }
 			var variant11_0 uint64
 			var variant11_1 uint64
 			switch variantPayload := thresholdOrSensitivity8.(type) {
@@ -379,7 +373,7 @@ func (i *OutlierInstance) Detect(
 		var default14 Output
 		return default14, errors.New("failed to read byte from memory")
 	}
-	// ResultLift { result: Result_ { ok: Some(Id(Id { idx: 19 })), err: Some(String) }, ty: Id { idx: 20 } }
+	// ResultLift { result: Result_ { ok: Some(Id(Id { idx: 18 })), err: Some(String) }, ty: Id { idx: 19 } }
 	var value58 Output
 	var err58 error
 	switch value14 {
@@ -618,7 +612,7 @@ func (i *OutlierInstance) Detect(
 			ok53 = true
 			result53 = value52
 		}
-		// RecordLift { record: Record { fields: [Field { name: "outlying-series", ty: Id(Id { idx: 6 }), docs: Docs { contents: Some("The indexes of the series considered outliers.\n\nThis is a `BTreeSet` to ensure that the order of the series is preserved.") } }, Field { name: "series-results", ty: Id(Id { idx: 7 }), docs: Docs { contents: Some("The results of the detection for each series.") } }, Field { name: "cluster-band", ty: Id(Id { idx: 8 }), docs: Docs { contents: Some("The band indicating the min and max value considered outlying\nat each timestamp.\n\nThis may be `None` if no cluster was found (for example if\nthere were fewer than 3 series in the input data in the case of\nDBSCAN).") } }] }, name: "output", ty: Id { idx: 9 } }
+		// RecordLift { record: Record { fields: [Field { name: "outlying-series", ty: Id(Id { idx: 6 }), docs: Docs { contents: Some("The indexes of the series considered outliers.") } }, Field { name: "series-results", ty: Id(Id { idx: 7 }), docs: Docs { contents: Some("The results of the detection for each series.") } }, Field { name: "cluster-band", ty: Id(Id { idx: 8 }), docs: Docs { contents: Some("The band indicating the min and max value considered outlying\nat each timestamp.\n\nThis may be `None` if no cluster was found (for example if\nthere were fewer than 3 series in the input data in the case of\nDBSCAN).") } }] }, name: "output", ty: Id { idx: 9 } }
 		var ptr54x2 *Band
 		if ok53 {
 			ptr54x2 = &result53
@@ -656,6 +650,6 @@ func (i *OutlierInstance) Detect(
 		err58 = errors.New("invalid variant discriminant for expected")
 	}
 	// Flush { amt: 1 }
-	// Return { amt: 1, func: Function { name: "detect", kind: Freestanding, params: [("input", Id(Id { idx: 18 }))], result: Some(Id(Id { idx: 20 })), docs: Docs { contents: Some("Detect outliers in the input.") }, stability: Unknown } }
+	// Return { amt: 1, func: Function { name: "detect", kind: Freestanding, params: [("input", Id(Id { idx: 17 }))], result: Some(Id(Id { idx: 19 })), docs: Docs { contents: Some("Detect outliers in the input.") }, stability: Unknown } }
 	return value58, err58
 }
