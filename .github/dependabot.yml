@@ -17,6 +17,10 @@ updates:
     # Check for updates every Monday
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
   - package-ecosystem: "npm"
     directory: "/js/testpkg"
     schedule:
