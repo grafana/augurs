@@ -21,7 +21,7 @@ test = false
 argmin = { workspace = true, features = ["wasm-bindgen"] }
 augurs-core-js.workspace = true
 augurs-forecaster.workspace = true
-getrandom.workspace = true
+getrandom = { workspace = true, features = ["wasm_js"] }
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 tsify-next.workspace = true

@@ -8,7 +8,7 @@ use changepoint::{
         process::gaussian::kernel::{
             AddKernel, ConstantKernel, Kernel, ProductKernel, RBFKernel, WhiteKernel,
         },
-        traits::{ConjugatePrior, HasSuffStat, Rv},
+        traits::{ConjugatePrior, HasDensity, HasSuffStat, Rv},
     },
     utils::map_changepoints,
     Argpcp, BocpdLike, BocpdTruncated,
@@ -32,7 +32,7 @@ pub trait Detector {
 pub struct BocpdDetector<Dist, Prior>
 where
     Dist: Rv<f64> + HasSuffStat<f64>,
-    Prior: ConjugatePrior<f64, Dist> + Clone,
+    Prior: ConjugatePrior<f64, Dist> + HasDensity<Dist> + Clone,
     Dist::Stat: Clone + fmt::Debug,
 {
     detector: BocpdTruncated<f64, Dist, Prior>,
@@ -41,7 +41,7 @@ where
 impl<Dist, Prior> Detector for BocpdDetector<Dist, Prior>
 where
     Dist: Rv<f64> + HasSuffStat<f64>,
-    Prior: ConjugatePrior<f64, Dist, Posterior = Prior> + Clone,
+    Prior: ConjugatePrior<f64, Dist, Posterior = Prior> + HasDensity<Dist> + Clone,
     Dist::Stat: Clone + fmt::Debug,
 {
     fn detect_changepoints(&mut self, y: &[f64]) -> Vec<usize> {
