@@ -46,6 +46,7 @@ augurs-core-js = { path = "js/augurs-core-js" }
 anyhow = "1.0.89"
 argmin = "0.11.0"
 bytemuck = "1.18.0"
+changepoint = "0.15.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
 getrandom = "0.3"
@@ -55,6 +56,7 @@ num-traits = "0.2.19"
 rand = "0.9.0"
 rand_distr = "0.5.1"
 roots = "0.0.8"
+rv = { version = "0.19.0", default-features = false }
 serde = { version = "1.0.166", features = ["derive"] }
 statrs = "0.18.0"
 serde_json = "1.0.128"
@@ -96,15 +98,6 @@ inherits = "release"
 debug = true
 
 [patch.crates-io]
-# rand 0.9 merged into main, waiting for a new release.
-argmin = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
-argmin-math = { git = "https://github.com/argmin-rs/argmin", branch = "main" }
-
-# Depends on rv PR and release (see below).
-changepoint = { git = "https://github.com/sd2k/changepoint", branch = "patched-deps-to-bump-rand" }
-# See PR at https://github.com/promised-ai/rv/pull/48.
-rv = { git = "https://github.com/sd2k/rv", branch = "bump-rand-dependency" }
-
 # See PR at https://github.com/statrs-dev/statrs/pull/331.
 statrs = { git = "https://github.com/RobertJacobsonCDC/statrs", branch = "update_rand_to_09" }
 
