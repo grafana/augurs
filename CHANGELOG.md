@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-prophet` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.1...augurs-prophet-v0.10.2) - 2025-10-21
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-outlier` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.1...augurs-outlier-v0.10.2) - 2025-10-21
+
+### Fixed
+- assert that data is rectangular in DBSCAN preprocessing ([#366](https://github.com/grafana/augurs/pull/366))
+
+## `augurs-forecaster` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.10.1...augurs-forecaster-v0.10.2) - 2025-10-21
+
+### Other
+- fix clippy lint for unnecessary parens ([#365](https://github.com/grafana/augurs/pull/365))
+
 ## `augurs-seasons` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.0...augurs-seasons-v0.10.1) - 2025-09-08
 
 ### Fixed
