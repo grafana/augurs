@@ -92,9 +92,9 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: windows-latest
+          - runner: windows-2022
             target: x64
-          - runner: windows-latest
+          - runner: windows-2022
             target: x86
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
