@@ -20,7 +20,7 @@ test = false
 [dependencies]
 augurs-core-js.workspace = true
 augurs-clustering.workspace = true
-getrandom.workspace = true
+getrandom = { workspace = true, features = ["wasm_js"] }
 js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
