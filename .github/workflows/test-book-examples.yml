@@ -38,64 +38,45 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: js/package-lock.json
 
       # Set up Python
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
-      # Install augurs packages
-      - name: Install augurs for JavaScript
+      # Build augurs packages
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Build augurs JavaScript packages
         run: |
           cd js
-          npm ci || npm install
+          just build
         continue-on-error: true
 
-      - name: Install augurs for Python
+      - name: Build augurs for Python
         run: |
-          pip install maturin numpy
           cd crates/pyaugurs
-          maturin develop
+          python -m venv .venv
+          .venv/bin/pip install maturin numpy
+          .venv/bin/maturin develop --release
         continue-on-error: true
 
-      # Make scripts executable
-      - name: Make test scripts executable
-        run: |
-          chmod +x book/scripts/test-examples.js
-          chmod +x book/scripts/test_examples.py
-
-      # Run Python test script (preferred)
+      # Run test script
       - name: Test examples with Python script
-        id: test_python_script
         run: |
           cd book
           python3 scripts/test_examples.py
-        continue-on-error: true
-
-      # Run Node.js test script (alternative)
-      - name: Test examples with Node.js script
-        id: test_node_script
-        if: steps.test_python_script.outcome == 'failure'
-        run: |
-          cd book
-          node scripts/test-examples.js
-        continue-on-error: true
-
-      # Report results
-      - name: Check test results
-        run: |
-          if [ "${{ steps.test_python_script.outcome }}" == "success" ] || [ "${{ steps.test_node_script.outcome }}" == "success" ]; then
-            echo "✓ Documentation examples tests passed"
-            exit 0
-          else
-            echo "✗ Documentation examples tests failed"
-            exit 1
-          fi
 
       # Upload artifacts on failure
       - name: Upload test artifacts
@@ -179,7 +160,7 @@ jobs:
       - name: Install Python for test script
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Extract and test Rust examples
         run: |
@@ -223,7 +204,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install augurs for JavaScript
         run: |
@@ -234,7 +215,7 @@ jobs:
       - name: Install Python for test script
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Extract and test JavaScript examples
         run: |
@@ -278,7 +259,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install augurs for Python
         run: |
