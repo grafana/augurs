@@ -1,0 +1,319 @@
+name: Test Book Examples
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'book/src/**/*.md'
+      - 'book/scripts/**'
+      - '.github/workflows/test-book-examples.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'book/src/**/*.md'
+      - 'book/scripts/**'
+      - '.github/workflows/test-book-examples.yml'
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  test-examples:
+    name: Test Documentation Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Rust
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      # Set up Node.js
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: js/package-lock.json
+
+      # Set up Python
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # Install augurs packages
+      - name: Install augurs for JavaScript
+        run: |
+          cd js
+          npm ci || npm install
+        continue-on-error: true
+
+      - name: Install augurs for Python
+        run: |
+          pip install maturin numpy
+          cd crates/pyaugurs
+          maturin develop
+        continue-on-error: true
+
+      # Make scripts executable
+      - name: Make test scripts executable
+        run: |
+          chmod +x book/scripts/test-examples.js
+          chmod +x book/scripts/test_examples.py
+
+      # Run Python test script (preferred)
+      - name: Test examples with Python script
+        id: test_python_script
+        run: |
+          cd book
+          python3 scripts/test_examples.py
+        continue-on-error: true
+
+      # Run Node.js test script (alternative)
+      - name: Test examples with Node.js script
+        id: test_node_script
+        if: steps.test_python_script.outcome == 'failure'
+        run: |
+          cd book
+          node scripts/test-examples.js
+        continue-on-error: true
+
+      # Report results
+      - name: Check test results
+        run: |
+          if [ "${{ steps.test_python_script.outcome }}" == "success" ] || [ "${{ steps.test_node_script.outcome }}" == "success" ]; then
+            echo "✓ Documentation examples tests passed"
+            exit 0
+          else
+            echo "✗ Documentation examples tests failed"
+            exit 1
+          fi
+
+      # Upload artifacts on failure
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-examples-output
+          path: book/.test-examples/
+          retention-days: 7
+
+  # Optional: Check that examples are present in docs
+  verify-coverage:
+    name: Verify Example Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for code examples in key files
+        run: |
+          echo "Checking for code examples in documentation..."
+
+          # Files that should have code examples
+          FILES=(
+            "book/src/getting-started/installation.md"
+            "book/src/getting-started/quick-start.md"
+          )
+
+          MISSING=0
+
+          for file in "${FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "⚠ File not found: $file"
+              continue
+            fi
+
+            # Check for langtabs sections
+            if ! grep -q "<!-- langtabs-start -->" "$file"; then
+              echo "✗ Missing langtabs in: $file"
+              MISSING=$((MISSING + 1))
+            else
+              # Count code blocks
+              RUST_COUNT=$(grep -c '```rust' "$file" || true)
+              JS_COUNT=$(grep -c '```javascript' "$file" || true)
+              PY_COUNT=$(grep -c '```python' "$file" || true)
+
+              echo "✓ $file has examples:"
+              echo "  - Rust: $RUST_COUNT"
+              echo "  - JavaScript: $JS_COUNT"
+              echo "  - Python: $PY_COUNT"
+
+              # Warn if languages are imbalanced
+              if [ $RUST_COUNT -gt 0 ] && [ $JS_COUNT -eq 0 ]; then
+                echo "  ⚠ Missing JavaScript examples"
+              fi
+              if [ $RUST_COUNT -gt 0 ] && [ $PY_COUNT -eq 0 ]; then
+                echo "  ⚠ Missing Python examples"
+              fi
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo ""
+            echo "Some key documentation files are missing code examples."
+            echo "This is a warning, not a failure."
+          fi
+
+  # Optional: Test specific language examples separately for better debugging
+  test-rust-examples:
+    name: Test Rust Examples Only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python for test script
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Extract and test Rust examples
+        run: |
+          cd book
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'scripts')
+          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
+          from pathlib import Path
+
+          book_src = Path('src')
+          blocks = []
+          for md_file in find_markdown_files(book_src):
+              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('rust', 'rs')])
+
+          print(f'Found {len(blocks)} Rust code blocks')
+
+          from tempfile import TemporaryDirectory
+          with TemporaryDirectory() as td:
+              temp_dir = Path(td)
+              (temp_dir / 'rust').mkdir()
+              temp_dirs = {'rust': temp_dir / 'rust'}
+
+              failed = 0
+              for i, block in enumerate(blocks):
+                  result = test_code_block(block, temp_dirs, i)
+                  if result.success is False:
+                      failed += 1
+
+              sys.exit(1 if failed > 0 else 0)
+          "
+
+  test-js-examples:
+    name: Test JavaScript Examples Only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install augurs for JavaScript
+        run: |
+          cd js
+          npm ci || npm install
+        continue-on-error: true
+
+      - name: Install Python for test script
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Extract and test JavaScript examples
+        run: |
+          cd book
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'scripts')
+          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
+          from pathlib import Path
+
+          book_src = Path('src')
+          blocks = []
+          for md_file in find_markdown_files(book_src):
+              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('javascript', 'js')])
+
+          print(f'Found {len(blocks)} JavaScript code blocks')
+
+          from tempfile import TemporaryDirectory
+          with TemporaryDirectory() as td:
+              temp_dir = Path(td)
+              (temp_dir / 'js').mkdir()
+              temp_dirs = {'js': temp_dir / 'js'}
+
+              failed = 0
+              for i, block in enumerate(blocks):
+                  result = test_code_block(block, temp_dirs, i)
+                  if result.success is False:
+                      failed += 1
+
+              sys.exit(1 if failed > 0 else 0)
+          "
+
+  test-python-examples:
+    name: Test Python Examples Only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install augurs for Python
+        run: |
+          pip install maturin numpy
+          cd crates/pyaugurs
+          maturin develop
+        continue-on-error: true
+
+      - name: Extract and test Python examples
+        run: |
+          cd book
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'scripts')
+          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
+          from pathlib import Path
+
+          book_src = Path('src')
+          blocks = []
+          for md_file in find_markdown_files(book_src):
+              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('python', 'py')])
+
+          print(f'Found {len(blocks)} Python code blocks')
+
+          from tempfile import TemporaryDirectory
+          with TemporaryDirectory() as td:
+              temp_dir = Path(td)
+              (temp_dir / 'python').mkdir()
+              temp_dirs = {'python': temp_dir / 'python'}
+
+              failed = 0
+              for i, block in enumerate(blocks):
+                  result = test_code_block(block, temp_dirs, i)
+                  if result.success is False:
+                      failed += 1
+
+              sys.exit(1 if failed > 0 else 0)
+          "
