@@ -43,7 +43,7 @@ impl TryFrom<InputDistanceMatrix<'_>> for augurs_core::DistanceMatrix {
 
 /// Dbscan clustering.
 ///
-/// :param eps: the maximum distance between two samples for one to be considered as in the
+/// :param epsilon: the maximum distance between two samples for one to be considered as in the
 ///     neighborhood of the other.
 /// :param min_cluster_size: the number of samples in a neighborhood for a point to be considered as a core
 ///     point.
@@ -57,16 +57,16 @@ pub struct Dbscan {
 impl Dbscan {
     fn __repr__(&self) -> String {
         format!(
-            "Dbscan(eps={}, min_cluster_size={})",
+            "Dbscan(epsilon={}, min_cluster_size={})",
             self.inner.epsilon(),
             self.inner.min_cluster_size(),
         )
     }
 
     #[new]
-    fn new(eps: f64, min_cluster_size: usize) -> Dbscan {
+    fn new(epsilon: f64, min_cluster_size: usize) -> Dbscan {
         Dbscan {
-            inner: augurs_clustering::DbscanClusterer::new(eps, min_cluster_size),
+            inner: augurs_clustering::DbscanClusterer::new(epsilon, min_cluster_size),
         }
     }
 

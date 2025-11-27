@@ -49,9 +49,11 @@ impl AutoETS {
     /// If no model can be found, or if any parameters are invalid, this function
     /// returns an error.
     pub fn fit(&mut self, y: PyReadonlyArrayDyn<'_, f64>) -> PyResult<()> {
-        self.inner
+        let fitted = self
+            .inner
             .fit(y.as_slice()?)
             .map_err(|e| PyException::new_err(e.to_string()))?;
+        self.fitted = Some(fitted);
         Ok(())
     }
 
@@ -65,6 +67,9 @@ impl AutoETS {
     /// This function will return an error if no model has been fit yet (using [`AutoETS::fit`]).
     #[pyo3(signature = (horizon, level=None))]
     pub fn predict(&self, horizon: usize, level: Option<f64>) -> PyResult<Forecast> {
+        if horizon == 0 {
+            return Err(PyException::new_err("horizon must be greater than 0"));
+        }
         self.fitted
             .as_ref()
             .ok_or_else(|| PyException::new_err("model not fit yet"))?

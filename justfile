@@ -53,6 +53,14 @@ doctest:
 doc:
   cargo doc --all-features --workspace --exclude *-js --exclude pyaugurs --open
 
+# Build the Python package
+build-pyaugurs:
+  cd crates/pyaugurs && uv pip install -e . --force-reinstall --no-deps
+
+# Run Python tests
+test-pyaugurs: build-pyaugurs
+  cd crates/pyaugurs && uv run pytest tests/ -v
+
 watch:
   bacon
 
