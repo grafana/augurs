@@ -41,7 +41,7 @@ class TestDbscan:
 
     def test_instantiation(self):
         """Test that Dbscan can be instantiated with valid parameters."""
-        clusterer = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=2)
         assert clusterer is not None
         assert isinstance(clusterer, Dbscan)
 
@@ -54,12 +54,12 @@ class TestDbscan:
             (2.0, 5),
         ]
         for eps, min_size in params:
-            clusterer = Dbscan(eps=eps, min_cluster_size=min_size)
+            clusterer = Dbscan(epsilon=eps, min_cluster_size=min_size)
             assert clusterer is not None
 
     def test_repr(self):
         """Test string representation of Dbscan."""
-        clusterer = Dbscan(eps=1.5, min_cluster_size=3)
+        clusterer = Dbscan(epsilon=1.5, min_cluster_size=3)
         repr_str = repr(clusterer)
         assert "Dbscan" in repr_str
         assert "1.5" in repr_str
@@ -67,7 +67,7 @@ class TestDbscan:
 
     def test_fit_with_list_of_lists(self, simple_distance_matrix_list):
         """Test fitting with a list of lists."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(simple_distance_matrix_list)
 
         assert isinstance(labels, np.ndarray)
@@ -76,7 +76,7 @@ class TestDbscan:
 
     def test_fit_with_numpy_array(self, simple_distance_matrix_numpy):
         """Test fitting with a numpy array."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(simple_distance_matrix_numpy)
 
         assert isinstance(labels, np.ndarray)
@@ -85,7 +85,7 @@ class TestDbscan:
 
     def test_cluster_assignments(self, simple_distance_matrix_list):
         """Test that cluster assignments are reasonable."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(simple_distance_matrix_list)
 
         # Expected: first two points form a cluster, last two are noise
@@ -94,7 +94,7 @@ class TestDbscan:
 
     def test_cluster_assignments_numpy(self, simple_distance_matrix_numpy):
         """Test cluster assignments with numpy array input."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(simple_distance_matrix_numpy)
 
         expected = np.array([1, 1, -1, -1], dtype=np.int32)
@@ -102,7 +102,7 @@ class TestDbscan:
 
     def test_noise_points(self, simple_distance_matrix_list):
         """Test that noise points are labeled as -1."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(simple_distance_matrix_list)
 
         # Points 2 and 3 should be noise (-1)
@@ -116,7 +116,7 @@ class TestDbscan:
         distance_matrix = dtw.distance_matrix(time_series_for_clustering)
 
         # Cluster the time series
-        clusterer = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         assert isinstance(labels, np.ndarray)
@@ -131,11 +131,11 @@ class TestDbscan:
     def test_different_epsilon_values(self, simple_distance_matrix_numpy):
         """Test clustering with different epsilon values."""
         # Small epsilon - more restrictive clustering
-        clusterer_small = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer_small = Dbscan(epsilon=0.5, min_cluster_size=2)
         labels_small = clusterer_small.fit(simple_distance_matrix_numpy)
 
         # Large epsilon - more permissive clustering
-        clusterer_large = Dbscan(eps=5.0, min_cluster_size=2)
+        clusterer_large = Dbscan(epsilon=5.0, min_cluster_size=2)
         labels_large = clusterer_large.fit(simple_distance_matrix_numpy)
 
         # Both should return valid labels
@@ -148,11 +148,11 @@ class TestDbscan:
     def test_different_min_cluster_sizes(self, simple_distance_matrix_numpy):
         """Test clustering with different minimum cluster sizes."""
         # Smaller min size
-        clusterer_small = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer_small = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels_small = clusterer_small.fit(simple_distance_matrix_numpy)
 
         # Larger min size
-        clusterer_large = Dbscan(eps=1.0, min_cluster_size=3)
+        clusterer_large = Dbscan(epsilon=1.0, min_cluster_size=3)
         labels_large = clusterer_large.fit(simple_distance_matrix_numpy)
 
         assert len(labels_small) == 4
@@ -169,7 +169,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # All points should be noise
@@ -187,7 +187,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # All points should be in the same cluster (not -1)
@@ -206,7 +206,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # Should have two clusters
@@ -231,7 +231,7 @@ class TestDbscan:
             dtype=np.float32,
         )
 
-        clusterer = Dbscan(eps=1.2, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.2, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         assert len(labels) == 3
@@ -247,7 +247,7 @@ class TestDbscan:
             dtype=np.float64,
         )
 
-        clusterer = Dbscan(eps=1.2, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.2, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         assert len(labels) == 3
@@ -263,7 +263,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=1.2, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.2, min_cluster_size=2)
         labels = clusterer.fit(symmetric_matrix)
         assert len(labels) == 3
 
@@ -278,7 +278,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=1.2, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.2, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
         assert len(labels) == 3
 
@@ -292,7 +292,7 @@ class TestDbscan:
         # Set diagonal to zero
         np.fill_diagonal(distance_matrix, 0)
 
-        clusterer = Dbscan(eps=0.5, min_cluster_size=3)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=3)
         labels = clusterer.fit(distance_matrix)
 
         assert len(labels) == n
@@ -302,7 +302,7 @@ class TestDbscan:
         """Test with a single point."""
         distance_matrix = np.array([[0.0]])
 
-        clusterer = Dbscan(eps=1.0, min_cluster_size=1)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=1)
         labels = clusterer.fit(distance_matrix)
 
         assert len(labels) == 1
@@ -316,7 +316,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # Both points should be in the same cluster
@@ -332,7 +332,7 @@ class TestDbscan:
             ]
         )
 
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # Both points should be noise
@@ -354,7 +354,7 @@ class TestDbscan:
         distance_matrix = dtw.distance_matrix(series)
 
         # Cluster
-        clusterer = Dbscan(eps=0.5, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=0.5, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         # First three should cluster together, last one is noise
@@ -375,7 +375,7 @@ class TestDbscan:
         dtw = Dtw(distance_fn="manhattan")
         distance_matrix = dtw.distance_matrix(series)
 
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
         labels = clusterer.fit(distance_matrix)
 
         assert len(labels) == 3
@@ -384,7 +384,7 @@ class TestDbscan:
 
     def test_reuse_clusterer(self, simple_distance_matrix_numpy):
         """Test that clusterer can be reused multiple times."""
-        clusterer = Dbscan(eps=1.0, min_cluster_size=2)
+        clusterer = Dbscan(epsilon=1.0, min_cluster_size=2)
 
         # First fit
         labels1 = clusterer.fit(simple_distance_matrix_numpy)
