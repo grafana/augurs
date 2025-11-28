@@ -1,13 +1,7 @@
 name: Test Book Examples
 
 on:
-  # Run after Python and JS workflows complete on main
-  workflow_run:
-    workflows: ["Python", "augurs-js"]
-    types:
-      - completed
-    branches: [main]
-  # Also run on PRs that modify book content or JS/Python APIs
+  # Run on PRs that modify book content or JS/Python APIs
   pull_request:
     paths:
       - "book/src/**/*.md"
@@ -32,17 +26,12 @@ jobs:
   test-examples:
     name: Test Documentation Examples
     runs-on: ubuntu-latest
-    # Only run if the triggering workflow succeeded (for workflow_run)
-    # or if manually triggered or on PR
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           persist-credentials: false
-          # For workflow_run, check out the correct ref
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       # Set up Rust
       - name: Install Rust toolchain
@@ -64,56 +53,22 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Download artifacts from Python and JS workflows if available
-      # Note: artifacts are only available from workflow_run events on the same repo
-      - name: Download JS packages artifact
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
-        with:
-          name: js-packages
-          path: js/augurs
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Download Python wheels
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
-        with:
-          pattern: wheels-linux-x86_64
-          path: python-wheels
-          merge-multiple: true
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      # For PRs and manual runs, build the packages
-      - name: Install wasm-pack (for PRs)
-        if: github.event_name != 'workflow_run'
+      # Build the packages from source
+      - name: Install wasm-pack
         uses: taiki-e/install-action@1ee706eb04986370fc60419ba172594c51067f29 # v2.62.58
         with:
           tool: wasm-pack
 
-      - name: Build JS packages (for PRs)
-        if: github.event_name != 'workflow_run'
+      - name: Build JS packages
         run: just build-augurs-js
         continue-on-error: true
 
-      - name: Install Python package
+      - name: Build and install Python package
         run: |
           cd crates/pyaugurs
           python -m venv .venv
-          .venv/bin/pip install numpy
-
-          # Try to install from wheel first (if available from workflow_run)
-          if [ -d "../../python-wheels" ] && [ -n "$(ls -A ../../python-wheels/*.whl 2>/dev/null)" ]; then
-            echo "Installing from downloaded wheel..."
-            .venv/bin/pip install ../../python-wheels/*.whl
-          else
-            echo "Building from source..."
-            .venv/bin/pip install maturin
-            .venv/bin/maturin develop --release
-          fi
+          .venv/bin/pip install numpy maturin
+          .venv/bin/maturin develop --release
         continue-on-error: true
 
       # Run test script
