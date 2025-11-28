@@ -1,75 +1,119 @@
 name: Test Book Examples
 
 on:
-  push:
+  # Run after Python and JS workflows complete on main
+  workflow_run:
+    workflows: ["Python", "augurs-js"]
+    types:
+      - completed
     branches: [main]
-    paths:
-      - 'book/src/**/*.md'
-      - 'book/scripts/**'
-      - '.github/workflows/test-book-examples.yml'
+  # Also run on PRs that modify book content or JS/Python APIs
   pull_request:
-    branches: [main]
     paths:
-      - 'book/src/**/*.md'
-      - 'book/scripts/**'
-      - '.github/workflows/test-book-examples.yml'
+      - "book/src/**/*.md"
+      - "book/scripts/**"
+      - ".github/workflows/test-book-examples.yml"
+      # JavaScript API changes
+      - "js/**/*.rs"
+      - "js/**/Cargo.toml"
+      # Python API changes
+      - "crates/pyaugurs/**/*.rs"
+      - "crates/pyaugurs/Cargo.toml"
+      - "crates/pyaugurs/augurs.pyi"
   # Allow manual triggering
   workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
 
 jobs:
   test-examples:
     name: Test Documentation Examples
     runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded (for workflow_run)
+    # or if manually triggered or on PR
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+          # For workflow_run, check out the correct ref
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       # Set up Rust
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
         with:
-          toolchain: stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+          bins: just
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Set up Node.js
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: js/package-lock.json
 
       # Set up Python
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      # Build augurs packages
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
-
-      - name: Install just
-        uses: taiki-e/install-action@v2
+      # Download artifacts from Python and JS workflows if available
+      # Note: artifacts are only available from workflow_run events on the same repo
+      - name: Download JS packages artifact
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
-          tool: just
-
-      - name: Build augurs JavaScript packages
-        run: |
-          cd js
-          just build
+          name: js-packages
+          path: js/augurs
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Build augurs for Python
+      - name: Download Python wheels
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: wheels-linux-x86_64
+          path: python-wheels
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      # For PRs and manual runs, build the packages
+      - name: Install wasm-pack (for PRs)
+        if: github.event_name != 'workflow_run'
+        uses: taiki-e/install-action@1ee706eb04986370fc60419ba172594c51067f29 # v2.62.58
+        with:
+          tool: wasm-pack
+
+      - name: Build JS packages (for PRs)
+        if: github.event_name != 'workflow_run'
+        run: just build-augurs-js
+        continue-on-error: true
+
+      - name: Install Python package
         run: |
           cd crates/pyaugurs
           python -m venv .venv
-          .venv/bin/pip install maturin numpy
-          .venv/bin/maturin develop --release
+          .venv/bin/pip install numpy
+
+          # Try to install from wheel first (if available from workflow_run)
+          if [ -d "../../python-wheels" ] && [ -n "$(ls -A ../../python-wheels/*.whl 2>/dev/null)" ]; then
+            echo "Installing from downloaded wheel..."
+            .venv/bin/pip install ../../python-wheels/*.whl
+          else
+            echo "Building from source..."
+            .venv/bin/pip install maturin
+            .venv/bin/maturin develop --release
+          fi
         continue-on-error: true
 
       # Run test script
@@ -81,7 +125,7 @@ jobs:
       # Upload artifacts on failure
       - name: Upload test artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: test-examples-output
           path: book/.test-examples/
@@ -94,7 +138,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
 
       - name: Check for code examples in key files
         run: |
@@ -144,157 +190,3 @@ jobs:
             echo "Some key documentation files are missing code examples."
             echo "This is a warning, not a failure."
           fi
-
-  # Optional: Test specific language examples separately for better debugging
-  test-rust-examples:
-    name: Test Rust Examples Only
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Python for test script
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Extract and test Rust examples
-        run: |
-          cd book
-          python3 -c "
-          import sys
-          sys.path.insert(0, 'scripts')
-          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
-          from pathlib import Path
-
-          book_src = Path('src')
-          blocks = []
-          for md_file in find_markdown_files(book_src):
-              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('rust', 'rs')])
-
-          print(f'Found {len(blocks)} Rust code blocks')
-
-          from tempfile import TemporaryDirectory
-          with TemporaryDirectory() as td:
-              temp_dir = Path(td)
-              (temp_dir / 'rust').mkdir()
-              temp_dirs = {'rust': temp_dir / 'rust'}
-
-              failed = 0
-              for i, block in enumerate(blocks):
-                  result = test_code_block(block, temp_dirs, i)
-                  if result.success is False:
-                      failed += 1
-
-              sys.exit(1 if failed > 0 else 0)
-          "
-
-  test-js-examples:
-    name: Test JavaScript Examples Only
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install augurs for JavaScript
-        run: |
-          cd js
-          npm ci || npm install
-        continue-on-error: true
-
-      - name: Install Python for test script
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Extract and test JavaScript examples
-        run: |
-          cd book
-          python3 -c "
-          import sys
-          sys.path.insert(0, 'scripts')
-          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
-          from pathlib import Path
-
-          book_src = Path('src')
-          blocks = []
-          for md_file in find_markdown_files(book_src):
-              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('javascript', 'js')])
-
-          print(f'Found {len(blocks)} JavaScript code blocks')
-
-          from tempfile import TemporaryDirectory
-          with TemporaryDirectory() as td:
-              temp_dir = Path(td)
-              (temp_dir / 'js').mkdir()
-              temp_dirs = {'js': temp_dir / 'js'}
-
-              failed = 0
-              for i, block in enumerate(blocks):
-                  result = test_code_block(block, temp_dirs, i)
-                  if result.success is False:
-                      failed += 1
-
-              sys.exit(1 if failed > 0 else 0)
-          "
-
-  test-python-examples:
-    name: Test Python Examples Only
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install augurs for Python
-        run: |
-          pip install maturin numpy
-          cd crates/pyaugurs
-          maturin develop
-        continue-on-error: true
-
-      - name: Extract and test Python examples
-        run: |
-          cd book
-          python3 -c "
-          import sys
-          sys.path.insert(0, 'scripts')
-          from test_examples import extract_code_blocks, find_markdown_files, test_code_block
-          from pathlib import Path
-
-          book_src = Path('src')
-          blocks = []
-          for md_file in find_markdown_files(book_src):
-              blocks.extend([b for b in extract_code_blocks(md_file) if b.language.lower() in ('python', 'py')])
-
-          print(f'Found {len(blocks)} Python code blocks')
-
-          from tempfile import TemporaryDirectory
-          with TemporaryDirectory() as td:
-              temp_dir = Path(td)
-              (temp_dir / 'python').mkdir()
-              temp_dirs = {'python': temp_dir / 'python'}
-
-              failed = 0
-              for i, block in enumerate(blocks):
-                  result = test_code_block(block, temp_dirs, i)
-                  if result.success is False:
-                      failed += 1
-
-              sys.exit(1 if failed > 0 else 0)
-          "
