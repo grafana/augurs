@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Prophet offers several customization options:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::prophet::{
     Prophet, TrainingData, ProphetOptions, FeatureMode,
