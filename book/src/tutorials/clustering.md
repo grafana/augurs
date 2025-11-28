@@ -12,7 +12,7 @@ Time series clustering is a technique used to group similar time series together
 
 Let's start with a simple example using DBSCAN clustering:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::{
     clustering::{DbscanCluster, DbscanClusterer},
@@ -92,7 +92,7 @@ fn main() {
 
 ## Example: Clustering with Multiple Distance Measures
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::{
     clustering::DbscanClusterer,

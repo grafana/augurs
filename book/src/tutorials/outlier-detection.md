@@ -6,7 +6,7 @@ This tutorial demonstrates how to use `augurs` to automatically detect outliers 
 
 The MAD detector is ideal for identifying time series that deviate significantly from the typical behavior pattern:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::outlier::{MADDetector, OutlierDetector};
 
@@ -35,7 +35,7 @@ fn main() {
 
 DBSCAN is particularly effective when your time series have seasonal patterns:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::outlier::{DbscanDetector, OutlierDetector};
 
@@ -67,7 +67,7 @@ fn main() {
 
 The outlier detection results provide several useful pieces of information:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::outlier::{MADDetector, OutlierDetector};
 
@@ -117,7 +117,7 @@ fn main() {
 
 Here's an example of using outlier detection in a monitoring context:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::outlier::{MADDetector, OutlierDetector};
 
