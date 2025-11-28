@@ -122,7 +122,7 @@ from augurs.outlier import MADDetector
 Test your installation with a simple example:
 
 <!-- langtabs-start -->
-```rust
+```rust,no_run
 use augurs::mstl::MSTLModel;
 
 fn main() {
