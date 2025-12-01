@@ -5,7 +5,7 @@ This guide will help you get started with `augurs`, a time series toolkit availa
 ## Installation
 
 <!-- langtabs-start -->
-```toml,ignore
+```toml
 // Add to your Cargo.toml:
 [dependencies]
 augurs = { version = "0.6.0", features = ["forecaster", "ets", "mstl", "outlier"] }
@@ -28,7 +28,7 @@ Let's start with a simple example using the MSTL (Multiple Seasonal-Trend decomp
 and a naive trend forecaster:
 
 <!-- langtabs-start -->
-```rust,ignore
+```rust
 use augurs::{mstl::MSTLModel, prelude::*};
 
 fn main() {
@@ -99,7 +99,7 @@ print("Upper bounds:", forecast.upper())
 For more complex scenarios, you can use the `Forecaster` API which supports data transformations:
 
 <!-- langtabs-start -->
-```rust,ignore
+```rust
 use augurs::{
     ets::AutoETS,
     forecaster::{
@@ -179,7 +179,7 @@ print("Upper bounds:", forecast.upper())
 `augurs` provides multiple algorithms for outlier detection. Here's an example using the MAD (Median Absolute Deviation) detector:
 
 <!-- langtabs-start -->
-```rust,ignore
+```rust
 use augurs::outlier::{MADDetector, OutlierDetector};
 
 fn main() {
@@ -240,7 +240,7 @@ print("Outlier detection examples coming soon for Python!")
 You can use DBSCAN clustering with Dynamic Time Warping (DTW) distance:
 
 <!-- langtabs-start -->
-```rust,ignore
+```rust
 use augurs::{clustering::DbscanClusterer, dtw::Dtw};
 
 fn main() {

@@ -5,26 +5,9 @@ build:
     mdbook build
 
 test:
-    mdbook test -L ../target/debug/deps
-
-# Test all code examples in documentation
-test-examples:
     python3 scripts/test_examples.py
 
-# Test only Rust examples
-test-rust:
-    python3 scripts/test_examples.py --lang rust
 
-# Test only JavaScript examples
-test-javascript:
-    python3 scripts/test_examples.py --lang javascript
-
-# Test only Python examples
-test-python:
-    python3 scripts/test_examples.py --lang python
-
-# Run all tests (mdbook + examples)
-test-all: test test-examples
 
 # Install mdbook-langtabs preprocessor
 install-langtabs:

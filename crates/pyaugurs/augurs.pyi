@@ -4,6 +4,7 @@ from typing import Literal, Optional, Sequence
 import numpy as np
 import numpy.typing as npt
 
+
 class TrendModel(abc.ABC):
     def fit(self, y: npt.NDArray[np.float64]) -> None:
         """
@@ -36,6 +37,7 @@ class TrendModel(abc.ABC):
         :return: a `Forecast` instance containing the predictions.
         """
 
+
 class Forecast:
     def __init__(
         self,
@@ -48,6 +50,7 @@ class Forecast:
     def lower(self) -> npt.NDArray[np.float64] | None: ...
     def upper(self) -> npt.NDArray[np.float64] | None: ...
 
+
 class MSTL:
     @classmethod
     def ets(cls, periods: Sequence[int]) -> "MSTL": ...
@@ -59,11 +62,13 @@ class MSTL:
     def predict(self, horizon: int, level: float | None) -> Forecast: ...
     def predict_in_sample(self, level: float | None) -> Forecast: ...
 
+
 class AutoETS:
     def __init__(self, season_length: int, spec: str) -> None: ...
     def fit(self, y: npt.NDArray[np.float64]) -> None: ...
     def predict(self, horizon: int, level: float | None) -> Forecast: ...
     def predict_in_sample(self, level: float | None) -> Forecast: ...
+
 
 def seasonalities(
     y: npt.NDArray[np.float64],
@@ -72,7 +77,9 @@ def seasonalities(
     threshold: Optional[float] = None,
 ) -> npt.NDArray[np.uint64]: ...
 
+
 DistanceFn = Literal["euclidean"] | Literal["manhattan"]
+
 
 class Dtw:
     """
@@ -87,12 +94,47 @@ class Dtw:
         a: npt.NDArray[np.float64],
         b: npt.NDArray[np.float64],
     ) -> float: ...
+
     """
     Compute the distance between two time series using DTW.
     """
+
     def distance_matrix(
         self, series: list[npt.NDArray[np.float64]]
     ) -> npt.NDArray[np.float64]: ...
+
     """
     Compute the pairwise distance matrix between a list of time series using DTW.
     """
+
+
+class Dbscan:
+    """
+    DBSCAN clustering algorithm.
+    """
+
+    def __init__(self, epsilon: float, min_cluster_size: int) -> None:
+        """
+        Create a new DBSCAN clusterer.
+
+        :param epsilon: the maximum distance between two samples for one to be considered
+                        as in the neighborhood of the other.
+        :param min_cluster_size: the number of samples in a neighborhood for a point to be
+                                 considered as a core point.
+        """
+        ...
+
+    def fit(
+        self, distance_matrix: npt.NDArray[np.float64] | list[list[float]]
+    ) -> npt.NDArray[np.int32]:
+        """
+        Fit the DBSCAN clustering algorithm to the given distance matrix.
+
+        The distance matrix can be obtained using the `Dtw` class or provided directly.
+
+        :param distance_matrix: square distance matrix between samples. Can be either:
+                                - a 2D square numpy array
+                                - a list of lists of floats
+        :return: cluster assignments, with -1 indicating noise points.
+        """
+        ...

@@ -5,13 +5,13 @@
 ## Quick Install
 
 <!-- langtabs-start -->
-```toml,ignore
+```toml
 // Add to your Cargo.toml:
 [dependencies]
 augurs = { version = "0.6.0", features = ["forecaster", "ets", "mstl"] }
 ```
 
-```bash,ignore
+```bash
 # Install via npm:
 npm install @bsull/augurs
 
@@ -19,7 +19,7 @@ npm install @bsull/augurs
 yarn add @bsull/augurs
 ```
 
-```bash,ignore
+```bash
 # Install via pip:
 pip install augurs
 
@@ -122,7 +122,7 @@ from augurs.outlier import MADDetector
 Test your installation with a simple example:
 
 <!-- langtabs-start -->
-```rust,ignore
+```rust
 use augurs::mstl::MSTLModel;
 
 fn main() {
@@ -153,19 +153,19 @@ print("augurs installed successfully!")
 ## Requirements
 
 <!-- langtabs-start -->
-```bash,ignore
+```bash
 # Minimum Rust version: 1.70
 # Check your Rust version:
 rustc --version
 ```
 
-```bash,ignore
+```bash
 # Requires Node.js 16 or higher
 # Check your Node.js version:
 node --version
 ```
 
-```bash,ignore
+```bash
 # Requires Python 3.8 or higher
 # Check your Python version:
 python --version
