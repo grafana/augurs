@@ -1,0 +1,147 @@
+name: Test Book Examples
+
+on:
+  # Run on PRs that modify book content or JS/Python APIs
+  pull_request:
+    paths:
+      - "book/src/**/*.md"
+      - "book/scripts/**"
+      - ".github/workflows/test-book-examples.yml"
+      # JavaScript API changes
+      - "js/**/*.rs"
+      - "js/**/Cargo.toml"
+      # Python API changes
+      - "crates/pyaugurs/**/*.rs"
+      - "crates/pyaugurs/Cargo.toml"
+      - "crates/pyaugurs/augurs.pyi"
+  # Allow manual triggering
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
+
+jobs:
+  test-examples:
+    name: Test Documentation Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      # Set up Rust
+      - name: Install Rust toolchain
+        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        with:
+          bins: just
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Set up Node.js
+      - name: Install Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "20"
+
+      # Set up Python
+      - name: Install Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.11"
+
+      # Build the packages from source
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@1ee706eb04986370fc60419ba172594c51067f29 # v2.62.58
+        with:
+          tool: wasm-pack
+
+      - name: Build JS packages
+        run: just build-augurs-js
+        continue-on-error: true
+
+      - name: Build and install Python package
+        run: |
+          cd crates/pyaugurs
+          python -m venv .venv
+          .venv/bin/pip install numpy maturin
+          .venv/bin/maturin develop --release
+        continue-on-error: true
+
+      # Run test script
+      - name: Test examples with Python script
+        run: |
+          cd book
+          python3 scripts/test_examples.py
+
+      # Upload artifacts on failure
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: test-examples-output
+          path: book/.test-examples/
+          retention-days: 7
+
+  # Optional: Check that examples are present in docs
+  verify-coverage:
+    name: Verify Example Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Check for code examples in key files
+        run: |
+          echo "Checking for code examples in documentation..."
+
+          # Files that should have code examples
+          FILES=(
+            "book/src/getting-started/installation.md"
+            "book/src/getting-started/quick-start.md"
+          )
+
+          MISSING=0
+
+          for file in "${FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "⚠ File not found: $file"
+              continue
+            fi
+
+            # Check for langtabs sections
+            if ! grep -q "<!-- langtabs-start -->" "$file"; then
+              echo "✗ Missing langtabs in: $file"
+              MISSING=$((MISSING + 1))
+            else
+              # Count code blocks
+              RUST_COUNT=$(grep -c '```rust' "$file" || true)
+              JS_COUNT=$(grep -c '```javascript' "$file" || true)
+              PY_COUNT=$(grep -c '```python' "$file" || true)
+
+              echo "✓ $file has examples:"
+              echo "  - Rust: $RUST_COUNT"
+              echo "  - JavaScript: $JS_COUNT"
+              echo "  - Python: $PY_COUNT"
+
+              # Warn if languages are imbalanced
+              if [ $RUST_COUNT -gt 0 ] && [ $JS_COUNT -eq 0 ]; then
+                echo "  ⚠ Missing JavaScript examples"
+              fi
+              if [ $RUST_COUNT -gt 0 ] && [ $PY_COUNT -eq 0 ]; then
+                echo "  ⚠ Missing Python examples"
+              fi
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo ""
+            echo "Some key documentation files are missing code examples."
+            echo "This is a warning, not a failure."
+          fi

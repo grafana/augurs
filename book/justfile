@@ -5,4 +5,11 @@ build:
     mdbook build
 
 test:
-    mdbook test -L ../target/debug/deps
+    python3 scripts/test_examples.py
+
+
+
+# Install mdbook-langtabs preprocessor
+install-langtabs:
+    cargo install mdbook-langtabs
+    mdbook-langtabs install .
