@@ -25,7 +25,7 @@ jobs:
           toolchain: stable
           targets: wasm32-unknown-unknown
 
-      - uses: taiki-e/install-action@1ee706eb04986370fc60419ba172594c51067f29 # v2.62.58
+      - uses: taiki-e/install-action@3575e532701a5fc614b0c842e4119af4cc5fd16d # v2.62.60
         with:
           tool: just,wasm-pack
 
