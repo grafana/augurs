@@ -192,12 +192,17 @@ def setup_js_test_env(temp_dir: Path) -> Path:
         repo_root = script_dir.parent.parent
         wasmstan_path = repo_root / "components" / "js" / "prophet-wasmstan"
 
+        # Check if wasmstan is actually built (not just if directory exists)
+        wasmstan_built = (
+            wasmstan_path.exists() and (wasmstan_path / "prophet-wasmstan.js").exists()
+        )
+
         package_json = {
             "type": "module",
             "dependencies": {
                 "@bsull/augurs": f"file:{augurs_js_path.absolute()}",
                 "@bsull/augurs-prophet-wasmstan": f"file:{wasmstan_path.absolute()}"
-                if wasmstan_path.exists()
+                if wasmstan_built
                 else "^0.2.0",
             },
         }
