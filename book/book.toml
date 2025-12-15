@@ -6,3 +6,10 @@ title = "augurs - a time series toolkit"
 
 [rust]
 edition = "2021"
+
+[preprocessor.langtabs]
+command = "mdbook-langtabs"
+
+[output.html]
+additional-css = ["langtabs.css"]
+additional-js = ["langtabs.js"]

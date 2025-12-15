@@ -41,7 +41,7 @@ let mut forecaster = Forecaster::new(model).with_transforms(transforms);
 
 After:
 
-```rust
+```rust,ignore
 # extern crate augurs;
 use augurs::{
     forecaster::{
