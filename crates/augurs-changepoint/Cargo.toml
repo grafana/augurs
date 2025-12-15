@@ -17,7 +17,7 @@ bench = false
 
 [dependencies]
 augurs-core.workspace = true
-changepoint = "0.14.1"
+changepoint.workspace = true
 distrs.workspace = true
 itertools.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
