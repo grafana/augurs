@@ -31,7 +31,7 @@
     "@bytecodealliance/preview2-shim": "^0.17.0"
   },
   "devDependencies": {
-    "vitest": "3.2.4"
+    "vitest": "4.0.16"
   },
   "scripts": {
     "test": "vitest",
