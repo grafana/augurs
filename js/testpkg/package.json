@@ -7,7 +7,7 @@
     "@bsull/augurs-prophet-wasmstan": "0.2.0",
     "@types/node": "22.19.3",
     "typescript": "5.9.3",
-    "vitest": "4.0.16"
+    "vitest": "4.0.18"
   },
   "scripts": {
     "test": "vitest",
