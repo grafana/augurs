@@ -44,16 +44,19 @@ augurs-testing = { path = "crates/augurs-testing" }
 augurs-core-js = { path = "js/augurs-core-js" }
 
 anyhow = "1.0.89"
-argmin = "0.10.0"
+argmin = "0.11.0"
 bytemuck = "1.18.0"
+changepoint = "0.15.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
-getrandom = { version = "0.2.10", features = ["js"] }
+getrandom = "0.3"
 itertools = "0.14.0"
 js-sys = "0.3.64"
 num-traits = "0.2.19"
-rand = "0.8.5"
+rand = "0.9.0"
+rand_distr = "0.5.1"
 roots = "0.0.8"
+rv = { version = "0.19.0", default-features = false }
 serde = { version = "1.0.166", features = ["derive"] }
 statrs = "0.18.0"
 serde_json = "1.0.128"
@@ -64,6 +67,11 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.20", default-features = false }
 tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
 wasm-bindgen = "0.2.99"
+wasmtime = "38"
+wasmtime-wasi = "38"
+wasmtime-wasi-io = "38"
+wit-bindgen = "0.46.0"
+wit-component = "0.239.0"
 
 assert_approx_eq = "1.1.0"
 criterion = "0.8.0"
@@ -88,3 +96,14 @@ lto = false
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[patch.crates-io]
+# See PR at https://github.com/statrs-dev/statrs/pull/331.
+statrs = { git = "https://github.com/RobertJacobsonCDC/statrs", branch = "update_rand_to_09" }
+
+# Depends on cap-rand PR/release (see below).
+wasmtime = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+wasmtime-wasi = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+wasmtime-wasi-io = { git = "https://github.com/sd2k/wasmtime", branch = "bump-rand" }
+# See PR at https://github.com/bytecodealliance/cap-std/pull/394
+cap-rand = { git = "https://github.com/sd2k/cap-std", branch = "bump-rand" }
