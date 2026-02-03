@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-seasons` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.1...augurs-seasons-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-prophet` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.1...augurs-prophet-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-outlier` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.1...augurs-outlier-v0.10.2) - 2026-02-03
+
+### Fixed
+- assert that data is rectangular in DBSCAN preprocessing ([#366](https://github.com/grafana/augurs/pull/366))
+
+## `augurs-forecaster` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.10.1...augurs-forecaster-v0.10.2) - 2026-02-03
+
+### Other
+- fix clippy lint for unnecessary parens ([#365](https://github.com/grafana/augurs/pull/365))
+
+## `augurs-ets` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-ets-v0.10.1...augurs-ets-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-mstl` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-mstl-v0.10.1...augurs-mstl-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-dtw` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-dtw-v0.10.1...augurs-dtw-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-clustering` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-clustering-v0.10.1...augurs-clustering-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-changepoint` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.10.1...augurs-changepoint-v0.10.2) - 2026-02-03
+
+### Other
+- update Cargo.toml dependencies
+
 ## `augurs-seasons` - [0.10.1](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.0...augurs-seasons-v0.10.1) - 2025-09-08
 
 ### Fixed
