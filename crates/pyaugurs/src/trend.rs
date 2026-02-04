@@ -96,7 +96,8 @@ impl FittedTrendModel for PyFittedTrendModel {
                 .model
                 .call_method1(py, "predict", (horizon, level))
                 .map_err(|e| Box::new(PyException::new_err(format!("error predicting: {e}"))))?;
-            let preds: Forecast = preds.extract(py)?;
+            let preds: Forecast = preds.bind(py).extract()
+                .map_err(|e| Box::new(PyErr::from(e)) as Box<dyn std::error::Error + Send + Sync>)?;
             *forecast = preds.into();
             Ok(())
         })
@@ -116,7 +117,8 @@ impl FittedTrendModel for PyFittedTrendModel {
                         "error predicting in-sample: {e}"
                     )))
                 })?;
-            let preds: Forecast = preds.extract(py)?;
+            let preds: Forecast = preds.bind(py).extract()
+                .map_err(|e| Box::new(PyErr::from(e)) as Box<dyn std::error::Error + Send + Sync>)?;
             *forecast = preds.into();
             Ok(())
         })
