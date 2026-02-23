@@ -89,6 +89,7 @@ jobs:
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
+    name: windows (${{ matrix.platform.target }})
     strategy:
       matrix:
         platform:
