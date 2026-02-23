@@ -47,7 +47,7 @@ jobs:
         uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.11 --manifest-path crates/pyaugurs/Cargo.toml
           manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -79,7 +79,7 @@ jobs:
         uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.11 --manifest-path crates/pyaugurs/Cargo.toml
           manylinux: musllinux_1_2
       - name: Upload wheels
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -95,10 +95,10 @@ jobs:
         platform:
           - runner: windows-2022
             target: x64
-            interpreters: -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i 3.14
+            interpreters: -i 3.11 -i 3.12 -i 3.13 -i 3.14
           - runner: windows-2022
             target: x86
-            interpreters: -i 3.10 -i 3.11 -i 3.12 -i 3.13
+            interpreters: -i 3.11 -i 3.12 -i 3.13
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -138,7 +138,7 @@ jobs:
         uses: PyO3/maturin-action@b1bd829e37fef14c63f19162034228a2f3dc1021 # v1.50.0
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.9 -i pypy-3.10 --manifest-path crates/pyaugurs/Cargo.toml
+          args: --release --out dist -i 3.11 -i 3.12 -i 3.13 -i 3.14 -i pypy-3.11 --manifest-path crates/pyaugurs/Cargo.toml
       - name: Upload wheels
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
