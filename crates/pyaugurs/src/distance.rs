@@ -12,7 +12,7 @@ use pyo3::prelude::*;
 /// This is intentionally opaque; it can either be passed back to other `augurs`
 /// functions or converted to a numpy array using `to_numpy`.
 #[derive(Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct DistanceMatrix {
     inner: augurs_core::DistanceMatrix,
 }
