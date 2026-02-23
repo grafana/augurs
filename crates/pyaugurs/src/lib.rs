@@ -18,7 +18,7 @@ pub mod trend;
 
 /// Forecasts produced by augurs models.
 #[derive(Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct Forecast {
     inner: augurs_core::Forecast,
 }
