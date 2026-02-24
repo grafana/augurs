@@ -10,6 +10,7 @@ build: \
   (build-inner "seasons") \
   (build-inner "transforms")
   just fix-package-json
+  just fix-wasm-streaming-fallback
   just copy-readme
 
 build-inner target args='':
@@ -31,6 +32,80 @@ fix-package-json:
   VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select (.name == "augurs") | .version')
   jq < augurs/package.json ". | .version = \"$VERSION\"" > augurs/package.json.tmp
   mv augurs/package.json.tmp augurs/package.json
+
+# Patch wasm-bindgen's generated __wbg_load to always fall back to the
+# non-streaming WebAssembly.instantiate path. The generated code rethrows
+# when instantiateStreaming fails and Content-Type is application/wasm,
+# but this breaks in environments where fetch() returns a Proxy-wrapped
+# Response (e.g. OpenTelemetry instrumentation-fetch) that passes JS
+# `instanceof Response` but fails the browser's internal C++ slot check.
+# Related: https://github.com/open-telemetry/opentelemetry-js/issues/5477
+fix-wasm-streaming-fallback:
+  #!/usr/bin/env python3
+  import re, glob, sys
+  # wasm-bindgen 0.2.101-0.2.106: multi-line else block
+  CATCH_V1 = re.compile(
+      r'(\s*)\} catch \(e\) \{\s*\n'
+      r'\s*const validResponse.*?\n'
+      r'\s*\n'
+      r'\s*if \(validResponse.*?\n'
+      r'\s*console\.warn\(.*?\n'
+      r'\s*\n'
+      r'\s*\} else \{\s*\n'
+      r'\s*throw e;\s*\n'
+      r'\s*\}'
+  )
+  # wasm-bindgen 0.2.107+: single-line else block
+  CATCH_V2 = re.compile(
+      r'(\s*)\} catch \(e\) \{\s*\n'
+      r'\s*const validResponse.*?\n'
+      r'\s*\n'
+      r'\s*if \(validResponse.*?\n'
+      r'\s*console\.warn\(.*?\n'
+      r'\s*\n'
+      r'\s*\} else \{ throw e; \}'
+  )
+  CATCH_REPL = (
+      r'\1} catch (e) {\1    console.warn('
+      r'"`WebAssembly.instantiateStreaming` failed. Falling back to '
+      r'`WebAssembly.instantiate` which is slower. Original error:\\n", e);'
+  )
+  # Module-level Set (wasm-bindgen 0.2.101-0.2.106)
+  EXPECTED_TYPES_SET_RE = re.compile(r"const EXPECTED_RESPONSE_TYPES[^\n]*\n\n")
+  # Local function inside __wbg_load (wasm-bindgen 0.2.107+)
+  EXPECTED_TYPE_FN_RE = re.compile(
+      r"\n    function expectedResponseType\(type\) \{"
+      r".*?return false;\n    \}\n",
+      re.DOTALL,
+  )
+  errors = []
+  for f in sorted(glob.glob("augurs/*.js")):
+      text = open(f).read()
+      if "instantiateStreaming" not in text:
+          continue
+      # Replace the conditional rethrow with an unconditional warn + fallback.
+      # Try both patterns; only one will match depending on wasm-bindgen version.
+      text, n = CATCH_V2.subn(CATCH_REPL, text)
+      if n == 0:
+          text, n = CATCH_V1.subn(CATCH_REPL, text)
+      if n == 0:
+          errors.append(f"{f}: expected to patch __wbg_load but regex didn't match")
+          continue
+      # Remove the now-unused response type check helper.
+      text = EXPECTED_TYPES_SET_RE.sub("", text)
+      text = EXPECTED_TYPE_FN_RE.sub("\n", text)
+      # Verify the original rethrow pattern is fully gone after patching.
+      if CATCH_V1.search(text) or CATCH_V2.search(text):
+          errors.append(f"{f}: patched but original rethrow pattern still present")
+          continue
+      open(f, "w").write(text)
+      print(f"  patched {f} ({n} replacement(s))")
+  if errors:
+      print("ERROR: wasm-streaming-fallback patch failed:", file=sys.stderr)
+      for e in errors:
+          print(f"  {e}", file=sys.stderr)
+      print("The wasm-bindgen output format may have changed. Update the regex in js/justfile.", file=sys.stderr)
+      sys.exit(1)
 
 copy-readme:
   cp README.md augurs/README.md
