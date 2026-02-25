@@ -45,7 +45,7 @@ wasmtime = { version = "41", features = [
 ], optional = true }
 wasmtime-wasi = { version = "41", optional = true }
 wasmtime-wasi-io = { version = "41", optional = true }
-zip = { version = "5", optional = true }
+zip = { version = "8", optional = true }
 
 [dev-dependencies]
 augurs.workspace = true
