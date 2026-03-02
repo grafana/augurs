@@ -44,7 +44,7 @@ wasmtime = { version = "41", features = [
     "component-model",
 ], optional = true }
 wasmtime-wasi = { version = "41", optional = true }
-wasmtime-wasi-io = { version = "41", optional = true }
+wasmtime-wasi-io = { version = "42", optional = true }
 zip = { version = "8", optional = true }
 
 [dev-dependencies]
