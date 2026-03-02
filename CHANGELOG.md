@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-prophet` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.2...augurs-prophet-v0.10.3) - 2026-03-02
+
+### Fixed
+- *(deps)* update rust crate zip to v8 ([#449](https://github.com/grafana/augurs/pull/449))
+
 ## `augurs-seasons` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.1...augurs-seasons-v0.10.2) - 2026-02-24
 
 ### Other
