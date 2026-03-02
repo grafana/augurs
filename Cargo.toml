@@ -44,11 +44,11 @@ augurs-testing = { path = "crates/augurs-testing" }
 augurs-core-js = { path = "js/augurs-core-js" }
 
 anyhow = "1.0.89"
-argmin = "0.10.0"
+argmin = "0.11.0"
 bytemuck = "1.18.0"
 chrono = "0.4.38"
 distrs = "0.2.1"
-getrandom = { version = "0.2.10", features = ["js"] }
+getrandom = { version = "0.4.1", features = ["js"] }
 itertools = "0.14.0"
 js-sys = "0.3.64"
 num-traits = "0.2.19"
