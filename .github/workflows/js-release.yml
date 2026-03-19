@@ -1,0 +1,111 @@
+# JavaScript package release workflow for @bsull/augurs
+#
+# This workflow builds, tests, and publishes the npm package.
+# It runs on:
+# - GitHub Release published (filtered to augurs-v* tags, triggered by release-plz)
+# - Manual workflow dispatch
+#
+# npm provenance is provided via OIDC - no NPM_TOKEN secret needed.
+# Configure "trusted publishers" on npmjs.com for this repo.
+
+name: JS Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to npm"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: js-release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    # Only run for the main augurs crate release (not augurs-core, augurs-prophet, etc.)
+    if: >-
+      github.repository_owner == 'grafana' && (
+        github.event_name == 'workflow_dispatch' ||
+        startsWith(github.event.release.tag_name, 'augurs-v')
+      )
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: nightly
+          targets: wasm32-unknown-unknown
+
+      - uses: taiki-e/install-action@cfdb446e391c69574ebc316dfb7d7849ec12b940 # v2.68.8
+        with:
+          tool: just,wasm-pack
+
+      - name: Build augurs-js
+        run: just build-augurs-js
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version-file: js/.node-version
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: js/testpkg
+      - name: Run typecheck
+        run: npm run typecheck
+        working-directory: js/testpkg
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: js/testpkg
+
+      - name: Upload JS package
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: js-package
+          path: js/augurs/
+          retention-days: 5
+
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download JS package
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: js-package
+          path: package/
+
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version-file: js/.node-version
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish to npm
+        working-directory: package
+        run: npm publish --provenance --access public
