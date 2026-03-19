@@ -9,6 +9,7 @@ CARGO_COMPONENT_VERSION := "0.19.0"
 WIT_BINDGEN_CLI_VERSION := "0.36.0"
 WASM_TOOLS_VERSION := "1.222.0"
 WAC_CLI_VERSION := "0.6.1"
+JCO_VERSION := "1.17.0"
 
 CLANG := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang"
 CLANG_CPP := TOOLS_DIR + "/" + WASI_SDK_PATH + "/bin/clang++"
@@ -23,7 +24,7 @@ install-deps: checkout-submodules
   cargo binstall -y wit-bindgen-cli@{{WIT_BINDGEN_CLI_VERSION}}
   cargo binstall -y wasm-tools@{{WASM_TOOLS_VERSION}}
   cargo binstall -y wac-cli@{{WAC_CLI_VERSION}}
-  npm install --yes -g @bytecodealliance/jco
+  npm install --yes -g @bytecodealliance/jco@{{JCO_VERSION}}
   curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-{{WASI_VERSION}}/{{WASI_SDK_PATH}}.tar.gz
   tar -xf {{WASI_SDK_PATH}}.tar.gz
   rm {{WASI_SDK_PATH}}.tar.gz
