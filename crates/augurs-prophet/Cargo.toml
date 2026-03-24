@@ -43,7 +43,7 @@ wasmtime = { version = "41", features = [
     "runtime",
     "component-model",
 ], optional = true }
-wasmtime-wasi = { version = "41", optional = true }
+wasmtime-wasi = { version = "43", optional = true }
 wasmtime-wasi-io = { version = "41", optional = true }
 zip = { version = "8", optional = true }
 
