@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
 
       - name: Run cargo check
         run: cargo check --all-targets --all-features
@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           bins: cargo-nextest,just
         env:
@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           bins: cargo-nextest,just
         env:
@@ -80,7 +80,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           bins: cargo-nextest,just,mdbook
         env:
@@ -109,7 +109,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           components: rustfmt
 
@@ -126,7 +126,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        uses: moonrepo/setup-rust@abb2d32350334249b178c401e5ec5836e0cd88d3 # v1.3.0
         with:
           components: clippy
 
