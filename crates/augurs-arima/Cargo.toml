@@ -1,0 +1,21 @@
+[package]
+name = "augurs-arima"
+version.workspace = true
+authors = ["Alberson Miranda <albersonmiranda@hotmail.com>",]
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+keywords.workspace = true
+description = "Arima models for augurs"
+
+[dependencies]
+augurs-core.workspace = true
+nalgebra.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+approx = "0.5"
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "crates/augurs-arima/katex-header.html" ]
