@@ -4,17 +4,8 @@
 use thiserror::Error;
 
 /// Error type for Augurs.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    /// Not enough data to fit the model.
-    #[error("not enough data to fit the model: need {need}, got {got}")]
-    NotEnoughData {
-        /// Number of data points needed.
-        need: usize,
-        /// Number of data points provided.
-        got: usize,
-    },
-
     /// The time series is too short for the requested ARIMA order.
     #[error("time series too short for ARIMA order: need {need}, got {got}")]
     SeriesTooShort {

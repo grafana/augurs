@@ -1,3 +1,5 @@
+//! Structs and enums for ARIMA modeling.
+
 use std::fmt;
 
 /// Arima order specification: ARIMA(p,d,q)(P,D,Q)[m].
