@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-/// Arima order specification: ARIMA(p,d,q)(P,D,Q)[m].
+/// Arima order specification: ARIMA(p,d,q)(P,D,Q)\[m\].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ArimaOrder {
     /// Non-seasonal AR order.
@@ -35,7 +35,7 @@ impl ArimaOrder {
         }
     }
 
-    /// Create a SARIMA(p,d,q)(P,D,Q)[m]
+    /// Create a SARIMA(p,d,q)(P,D,Q)\[m\]
     pub fn seasonal(
         p: usize,
         d: usize,
