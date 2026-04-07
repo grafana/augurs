@@ -13,6 +13,7 @@ description = "A time-series toolkit for forecasting, outlier detection, cluster
 all-features = true
 
 [dependencies]
+augurs-arima = { workspace = true, optional = true}
 augurs-changepoint = { workspace = true, optional = true }
 augurs-clustering = { workspace = true, optional = true }
 augurs-core = { workspace = true }
@@ -30,6 +31,7 @@ itertools.workspace = true
 
 [features]
 default = []
+arima = ["augurs-arima"]
 changepoint = ["augurs-changepoint"]
 clustering = ["augurs-clustering"]
 dtw = ["augurs-dtw"]
