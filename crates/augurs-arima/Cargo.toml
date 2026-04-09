@@ -10,6 +10,7 @@ keywords.workspace = true
 description = "Arima models for augurs"
 
 [dependencies]
+argmin.workspace = true
 augurs-core.workspace = true
 nalgebra.workspace = true
 thiserror.workspace = true

@@ -3,7 +3,7 @@
 //! Puts an Arima(p, d, q) model into state-space form and runs the Kalman
 //! filter to compute the exact log-likelihood.
 
-use crate::error::*;
+use crate::error::{Error, Result};
 use nalgebra::{DMatrix, DVector};
 
 /// State-space representation of an ARMA model. It uses the Harvey representation defined as
