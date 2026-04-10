@@ -1,6 +1,8 @@
 //! Utilities for augurs-arima.
 //!
 //! - Take the n-th difference of a time series, including seasonal differencing.
+//! - Expand the AR/MA backshift notation polynomial.
+//! - Compute mean and variance of a slice.
 
 use crate::error::*;
 
