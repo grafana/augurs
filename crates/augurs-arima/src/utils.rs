@@ -96,6 +96,67 @@ pub fn expand_poly(non_seasonal: &[f64], seasonal: &[f64], period: usize, is_ar:
     prod[1..].iter().map(|&v| v * sign).collect()
 }
 
+/// Compute the sample autocorrelation function up to `max_lag`.
+pub fn acf(y: &[f64], max_lag: usize) -> Result<Vec<f64>> {
+    let n = y.len();
+    if n < 2 {
+        return Err(Error::SeriesTooShort { need: 2, got: n });
+    }
+    let m = mean(y);
+    let var = variance(y);
+
+    if var.abs() < f64::EPSILON {
+        let mut r = vec![0.0; max_lag + 1];
+        r[0] = 1.0;
+        return Ok(r);
+    }
+
+    let mut r = Vec::with_capacity(max_lag + 1);
+    for k in 0..=max_lag {
+        if k >= n {
+            r.push(0.0);
+            continue;
+        }
+        let cov: f64 = y[..n - k]
+            .iter()
+            .zip(y[k..].iter())
+            .map(|(&a, &b)| (a - m) * (b - m))
+            .sum::<f64>()
+            / n as f64;
+        r.push(cov / var);
+    }
+    Ok(r)
+}
+
+/// Compute the sample partial autocorrelation function up to `max_lag`.
+pub fn pacf(y: &[f64], max_lag: usize) -> Result<Vec<f64>> {
+    let r = acf(y, max_lag)?;
+    let mut phi = vec![0.0; max_lag + 1];
+    if max_lag == 0 {
+        return Ok(phi);
+    }
+
+    let mut prev = vec![0.0; max_lag + 1];
+    phi[1] = r[1];
+    prev[1] = r[1];
+
+    for k in 2..=max_lag {
+        let num: f64 = r[k] - (1..k).map(|j| prev[j] * r[k - j]).sum::<f64>();
+        let den: f64 = 1.0 - (1..k).map(|j| prev[j] * r[j]).sum::<f64>();
+        if den.abs() < f64::EPSILON {
+            break;
+        }
+        phi[k] = num / den;
+
+        let curr: Vec<f64> = (1..k).map(|j| prev[j] - phi[k] * prev[k - j]).collect();
+        for (j, &v) in curr.iter().enumerate() {
+            prev[j + 1] = v;
+        }
+        prev[k] = phi[k];
+    }
+    Ok(phi)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
