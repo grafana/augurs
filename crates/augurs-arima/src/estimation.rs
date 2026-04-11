@@ -14,6 +14,8 @@ use nalgebra::{ComplexField, DMatrix, DVector};
 use num_complex::Complex;
 use std::ops::{Add, Div, Mul, Sub};
 
+type BfgsState = argmin::core::IterState<Vec<f64>, Vec<f64>, (), Vec<Vec<f64>>, (), f64>;
+
 /// Fit an (S)ARIMA model to a time series.
 ///
 /// # Arguments
@@ -47,7 +49,6 @@ use std::ops::{Add, Div, Mul, Sub};
 /// let params = fit_arima(&y, &order, method, true, false);
 /// println!("{:?}", params);
 /// ```
-
 pub fn fit_arima(
     y: &[f64],
     order: &ArimaOrder,
@@ -125,16 +126,14 @@ pub fn fit_arima(
             if include_mean || include_drift {
                 init.push(css_model.intercept);
             }
-            let ml_model = fit_ml_with_init(
-                y,
-                &z,
-                order,
-                z_mean_init,
+
+            let options = FitMlOptions {
                 include_mean,
                 include_drift,
-                &init,
-                true,
-            )?;
+                transform_pars: true,
+            };
+
+            let ml_model = fit_ml_with_init(y, &z, order, z_mean_init, &init, options)?;
 
             let z_centered_css: Vec<f64> = z.iter().map(|&v| v - css_model.intercept).collect();
             let expanded_ar = expand_poly(&css_model.ar, &css_model.sar, order.period, true);
@@ -241,14 +240,12 @@ fn fit_css(
             })
             .collect();
         let result = Executor::new(problem.clone(), solver)
-            .configure(
-                |state: argmin::core::IterState<Vec<f64>, Vec<f64>, (), Vec<Vec<f64>>, (), f64>| {
-                    state
-                        .param(init_params.to_vec())
-                        .inv_hessian(init_hessian)
-                        .max_iters(100)
-                },
-            )
+            .configure(|state: BfgsState| {
+                state
+                    .param(init_params.to_vec())
+                    .inv_hessian(init_hessian)
+                    .max_iters(100)
+            })
             .run()?;
         Ok(result
             .state
@@ -328,16 +325,14 @@ fn fit_ml(
     if include_mean || include_drift {
         init.push(z_mean_init);
     }
-    fit_ml_with_init(
-        y,
-        z,
-        order,
-        z_mean_init,
+
+    let options = FitMlOptions {
         include_mean,
         include_drift,
-        &init,
-        true,
-    )
+        transform_pars: true,
+    };
+
+    fit_ml_with_init(y, z, order, z_mean_init, &init, options)
 }
 
 fn fit_ml_with_init(
@@ -345,18 +340,16 @@ fn fit_ml_with_init(
     z: &[f64],
     order: &ArimaOrder,
     z_mean_init: f64,
-    include_mean: bool,
-    include_drift: bool,
     init: &[f64],
-    transform_pars: bool,
+    options: FitMlOptions,
 ) -> Result<ArimaModel> {
-    let has_intercept = include_mean || include_drift;
+    let has_intercept = options.include_mean || options.include_drift;
 
     let problem = MlCostFunction {
         z: z.to_vec(),
         order: *order,
         include_mean: has_intercept,
-        transform_pars,
+        transform_pars: options.transform_pars,
     };
 
     let linesearch = MoreThuenteLineSearch::new();
@@ -374,14 +367,12 @@ fn fit_ml_with_init(
         .collect();
 
     let result = Executor::new(problem.clone(), solver)
-        .configure(
-            |state: argmin::core::IterState<Vec<f64>, Vec<f64>, (), Vec<Vec<f64>>, (), f64>| {
-                state
-                    .param(init.to_vec())
-                    .inv_hessian(init_hessian)
-                    .max_iters(100)
-            },
-        )
+        .configure(|state: BfgsState| {
+            state
+                .param(init.to_vec())
+                .inv_hessian(init_hessian)
+                .max_iters(100)
+        })
         .run();
 
     let best = match &result {
@@ -395,8 +386,16 @@ fn fit_ml_with_init(
 
     let (ar, ma, sar, sma, intercept) = problem.to_constrained(&best);
 
-    let ma = if transform_pars { ma_invert(&ma) } else { ma };
-    let sma = if transform_pars { ma_invert(&sma) } else { sma };
+    let ma = if options.transform_pars {
+        ma_invert(&ma)
+    } else {
+        ma
+    };
+    let sma = if options.transform_pars {
+        ma_invert(&sma)
+    } else {
+        sma
+    };
 
     let intercept = if has_intercept {
         intercept
@@ -420,8 +419,8 @@ fn fit_ml_with_init(
         sar,
         sma,
         intercept,
-        include_mean,
-        include_drift,
+        include_mean: options.include_mean,
+        include_drift: options.include_drift,
         sigma2: kf_output.sigma2,
         log_lik: kf_output.log_lik,
         fitted,
@@ -430,6 +429,12 @@ fn fit_ml_with_init(
         lambda: None,
         method: EstimationMethod::Ml,
     })
+}
+
+struct FitMlOptions {
+    include_mean: bool,
+    include_drift: bool,
+    transform_pars: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -661,9 +666,9 @@ fn polyroot(coeffs: &[f64]) -> Vec<Complex<f64>> {
             let zi = roots[i];
             let pz = eval(zi);
             let mut prod = Complex::new(1.0, 0.0);
-            for j in 0..n {
+            for (j, &root) in roots.iter().enumerate().take(n) {
                 if j != i {
-                    prod = prod.mul(zi.sub(roots[j]));
+                    prod = prod.mul(zi.sub(root));
                 }
             }
             let delta = pz.div(prod);
@@ -734,9 +739,7 @@ fn trans_pars(raw: &[f64]) -> Vec<f64> {
         for k in 0..j {
             work[k] -= a * result[j - k - 1];
         }
-        for k in 0..j {
-            result[k] = work[k];
-        }
+        result[..j].copy_from_slice(&work[..j]);
     }
     result
 }
@@ -757,9 +760,7 @@ fn inv_trans(phi: &[f64]) -> Vec<f64> {
         for k in 0..j {
             work[k] = (result[k] + a * result[j - k - 1]) / denom;
         }
-        for k in 0..j {
-            result[k] = work[k];
-        }
+        result[..j].copy_from_slice(&work[..j]);
     }
     result
         .iter()
@@ -802,7 +803,9 @@ fn yule_walker_init(z: &[f64], p: usize) -> Result<Vec<f64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use augurs_testing::{assert_approx_eq, assert_within_pct, data::AIR_PASSENGERS, assert_all_close};
+    use augurs_testing::{
+        assert_all_close, assert_approx_eq, assert_within_pct, data::AIR_PASSENGERS,
+    };
 
     #[test]
     fn test_polyroot_1() {
