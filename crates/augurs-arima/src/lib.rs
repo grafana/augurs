@@ -6,6 +6,7 @@
 //! including automatic model selection.
 
 pub mod error;
+pub mod estimation;
 pub mod kalman;
 pub mod types;
 pub mod utils;

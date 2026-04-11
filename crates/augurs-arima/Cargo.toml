@@ -11,12 +11,15 @@ description = "Arima models for augurs"
 
 [dependencies]
 argmin.workspace = true
+argmin-math = { version = "0.4"}
 augurs-core.workspace = true
 nalgebra.workspace = true
 thiserror.workspace = true
+num-complex = "0.4"
 
 [dev-dependencies]
 approx = "0.5"
+augurs-testing.workspace = true
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "crates/augurs-arima/katex-header.html" ]
