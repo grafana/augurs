@@ -25,14 +25,14 @@ jobs:
           toolchain: stable
           targets: wasm32-unknown-unknown
 
-      - uses: taiki-e/install-action@921a4027af787cda265c4f334a0f7f89b21d72e9 # v2.75.8
+      - uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
         with:
           tool: just,wasm-pack
 
       - name: Build augurs-js
         run: just build-augurs-js
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: js/.node-version
       - name: Install dependencies
