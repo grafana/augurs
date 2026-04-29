@@ -16,7 +16,7 @@ bench = false
 augurs-core.workspace = true
 distrs.workspace = true
 serde = { workspace = true, features = ["derive"], optional = true }
-stlrs = "0.3.0"
+stlrs = "0.4.0"
 thiserror.workspace = true
 tracing.workspace = true
 
