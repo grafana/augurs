@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs-prophet` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.2...augurs-prophet-v0.10.3) - 2026-05-18
+
+### Fixed
+- *(deps)* update rust crate zip to v8 ([#449](https://github.com/grafana/augurs/pull/449))
+
+## `augurs-outlier` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.2...augurs-outlier-v0.10.3) - 2026-05-18
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-ets` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-ets-v0.10.2...augurs-ets-v0.10.3) - 2026-05-18
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-mstl` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-mstl-v0.10.2...augurs-mstl-v0.10.3) - 2026-05-18
+
+### Fixed
+- *(deps)* update rust crate stlrs to 0.4.0 ([#488](https://github.com/grafana/augurs/pull/488))
+
 ## `augurs-seasons` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.1...augurs-seasons-v0.10.2) - 2026-02-24
 
 ### Other
