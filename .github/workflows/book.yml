@@ -14,11 +14,11 @@ jobs:
       pages: write # To push to a GitHub Pages site
       id-token: write # To update the deployment status
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taiki-e/install-action@7be9fd86bd1707236395105d6e9329dd1511a7e1 # v2.79.0
+      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with:
           tool: mdbook
         env:

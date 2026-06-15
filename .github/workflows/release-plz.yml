@@ -19,7 +19,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -29,7 +29,7 @@ jobs:
           toolchain: stable
 
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@a53fc80bc30b0a16a262520465db899fa3af08b7 # get-vault-secrets/v1.3.2
+        uses: grafana/shared-workflows/actions/get-vault-secrets@e46fe1e9a2bf9e618bcf8d8d32f3a7381b45c06d # get-vault-secrets/v2.0.0
         with:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
@@ -37,7 +37,7 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@064f4d1e36c843611ddf013be726beaa4ad804db # v0.5.129
+        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         with:
           command: release
 
@@ -55,7 +55,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -65,7 +65,7 @@ jobs:
           toolchain: stable
 
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@a53fc80bc30b0a16a262520465db899fa3af08b7 # get-vault-secrets/v1.3.2
+        uses: grafana/shared-workflows/actions/get-vault-secrets@e46fe1e9a2bf9e618bcf8d8d32f3a7381b45c06d # get-vault-secrets/v2.0.0
         with:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
@@ -73,6 +73,6 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@064f4d1e36c843611ddf013be726beaa4ad804db # v0.5.129
+        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         with:
           command: release-pr
