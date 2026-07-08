@@ -15,9 +15,9 @@ augurs-mstl = { workspace = true, optional = true }
 distrs.workspace = true
 itertools.workspace = true
 lstsq = "0.7.0"
-nalgebra = "0.34.0"
+nalgebra = "0.34.2"
 rand.workspace = true
-rand_distr = "0.4.3"
+rand_distr.workspace = true
 roots.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
 thiserror.workspace = true

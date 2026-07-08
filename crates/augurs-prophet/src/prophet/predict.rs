@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use augurs_core::FloatIterExt;
 use itertools::{izip, Itertools};
-use rand::{distributions::Uniform, thread_rng, Rng};
-use statrs::distribution::{Laplace, Normal, Poisson};
+use rand::{distr::Uniform, rng, RngExt};
+use rand_distr::{Normal, Poisson};
 
 use crate::{optimizer::OptimizedParams, Error, GrowthType, Prophet, TimestampSeconds};
 
@@ -472,7 +472,7 @@ impl<O> Prophet<O> {
 
         let sigma = params.sigma_obs;
         let dist = Normal::new(0.0, *sigma).expect("sigma must be non-negative");
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let noise = (&mut rng).sample_iter(dist).take(n).map(|x| x * y_scale);
 
         for yhat in izip!(trend_tmp, &xb_a, &xb_m, noise).map(|(t, a, m, n)| *t * (1.0 + m) + a + n)
@@ -495,7 +495,7 @@ impl<O> Prophet<O> {
 
         let t_max = df.t.iter().copied().nanmax(true);
 
-        let mut rng = thread_rng();
+        let mut rng = rng();
 
         let n_changes = if t_max > 1.0 {
             // Sample new changepoints from a Poisson process with rate n_cp on [1, T].
@@ -509,7 +509,10 @@ impl<O> Prophet<O> {
         };
         let changepoints_t_new = if n_changes > 0 {
             let mut cp_t_new = (&mut rng)
-                .sample_iter(Uniform::new(0.0, t_max - 1.0))
+                .sample_iter(
+                    Uniform::new(0.0, t_max - 1.0)
+                        .expect("uniform distribution bounds should be valid"),
+                )
                 .take(n_changes)
                 .map(|x| x + 1.0)
                 .collect_vec();
@@ -529,8 +532,10 @@ impl<O> Prophet<O> {
         }
         // Sample deltas from a Laplace distribution with location 0 and scale lambda.
         // Lambda should always be positive and non-NaN, checked above.
-        let dist = Laplace::new(0.0, lambda).expect("Valid Laplace distribution");
-        let deltas_new = rng.sample_iter(dist).take(n_changes);
+        let deltas_new = (0..n_changes).map(|_| {
+            let u = rng.random::<f64>() - 0.5;
+            -lambda * u.signum() * (1.0 - 2.0 * u.abs()).ln()
+        });
 
         // Prepend the times and deltas from the history.
         let all_changepoints_t = changepoints_t

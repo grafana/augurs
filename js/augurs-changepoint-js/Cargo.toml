@@ -20,12 +20,12 @@ test = false
 [dependencies]
 augurs-core-js.workspace = true
 augurs-changepoint = { workspace = true, features = ["serde"] }
-getrandom = { version = "0.2.10", features = ["js"] }
-js-sys = "0.3.64"
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
+js-sys = "0.3.103"
 serde.workspace = true
-serde-wasm-bindgen = "0.6.0"
+serde-wasm-bindgen = "0.6.5"
 tracing.workspace = true
-tsify-next = { version = "0.5.3", default-features = false, features = ["js"] }
+tsify-next = { version = "0.5.6", default-features = false, features = ["js"] }
 wasm-bindgen.workspace = true
 
 [package.metadata.wasm-pack.profile.release]

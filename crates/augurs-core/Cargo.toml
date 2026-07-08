@@ -14,7 +14,7 @@ bench = false
 
 [dependencies]
 num-traits.workspace = true
-serde = { version = "1.0.166", optional = true, features = ["derive"] }
+serde = { version = "1.0.228", optional = true, features = ["derive"] }
 
 [lints]
 workspace = true

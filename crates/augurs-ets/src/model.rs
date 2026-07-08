@@ -1464,7 +1464,7 @@ impl Forecast<'_> {
             params.gamma
         };
         let phi = if params.phi.is_nan() { 0.0 } else { params.phi };
-        let rng = &mut rand::thread_rng();
+        let rng = &mut rand::rng();
         let normal = Normal::new(0.0, fit.sigma_squared().sqrt()).unwrap();
         // Use the same `f` vector for each simulation to avoid re-allocating.
         // For some reason statsforecast uses a length of 10 for `f`?
