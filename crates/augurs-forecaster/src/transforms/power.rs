@@ -256,21 +256,27 @@ fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, Error> {
 }
 
 /// Returns the inverse Yeo-Johnson transformation of the given value.
+///
+/// Mirrors the exact branch structure of [`yeo_johnson`] so the two are
+/// inverses; selecting branches with the same `== 0.0` / `== 2.0` tests avoids
+/// the fwd/inverse asymmetry that previously fired the wrong formula near
+/// `lambda == 2`.
 fn inverse_yeo_johnson(y: f64, lambda: f64) -> f64 {
-    const EPSILON: f64 = 1e-6;
+    if y.is_nan() {
+        return y;
+    }
 
-    if y >= 0.0 && lambda.abs() < EPSILON {
-        // For lambda close to 0 (positive values)
-        (y.exp()) - 1.0
-    } else if y >= 0.0 {
-        // For positive values (lambda not close to 0)
-        (y * lambda + 1.0).powf(1.0 / lambda) - 1.0
-    } else if (lambda - 2.0).abs() < EPSILON {
-        // For lambda close to 2 (negative values)
-        -(-y.exp() - 1.0)
+    if y >= 0.0 {
+        if lambda == 0.0 {
+            y.exp() - 1.0
+        } else {
+            (y * lambda + 1.0).powf(1.0 / lambda) - 1.0
+        }
+    } else if lambda == 2.0 {
+        // Inverse of y = -ln(1 - x): x = 1 - exp(-y).
+        1.0 - (-y).exp()
     } else {
-        // For negative values (lambda not close to 2)
-        -((-((2.0 - lambda) * y) + 1.0).powf(1.0 / (2.0 - lambda)) - 1.0)
+        1.0 - (1.0 - (2.0 - lambda) * y).powf(1.0 / (2.0 - lambda))
     }
 }
 
@@ -332,8 +338,8 @@ impl CostFunction for YeoJohnsonProblem<'_> {
 ///
 /// - if lambda != 0 and x >= 0: ((x + 1)^lambda - 1) / lambda
 /// - if lambda == 0 and x >= 0: (x + 1).ln()
-/// - if lambda != 2 and x < 0:  ((-x + 1)^2 - 1) / 2
-/// - if lambda == 2 and x < 0:  (-x + 1).ln()
+/// - if lambda != 2 and x < 0:  -((-x + 1)^(2 - lambda) - 1) / (2 - lambda)
+/// - if lambda == 2 and x < 0:  -(-x + 1).ln()
 ///
 /// By default the optimal `lambda` parameter is found from the data in
 /// `transform` using maximum likelihood estimation. If you want to use a
@@ -590,6 +596,38 @@ mod test {
         let lambda = 0.5;
         let yeo_johnson = YeoJohnson::new().with_lambda(lambda).unwrap();
         let expected = vec![-1.0, 0.0, 1.0];
+        yeo_johnson.inverse_transform(&mut data).unwrap();
+        assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn yeo_johnson_inverse_round_trip() {
+        // inverse_yeo_johnson must invert yeo_johnson across the whole lambda
+        // range, including lambda == 2 (the optimizer's upper bound) with
+        // negative inputs, where the inverse previously diverged.
+        let lambdas = [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0];
+        let xs = [-5.0, -3.0, -1.0, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0, 3.0, 5.0];
+        for &lambda in &lambdas {
+            for &x in &xs {
+                let y = yeo_johnson(x, lambda).unwrap();
+                let round_tripped = inverse_yeo_johnson(y, lambda);
+                assert!(
+                    (round_tripped - x).abs() < 1e-9,
+                    "round-trip failed for lambda={lambda}, x={x}: got {round_tripped}",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn yeo_johnson_inverse_lambda_two_negative() {
+        // Regression: with lambda == 2 the negative-side inverse computed
+        // exp(y) + 1 instead of 1 - exp(-y), so back-transformed values landed
+        // in the positive domain.
+        let mut data = vec![-5.0, -3.0, -0.5];
+        let expected = data.clone();
+        let yeo_johnson = YeoJohnson::new().with_lambda(2.0).unwrap();
+        yeo_johnson.transform(&mut data).unwrap();
         yeo_johnson.inverse_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
     }
