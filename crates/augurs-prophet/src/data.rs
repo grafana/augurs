@@ -189,10 +189,10 @@ impl TrainingData {
         if let Some(floor) = self.floor.as_mut() {
             floor.truncate(n);
         }
-        for (_, v) in self.x.iter_mut() {
+        for v in self.x.values_mut() {
             v.truncate(n);
         }
-        for (_, v) in self.seasonality_conditions.iter_mut() {
+        for v in self.seasonality_conditions.values_mut() {
             v.truncate(n);
         }
         self
@@ -210,10 +210,10 @@ impl TrainingData {
         if let Some(floor) = self.floor.as_mut() {
             *floor = floor.split_off(split);
         }
-        for (_, v) in self.x.iter_mut() {
+        for v in self.x.values_mut() {
             *v = v.split_off(split);
         }
-        for (_, v) in self.seasonality_conditions.iter_mut() {
+        for v in self.seasonality_conditions.values_mut() {
             *v = v.split_off(split);
         }
         self
