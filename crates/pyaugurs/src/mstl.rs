@@ -28,7 +28,7 @@ impl MSTL {
                 false => "unfit",
                 true => "fit",
             },
-            &self.trend_model_name,
+            self.trend_model_name,
         )
     }
 
