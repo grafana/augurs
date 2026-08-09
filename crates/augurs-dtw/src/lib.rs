@@ -288,6 +288,21 @@ impl<T: Distance + Send + Sync> Dtw<T> {
 
         let mut k = 0;
 
+        // `cost_k_minus_1` is the cost of the cell to the left of the current one,
+        // i.e. `cost[k - 1]`. On the first row there is no cell to the left, and
+        // seeding it with 0.0 makes the very first cell evaluate to nothing but its
+        // own distance -- which is exactly the DTW base case `D[0][0] = d(0, 0)`.
+        // Every later row is seeded with infinity instead, at the bottom of the loop.
+        //
+        // Seeding it out here rather than special-casing `i == 0 && j == 0` inside
+        // the loop keeps two loop-invariant branches out of the innermost loop. The
+        // first is that check itself, which is true exactly once in the whole
+        // function yet was evaluated for every cell. The second is the `k == 0`
+        // check it made necessary: `k` only ever increases, so `k == 0` implies
+        // we're on the first inner iteration of a row with `i >= max_window`, and
+        // there `cost_k_minus_1` still holds the infinity seeded below.
+        let mut cost_k_minus_1: f64 = 0.0;
+
         for (i, t_i) in outer_iter.copied().enumerate() {
             k = max_window.saturating_sub(i);
 
@@ -295,33 +310,20 @@ impl<T: Distance + Send + Sync> Dtw<T> {
             let upper_bound = usize::min(n - 1, i + max_window);
             let mut min_cost = f64::INFINITY;
 
-            let mut cost_k_minus_1 = f64::INFINITY;
-            for ((j, s_j), c) in inner_iter
+            for (s_j, c) in inner_iter
                 .clone()
                 .skip(lower_bound)
                 .take(upper_bound - lower_bound + 1)
                 .copied()
-                .enumerate()
                 .zip(&mut cost[k..])
             {
-                if i == 0 && j == 0 {
-                    *c = self.distance_fn.distance(s_j, t_i);
-                    cost_k_minus_1 = *c;
-                    min_cost = *c;
-                    k += 1;
-                    continue;
-                }
                 // SAFETY: prev_cost has length 2 * max_window + 1,
                 // and k is always in the range 0..=2 * max_window
                 // since we start at k = max_window and increment it
                 // by 1 each iteration, and the inner loop runs
                 // `max_window` times.
                 z = unsafe { *prev_cost.get_unchecked(k) };
-                if k == 0 {
-                    y = f64::INFINITY;
-                } else {
-                    y = cost_k_minus_1;
-                }
+                y = cost_k_minus_1;
                 let min = if k > max_k {
                     y.min(z)
                 } else {
@@ -344,6 +346,9 @@ impl<T: Distance + Send + Sync> Dtw<T> {
                 return self.max_distance.unwrap();
             }
             (prev_cost, cost) = (cost, prev_cost);
+            // Seed the next row: unlike the first row, every later one starts at a
+            // cell whose left neighbour is outside the warping band.
+            cost_k_minus_1 = f64::INFINITY;
         }
         k = k.saturating_sub(1);
 
@@ -629,6 +634,71 @@ mod test {
                 vec![9.273618495495704, 5.0, 0.0],
             ],
         );
+    }
+
+    /// Textbook full-matrix DTW, used as an independent oracle for the banded
+    /// implementation in [`Dtw::distance`].
+    ///
+    /// This is deliberately the naive `O(m * n)` formulation with no windowing,
+    /// no early stopping and no `transform_result` trickery, so that it shares no
+    /// code (and therefore no bugs) with the real implementation.
+    fn reference_euclidean(s: &[f64], t: &[f64]) -> f64 {
+        let (m, n) = (s.len(), t.len());
+        let mut dp = vec![vec![f64::INFINITY; n + 1]; m + 1];
+        dp[0][0] = 0.0;
+        for i in 1..=m {
+            for j in 1..=n {
+                let cost = (s[i - 1] - t[j - 1]).powi(2);
+                dp[i][j] = cost + dp[i - 1][j - 1].min(dp[i - 1][j]).min(dp[i][j - 1]);
+            }
+        }
+        dp[m][n].sqrt()
+    }
+
+    /// Check the banded implementation against a full-matrix reference over a
+    /// deterministic spread of series lengths and shapes.
+    ///
+    /// Without a window the band covers the whole matrix, so the two must agree.
+    #[test]
+    fn matches_reference_implementation() {
+        // Simple deterministic LCG: avoids a dev-dependency on `rand` while still
+        // covering far more shapes than hand-written cases would.
+        let mut state = 0x00C0_FFEE_u64;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((state >> 11) as f64) / ((1u64 << 53) as f64)
+        };
+
+        for len_s in 1..12 {
+            for len_t in 1..12 {
+                let s: Vec<f64> = (0..len_s).map(|_| next() * 20.0 - 10.0).collect();
+                let t: Vec<f64> = (0..len_t).map(|_| next() * 20.0 - 10.0).collect();
+                let expected = reference_euclidean(&s, &t);
+                let actual = Dtw::euclidean().distance(&s, &t);
+                assert!(
+                    (actual - expected).abs() <= 1e-9 * expected.abs().max(1.0),
+                    "len_s={len_s} len_t={len_t}: expected {expected}, got {actual}\ns={s:?}\nt={t:?}"
+                );
+            }
+        }
+    }
+
+    /// A window at least as wide as the longer series must give the same answer as
+    /// no window at all, since the band then covers the entire cost matrix.
+    #[test]
+    fn wide_window_matches_unwindowed() {
+        let s: &[f64] = &[0.0, 3.0, -2.0, 5.0, 1.0, 1.0, -4.0];
+        let t: &[f64] = &[1.0, 2.0, 2.0, -1.0, 6.0];
+        let unwindowed = Dtw::euclidean().distance(s, t);
+        for window in [s.len(), s.len() + 1, s.len() * 2, 100] {
+            let windowed = Dtw::euclidean().with_window(window).distance(s, t);
+            assert_eq!(
+                windowed, unwindowed,
+                "window={window} should not constrain the path"
+            );
+        }
     }
 
     #[test]
