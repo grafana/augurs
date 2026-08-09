@@ -21,12 +21,16 @@ rustc-hash = "2.0.0"
 rv = { version = "0.18.0", default-features = false }
 serde = { workspace = true, features = ["derive"], optional = true }
 thiserror.workspace = true
-tinyvec = { workspace = true, features = ["std"] }
 tracing.workspace = true
 
 [dev-dependencies]
 augurs.workspace = true
+criterion.workspace = true
 serde_json.workspace = true
+
+[[bench]]
+name = "dbscan"
+harness = false
 
 [features]
 parallel = ["rayon"]

@@ -1,4 +1,5 @@
-use tinyvec::TinyVec;
+use std::ops::Range;
+
 use tracing::instrument;
 
 #[cfg(feature = "parallel")]
@@ -122,39 +123,52 @@ impl DbscanDetector {
 
     fn run(&self, data: &Data) -> OutlierOutput {
         let epsilon = self.epsilon_or_sensitivity.resolve_epsilon(data);
-        let n_timestamps = data.sorted.len();
+        let n_timestamps = data.n_timestamps();
         let mut serieses = Series::preallocated(data.n_series, n_timestamps);
         let mut normal_band = None;
-
-        // TODO: come up with an educated guess for capacity.
-        let mut outliers_so_far = TinyVec::with_capacity(data.sorted.len());
 
         // Run DBSCANs in parallel using Rayon if specified.
         #[cfg(feature = "parallel")]
         let dbscans: Vec<_> = if self.parallelize {
-            data.sorted
-                .par_iter()
-                .map(|ts_data| Self::dbscan_1d(ts_data, epsilon))
+            (0..n_timestamps)
+                .into_par_iter()
+                .map(|i| Self::dbscan_1d(data.timestamp(i), epsilon))
                 .collect()
         } else {
-            data.sorted
-                .iter()
-                .map(|ts_data| Self::dbscan_1d(ts_data, epsilon))
+            (0..n_timestamps)
+                .map(|i| Self::dbscan_1d(data.timestamp(i), epsilon))
                 .collect()
         };
         #[cfg(not(feature = "parallel"))]
-        let dbscans: Vec<_> = data
-            .sorted
-            .iter()
-            .map(|ts_data| Self::dbscan_1d(ts_data, epsilon))
+        let dbscans: Vec<_> = (0..n_timestamps)
+            .map(|i| Self::dbscan_1d(data.timestamp(i), epsilon))
             .collect();
+
+        // Which series currently have an open outlier interval, tracked both as a
+        // dense flag per series and as the list of series where that flag is set.
+        //
+        // Keeping the dense flags means deciding whether a series started or stopped
+        // being an outlier is a single lookup. The previous approach searched the
+        // previous timestamp's list of outliers, making the bookkeeping below
+        // `O(n_outliers ^ 2)` per timestamp rather than `O(n_outliers)`.
+        let mut interval_open = vec![false; data.n_series];
+        let mut open_series: Vec<usize> = Vec::new();
+        // Scratch flags marking the series that are outlying at this timestamp.
+        // Always fully reset before the end of each iteration.
+        let mut outlying_now = vec![false; data.n_series];
 
         for (i, dbscan) in dbscans.into_iter().enumerate() {
             let DBScan1DResults {
                 cluster_min,
                 cluster_max,
-                outlier_indices,
+                cluster,
             } = dbscan;
+
+            // The values at each timestamp are sorted, so the outliers are exactly
+            // those that sort outside the cluster: a prefix and a suffix. When no
+            // cluster was found `cluster` is empty and everything is an outlier.
+            let indices = data.timestamp(i).indices;
+            let (below, above) = (&indices[..cluster.start], &indices[cluster.end..]);
 
             // Construct the normal band, if found.
             if let Some((min, max)) = cluster_min.zip(cluster_max) {
@@ -164,46 +178,38 @@ impl DbscanDetector {
             }
 
             // Mark the outlier series and fill in any positive scores.
-            outlier_indices.iter().for_each(|Index(idx)| {
-                let series = &mut serieses[*idx];
+            for &Index(idx) in below.iter().chain(above) {
+                let idx = idx as usize;
+                let series = &mut serieses[idx];
                 series.is_outlier = true;
                 series.scores[i] = 1.0;
-            });
+                outlying_now[idx] = true;
+            }
 
-            // For each series that has outliers, find the intervals where they are outliers.
-            if !outlier_indices.is_empty() {
-                // Compare with outliers so far.
-
-                // What was in previous outliers, but now not
-                let stopped_being_outlier = outliers_so_far
-                    .iter()
-                    .filter(|x| !outlier_indices.contains(x));
-                for stopped_index in stopped_being_outlier {
-                    serieses[stopped_index.into_inner()]
-                        .outlier_intervals
-                        .add_end(i);
+            // Close the interval of every series that has stopped being an outlier.
+            for &idx in &open_series {
+                if !outlying_now[idx] {
+                    serieses[idx].outlier_intervals.add_end(i);
+                    interval_open[idx] = false;
                 }
+            }
+            open_series.retain(|&idx| interval_open[idx]);
 
-                // What has started being outlier
-                let started_being_outlier = outlier_indices
-                    .iter()
-                    .filter(|x| !outliers_so_far.contains(x));
-                for started_index in started_being_outlier {
-                    serieses[started_index.into_inner()]
-                        .outlier_intervals
-                        .add_start(i);
+            // Open an interval for every series that has started being an outlier.
+            for &Index(idx) in below.iter().chain(above) {
+                let idx = idx as usize;
+                if !interval_open[idx] {
+                    serieses[idx].outlier_intervals.add_start(i);
+                    interval_open[idx] = true;
+                    open_series.push(idx);
                 }
+            }
 
-                outliers_so_far = outlier_indices;
-            } else {
-                // all series considered normal at this timestamp, so take all outliers_so_far entries,
-                // mark them as stopped and empty it
-                for stopped_index in &outliers_so_far {
-                    serieses[stopped_index.into_inner()]
-                        .outlier_intervals
-                        .add_end(i);
-                }
-                outliers_so_far.clear();
+            // Reset the scratch flags ready for the next timestamp. Only the flags we
+            // set need clearing, which is what keeps this loop proportional to the
+            // number of outliers rather than the number of series.
+            for &Index(idx) in below.iter().chain(above) {
+                outlying_now[idx as usize] = false;
             }
         }
         OutlierOutput::new(serieses, normal_band)
@@ -211,76 +217,59 @@ impl DbscanDetector {
 
     // Following impl inspired by https://github.com/d-chambers/dbscan1d
     //
-    // Main idea: as the array is sorted, compare the distance between each neighbour. If
-    // distance less than epsilon, is candidate for cluster. Try next neighbour to see if
-    // it close enough to join cluster. If cluster size grows to half of all points, that
-    // is the main/final cluster. If not, the points are outliers.
-    fn dbscan_1d(sorted: &SortedData, eps: f64) -> DBScan1DResults {
-        let SortedData {
-            sorted,
-            indices: sort_indices,
-        } = sorted;
+    // Main idea: as the array is sorted, a cluster is just a run of consecutive
+    // values where every neighbouring pair is within epsilon of each other. We
+    // mandate that the cluster contains more than half of all values, which has a
+    // useful consequence: at most one run can ever be large enough, and any run
+    // that large must span the middle of the sorted values.
+    //
+    // (A run of length `L > n / 2` starting at `s` and ending at `e` satisfies
+    // `s <= n - L < n / 2` and `e >= L - 1 >= n / 2`, so it always contains index
+    // `n / 2`. Two such runs cannot both exist, as they are disjoint and would need
+    // more than `n` values between them.)
+    //
+    // So instead of scanning every gap and then rescanning to collect the outliers,
+    // start from the middle value and walk outwards for as long as the gap to the
+    // next value is within epsilon. That both finds the only candidate cluster and
+    // gives us its bounds directly, and it can stop early when there is no cluster.
+    fn dbscan_1d(timestamp: Timestamp<'_>, eps: f64) -> DBScan1DResults {
+        let values = timestamp.values;
+        let n = values.len();
         // if <=2 series, can return quickly as no anomaly
-        if sorted.len() <= 2 {
-            return DBScan1DResults {
-                cluster_min: None,
-                cluster_max: None,
-                outlier_indices: TinyVec::new(),
-            };
+        if n <= 2 {
+            return DBScan1DResults::all_normal(n);
         }
 
-        // Below DBSCAN impl relies on the fact we mandate the cluster contains at least 50% of all values
-        let min_cluster_size = sorted.len() / 2 + 1;
+        let min_cluster_size = n / 2 + 1;
+        // The "must span the middle" argument above relies on the cluster holding a
+        // strict majority of the values. If that ever changes, this shortcut is no
+        // longer valid and the full scan has to come back.
+        debug_assert!(
+            min_cluster_size * 2 > n,
+            "dbscan_1d assumes a cluster holds a strict majority of values"
+        );
 
-        let mut this_cluster_bottom = None;
-        let mut this_cluster_top;
-        let mut this_cluster_size = 1;
-        let mut in_cluster = false;
-        let (mut cluster_min, mut cluster_max) = (None, None);
-        let mut outlier_indices = TinyVec::with_capacity(sorted.len());
-
-        // Ideally we'd use `array_windows` here but it's still unstable so
-        // we're stuck with `windows`. This means we need to manually add
-        // some assertions to help the compiler to optimize the code,
-        // and there's an unfortunate `unreachable!` call which should
-        // never be hit.
-        for window in sorted.windows(2) {
-            assert_eq!(window.len(), 2);
-            let &[a, b] = &window else { unreachable!() };
-            if (b - a).abs() <= eps {
-                if !in_cluster {
-                    this_cluster_bottom = Some(*a);
-                }
-                in_cluster = true;
-                this_cluster_top = *b;
-                this_cluster_size += 1;
-
-                if this_cluster_size >= min_cluster_size {
-                    cluster_min = this_cluster_bottom;
-                    cluster_max = Some(this_cluster_top);
-                }
-            } else {
-                this_cluster_size = 1;
-                in_cluster = false;
-            }
+        // Note there's no need for `abs` when comparing gaps: `values` is sorted
+        // ascending, so every gap is already non-negative.
+        let middle = n / 2;
+        let mut start = middle;
+        while start > 0 && values[start] - values[start - 1] <= eps {
+            start -= 1;
+        }
+        let mut end = middle;
+        while end + 1 < n && values[end + 1] - values[end] <= eps {
+            end += 1;
         }
 
-        if let Some((cluster_bottom, cluster_top)) = cluster_min.zip(cluster_max) {
-            for (i, val) in sorted.iter().enumerate() {
-                let original_index = sort_indices[i];
-                if *val < cluster_bottom || *val > cluster_top {
-                    outlier_indices.push(original_index);
-                }
+        if end - start + 1 >= min_cluster_size {
+            DBScan1DResults {
+                cluster_min: Some(values[start]),
+                cluster_max: Some(values[end]),
+                cluster: start..end + 1,
             }
         } else {
-            // everything is an outlier
-            outlier_indices = TinyVec::from(sort_indices.as_slice());
-        }
-
-        DBScan1DResults {
-            cluster_min,
-            cluster_max,
-            outlier_indices,
+            // No run is large enough, so everything is an outlier.
+            DBScan1DResults::all_outlying()
         }
     }
 }
@@ -288,26 +277,73 @@ impl DbscanDetector {
 pub(crate) struct DBScan1DResults {
     cluster_min: Option<f64>,
     cluster_max: Option<f64>,
-    outlier_indices: TinyVec<[Index; 24]>,
+    /// The range of the timestamp's sorted values that falls inside the cluster.
+    ///
+    /// Everything outside this range is an outlier, so an empty range means every
+    /// value at this timestamp is an outlier.
+    cluster: Range<usize>,
+}
+
+impl DBScan1DResults {
+    /// There were too few values at this timestamp to call any of them outlying.
+    ///
+    /// Note this is *not* the same as [`Self::all_outlying`]: there is no cluster
+    /// band either way, but here every value is treated as normal.
+    fn all_normal(n: usize) -> Self {
+        Self {
+            cluster_min: None,
+            cluster_max: None,
+            cluster: 0..n,
+        }
+    }
+
+    /// No run of values was large enough to form a cluster, so all of them are
+    /// outlying.
+    fn all_outlying() -> Self {
+        Self {
+            cluster_min: None,
+            cluster_max: None,
+            cluster: 0..0,
+        }
+    }
 }
 
 /// Newtype wrapper to ensure that we use the correct type when converting from
 /// sorted data to original indexes.
+///
+/// A `u32` is plenty: it bounds the number of input series, not the number of
+/// timestamps, and halves the size of the index array relative to a `usize`.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-struct Index(usize);
-
-impl Index {
-    fn into_inner(self) -> usize {
-        self.0
-    }
-}
+struct Index(u32);
 
 /// Preprocessed data for the DBSCAN algorithm.
+///
+/// This holds the input values transposed, so that the values of every series at
+/// a given timestamp are contiguous, and sorted ascending within each timestamp.
+///
+/// All timestamps share one flat allocation rather than getting a `Vec` each: the
+/// values for timestamp `i` live at `i * n_series..i * n_series + counts[i]`. Any
+/// `NaN` inputs are dropped during preprocessing, which is why the number of
+/// values at a timestamp can be smaller than `n_series`.
 #[derive(Debug)]
 pub struct Data {
-    sorted: Vec<SortedData>,
+    /// The values at each timestamp, sorted ascending.
+    values: Vec<f64>,
+    /// The original series index of each entry in `values`.
+    indices: Vec<Index>,
+    /// The number of non-`NaN` values at each timestamp.
+    counts: Vec<u32>,
     n_series: usize,
+}
+
+/// A borrowed view of the values of every series at a single timestamp.
+#[derive(Debug, Clone, Copy)]
+struct Timestamp<'a> {
+    /// The non-`NaN` values at this timestamp, sorted ascending.
+    values: &'a [f64],
+    /// The original series index of each entry in `values`.
+    indices: &'a [Index],
 }
 
 impl Data {
@@ -349,17 +385,17 @@ impl Data {
             }
         }
 
-        // Transpose the data.
-        let mut transposed = vec![vec![f64::NAN; n_series]; n_timestamps];
-        data.iter().enumerate().for_each(|(i, chunk)| {
-            chunk.iter().enumerate().for_each(|(j, value)| {
-                transposed[j][i] = *value;
-            })
-        });
-
-        // Then sort values at each timestamp.
-        let sorted = transposed.into_iter().map(SortedData::new).collect();
-        Ok(Self { sorted, n_series })
+        // Transpose and sort in one pass. Gathering column `i` walks down the rows,
+        // which looks strided but reads the same handful of cache lines for a run of
+        // consecutive timestamps, so there's no need for a separate transpose buffer.
+        Ok(Self::build(n_series, n_timestamps, |i, scratch| {
+            for (j, row) in data.iter().enumerate() {
+                let value = row[i];
+                if !value.is_nan() {
+                    scratch.push((value, Index(j as u32)));
+                }
+            }
+        }))
     }
 
     /// Create a `Data` struct from column-major data.
@@ -399,49 +435,105 @@ impl Data {
             }
         }
 
-        let mut sorted = Vec::with_capacity(data.len());
-        for ts in data {
-            sorted.push(SortedData::new(ts.to_vec()));
+        // The data is already grouped by timestamp, so gathering is just a copy.
+        Ok(Self::build(n_series, data.len(), |i, scratch| {
+            for (j, &value) in data[i].iter().enumerate() {
+                if !value.is_nan() {
+                    scratch.push((value, Index(j as u32)));
+                }
+            }
+        }))
+    }
+
+    /// Transpose and sort the input into the flat layout described on [`Data`].
+    ///
+    /// `gather` is called once per timestamp and should push the `(value, series)`
+    /// pair of every non-`NaN` value at that timestamp onto the scratch buffer.
+    #[instrument(skip(gather))]
+    fn build(
+        n_series: usize,
+        n_timestamps: usize,
+        mut gather: impl FnMut(usize, &mut Vec<(f64, Index)>),
+    ) -> Self {
+        let mut counts = vec![0; n_timestamps];
+        if n_series == 0 {
+            // Degenerate input: still the right number of timestamps, each with no
+            // values at all. Bail out before chunking below, which needs a non-zero
+            // chunk size.
+            return Self {
+                values: Vec::new(),
+                indices: Vec::new(),
+                counts,
+                n_series,
+            };
         }
-        Ok(Self { sorted, n_series })
+
+        let mut values = vec![0.0; n_series * n_timestamps];
+        let mut indices = vec![Index(0); n_series * n_timestamps];
+        // Reused across timestamps so that sorting doesn't allocate per timestamp.
+        let mut scratch: Vec<(f64, Index)> = Vec::with_capacity(n_series);
+
+        for (i, ((values, indices), count)) in values
+            .chunks_mut(n_series)
+            .zip(indices.chunks_mut(n_series))
+            .zip(&mut counts)
+            .enumerate()
+        {
+            scratch.clear();
+            gather(i, &mut scratch);
+            // Sorting `(f64, Index)` pairs by the value keeps the value inline, so
+            // each comparison is a load from the pair rather than a pointer chase
+            // through a separate array. `total_cmp` is total, so no `unwrap` is
+            // needed; `NaN`s have already been filtered out by `gather`, and the
+            // only case where it disagrees with `partial_cmp` is the relative order
+            // of `-0.0` and `0.0`, which is arbitrary under an unstable sort anyway.
+            scratch.sort_unstable_by(|(a, _), (b, _)| a.total_cmp(b));
+
+            for (slot, &(value, index)) in scratch.iter().enumerate() {
+                values[slot] = value;
+                indices[slot] = index;
+            }
+            *count = scratch.len() as u32;
+        }
+
+        Self {
+            values,
+            indices,
+            counts,
+            n_series,
+        }
+    }
+
+    /// The number of timestamps in the data.
+    fn n_timestamps(&self) -> usize {
+        self.counts.len()
+    }
+
+    /// The sorted values of every series at timestamp `i`.
+    fn timestamp(&self, i: usize) -> Timestamp<'_> {
+        let base = i * self.n_series;
+        let range = base..base + self.counts[i] as usize;
+        Timestamp {
+            values: &self.values[range.clone()],
+            indices: &self.indices[range],
+        }
     }
 
     /// Calculate the span of the data: the difference between the highest and lowest values.
     fn span(&self) -> f64 {
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
-        for ts in &self.sorted {
-            if let Some(low) = ts.sorted.first() {
+        for i in 0..self.n_timestamps() {
+            // Values are sorted, so the extremes of each timestamp are its ends.
+            let values = self.timestamp(i).values;
+            if let Some(low) = values.first() {
                 min = min.min(*low);
             }
-            if let Some(high) = ts.sorted.last() {
+            if let Some(high) = values.last() {
                 max = max.max(*high);
             }
         }
         (max - min).abs().max(0.1)
-    }
-}
-
-/// A sorted list of values at a single timestamp, with the original indices of the values.
-#[derive(Debug)]
-struct SortedData {
-    /// The values at the timestamp, sorted.
-    sorted: Vec<f64>,
-    /// The original indices of the sorted values.
-    indices: Vec<Index>,
-}
-
-impl SortedData {
-    #[instrument(skip(vals))]
-    fn new(vals: Vec<f64>) -> Self {
-        let mut vals_with_idx: Vec<_> = vals
-            .iter()
-            .enumerate()
-            .filter_map(|(i, val)| (!val.is_nan()).then_some((Index(i), val)))
-            .collect();
-        vals_with_idx.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
-        let (indices, sorted) = vals_with_idx.into_iter().unzip();
-        Self { sorted, indices }
     }
 }
 
@@ -725,6 +817,90 @@ mod tests {
         assert!(!results.outlying_series.contains(&1));
         assert!(results.outlying_series.contains(&2));
         assert!(results.cluster_band.is_some());
+    }
+
+    // Having too few values at a timestamp and finding no cluster at a timestamp both
+    // mean there is no cluster band, but they mean opposite things about the values:
+    // with fewer than three values nothing can be called outlying, whereas if no run
+    // of values is big enough to be a cluster then everything is outlying. It's easy
+    // to conflate the two, so pin the distinction down.
+    #[test]
+    fn test_too_few_values_is_not_the_same_as_no_cluster() {
+        // Two series, far enough apart that no cluster could form: neither is an
+        // outlier, because with two values there's nothing to be an outlier of.
+        let data: &[&[f64]] = &[&[1.0, 2.0], &[100.0, 200.0]];
+        let dbscan = DbscanDetector::with_epsilon(1.0);
+        let results = dbscan.detect(&dbscan.preprocess(data).unwrap()).unwrap();
+        assert!(results.outlying_series.is_empty());
+        assert!(results.cluster_band.is_none());
+        for series in &results.series_results {
+            assert_eq!(series.scores, vec![0.0, 0.0]);
+            assert!(series.outlier_intervals.intervals.is_empty());
+        }
+
+        // Three series spread out so that no cluster can reach the required majority:
+        // now every series is an outlier at every timestamp.
+        let data: &[&[f64]] = &[&[1.0, 2.0], &[100.0, 200.0], &[10_000.0, 20_000.0]];
+        let results = dbscan.detect(&dbscan.preprocess(data).unwrap()).unwrap();
+        assert_eq!(results.outlying_series.len(), 3);
+        assert!(results.cluster_band.is_none());
+        for series in &results.series_results {
+            assert_eq!(series.scores, vec![1.0, 1.0]);
+        }
+    }
+
+    // NaNs are dropped during preprocessing, so a timestamp can drop below three
+    // values even when there are plenty of series. That has to be judged on the
+    // number of values actually present, not the number of series.
+    #[test]
+    fn test_nans_reduce_values_below_cluster_threshold() {
+        let data: &[&[f64]] = &[
+            &[1.0, 1.0],
+            &[100.0, UNDEFINED],
+            &[10_000.0, UNDEFINED],
+            &[20_000.0, UNDEFINED],
+        ];
+        let dbscan = DbscanDetector::with_epsilon(1.0);
+        let results = dbscan.detect(&dbscan.preprocess(data).unwrap()).unwrap();
+
+        // Timestamp 0 has four spread-out values and so no cluster: all outlying.
+        // Timestamp 1 has a single value, which can't be outlying.
+        assert_eq!(results.series_results[0].scores, vec![1.0, 0.0]);
+        for series in &results.series_results[1..] {
+            assert_eq!(series.scores, vec![1.0, 0.0]);
+        }
+        // Every series was outlying at timestamp 0, and stopped at timestamp 1.
+        for series in &results.series_results {
+            assert_eq!(series.outlier_intervals.intervals.len(), 1);
+            assert_eq!(series.outlier_intervals.intervals[0].start, 0);
+            assert_eq!(series.outlier_intervals.intervals[0].end, Some(1));
+        }
+    }
+
+    // Column-major data can describe timestamps that contain no series at all, which
+    // makes the flat value storage zero-width. That must not panic.
+    #[test]
+    fn test_column_major_no_series() {
+        let data: &[&[f64]] = &[&[], &[]];
+        let dbscan = DbscanDetector::with_epsilon(1.0);
+        let results = dbscan.detect(&Data::from_column_major(data)).unwrap();
+        assert!(results.series_results.is_empty());
+        assert!(results.outlying_series.is_empty());
+        assert!(results.cluster_band.is_none());
+    }
+
+    // Row-major data can likewise describe series with no timestamps.
+    #[test]
+    fn test_row_major_no_timestamps() {
+        let data: &[&[f64]] = &[&[], &[]];
+        let dbscan = DbscanDetector::with_epsilon(1.0);
+        let results = dbscan.detect(&Data::from_row_major(data)).unwrap();
+        assert_eq!(results.series_results.len(), 2);
+        for series in &results.series_results {
+            assert!(series.scores.is_empty());
+            assert!(!series.is_outlier);
+        }
+        assert!(results.cluster_band.is_none());
     }
 
     #[test]
