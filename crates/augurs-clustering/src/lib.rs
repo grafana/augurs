@@ -160,18 +160,28 @@ impl DbscanClusterer {
     /// `filter`/`extend` across the full range of neighbour counts.
     #[inline]
     fn find_neighbours(&self, i: usize, dists: &[f64], n: &mut Vec<usize>) {
-        // Grow the buffer so that it can hold every index, then truncate down to
-        // however many actually matched.
+        // Reserve room for every index without initializing it. `resize` would
+        // zero-fill the whole buffer even though every slot the loop below
+        // touches gets overwritten anyway, which just wastes a full pass over
+        // it on every call.
         n.clear();
-        n.resize(dists.len(), 0);
+        n.reserve(dists.len());
+        let spare = n.spare_capacity_mut();
         let mut found = 0;
         for (j, &dist) in dists.iter().enumerate() {
-            n[found] = j;
+            // SAFETY: after `j` iterations `found` has advanced by at most one
+            // per iteration, so `found <= j < dists.len() <= spare.len()`.
+            // `get_unchecked_mut` (rather than indexing `spare`) keeps this
+            // write free of the bounds-check branch that indexing would add,
+            // which is the whole point of writing it "branchlessly" below.
+            unsafe { spare.get_unchecked_mut(found).write(j) };
             // Note the non-short-circuiting `&`: both operands are cheap, and
             // avoiding the branch is the entire point.
             found += ((dist <= self.epsilon) & (i != j)) as usize;
         }
-        n.truncate(found);
+        // SAFETY: indices `0..found` were each written exactly once above, in
+        // order, since `found` only ever advances by one slot at a time.
+        unsafe { n.set_len(found) };
     }
 }
 
@@ -230,6 +240,56 @@ mod test {
         // Exactly epsilon away counts as a neighbour.
         dbscan.find_neighbours(0, &[0.0, 2.0, 2.000001], &mut neighbours);
         assert_eq!(neighbours, vec![1]);
+    }
+
+    // `find_neighbours` writes into spare capacity via `get_unchecked_mut` and
+    // `set_len` rather than safe indexing, so its output is checked here
+    // against a naive filter across many shapes and epsilons, including the
+    // buffer being reused (and so already containing stale data) between
+    // calls, to guard against the unsafe rewrite ever reading or writing out
+    // of bounds or leaving stale entries behind.
+    #[test]
+    fn find_neighbours_matches_naive_filter() {
+        // Small xorshift PRNG so the sweep is deterministic without adding a
+        // dependency just for this test.
+        struct Xorshift(u64);
+        impl Xorshift {
+            fn next_u64(&mut self) -> u64 {
+                self.0 ^= self.0 << 13;
+                self.0 ^= self.0 >> 7;
+                self.0 ^= self.0 << 17;
+                self.0
+            }
+            // A small, low-cardinality range of distances so that plenty of
+            // trials land exactly on the epsilon boundary.
+            fn next_dist(&mut self) -> f64 {
+                (self.next_u64() % 10) as f64
+            }
+        }
+        let mut rng = Xorshift(0x9E3779B97F4A7C15);
+        let mut neighbours = Vec::new();
+
+        for trial in 0..2_000 {
+            let len = (rng.next_u64() % 20) as usize;
+            let dists: Vec<f64> = (0..len).map(|_| rng.next_dist()).collect();
+            let i = if len == 0 { 0 } else { (rng.next_u64() as usize) % len };
+            let epsilon = rng.next_dist();
+            let dbscan = DbscanClusterer::new(epsilon, 2);
+
+            dbscan.find_neighbours(i, &dists, &mut neighbours);
+
+            let expected: Vec<usize> = dists
+                .iter()
+                .enumerate()
+                .filter(|&(j, &d)| d <= epsilon && j != i)
+                .map(|(j, _)| j)
+                .collect();
+
+            assert_eq!(
+                neighbours, expected,
+                "trial {trial}: dists={dists:?}, i={i}, epsilon={epsilon}"
+            );
+        }
     }
 
     #[test]

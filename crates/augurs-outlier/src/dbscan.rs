@@ -144,14 +144,14 @@ impl DbscanDetector {
             .map(|i| Self::dbscan_1d(data.timestamp(i), epsilon))
             .collect();
 
-        // Which series currently have an open outlier interval, tracked both as a
-        // dense flag per series and as the list of series where that flag is set.
+        // The series that currently have an open outlier interval. Whether a
+        // given series is one of them is answered by
+        // `OutlierIntervals::is_open`, so this list only needs to name *which*
+        // series to check, rather than duplicating that flag itself.
         //
-        // Keeping the dense flags means deciding whether a series started or stopped
-        // being an outlier is a single lookup. The previous approach searched the
-        // previous timestamp's list of outliers, making the bookkeeping below
-        // `O(n_outliers ^ 2)` per timestamp rather than `O(n_outliers)`.
-        let mut interval_open = vec![false; data.n_series];
+        // Keeping this list (rather than searching the previous timestamp's
+        // outliers) is what keeps the bookkeeping below `O(n_outliers)` per
+        // timestamp rather than `O(n_outliers ^ 2)`.
         let mut open_series: Vec<usize> = Vec::new();
         // Scratch flags marking the series that are outlying at this timestamp.
         // Always fully reset before the end of each iteration.
@@ -186,30 +186,31 @@ impl DbscanDetector {
                 outlying_now[idx] = true;
             }
 
-            // Close the interval of every series that has stopped being an outlier.
-            for &idx in &open_series {
-                if !outlying_now[idx] {
+            // Close the interval of every series that has stopped being an
+            // outlier, dropping it from the open list in the same pass rather
+            // than closing and then re-scanning the list to filter it.
+            open_series.retain(|&idx| {
+                if outlying_now[idx] {
+                    true
+                } else {
                     serieses[idx].outlier_intervals.add_end(i);
-                    interval_open[idx] = false;
+                    false
                 }
-            }
-            open_series.retain(|&idx| interval_open[idx]);
+            });
 
-            // Open an interval for every series that has started being an outlier.
+            // Open an interval for every series that has started being an
+            // outlier, resetting its scratch flag ready for the next
+            // timestamp in the same pass since nothing else reads it in
+            // between. Only the flags we set need clearing, which is what
+            // keeps this loop proportional to the number of outliers rather
+            // than the number of series.
             for &Index(idx) in below.iter().chain(above) {
                 let idx = idx as usize;
-                if !interval_open[idx] {
+                if !serieses[idx].outlier_intervals.is_open() {
                     serieses[idx].outlier_intervals.add_start(i);
-                    interval_open[idx] = true;
                     open_series.push(idx);
                 }
-            }
-
-            // Reset the scratch flags ready for the next timestamp. Only the flags we
-            // set need clearing, which is what keeps this loop proportional to the
-            // number of outliers rather than the number of series.
-            for &Index(idx) in below.iter().chain(above) {
-                outlying_now[idx as usize] = false;
+                outlying_now[idx] = false;
             }
         }
         OutlierOutput::new(serieses, normal_band)
@@ -240,10 +241,12 @@ impl DbscanDetector {
             return DBScan1DResults::all_normal(n);
         }
 
-        let min_cluster_size = n / 2 + 1;
+        let min_cluster_size = min_majority_cluster_size(n);
         // The "must span the middle" argument above relies on the cluster holding a
         // strict majority of the values. If that ever changes, this shortcut is no
-        // longer valid and the full scan has to come back.
+        // longer valid and the full scan has to come back. This is also checked
+        // unconditionally (not just in debug builds) by
+        // `min_majority_cluster_size_is_always_a_strict_majority` below.
         debug_assert!(
             min_cluster_size * 2 > n,
             "dbscan_1d assumes a cluster holds a strict majority of values"
@@ -272,6 +275,19 @@ impl DbscanDetector {
             DBScan1DResults::all_outlying()
         }
     }
+}
+
+/// The minimum size a cluster of `n` sorted values must reach to hold a
+/// strict majority of them.
+///
+/// `dbscan_1d`'s "walk outwards from the middle" shortcut is only valid
+/// because a cluster of at least this size is guaranteed to contain the
+/// middle index (see the comment on `dbscan_1d`). That guarantee is checked
+/// unconditionally by `min_majority_cluster_size_is_always_a_strict_majority`
+/// below, so that changing this formula in a way that breaks it fails a test
+/// in every build, not just debug ones.
+fn min_majority_cluster_size(n: usize) -> usize {
+    n / 2 + 1
 }
 
 pub(crate) struct DBScan1DResults {
@@ -317,21 +333,52 @@ impl DBScan1DResults {
 #[repr(transparent)]
 struct Index(u32);
 
+/// The largest number of input series that [`Data::build`] can index.
+const MAX_SERIES: usize = u32::MAX as usize;
+
+/// Check that `n_series` fits in the `u32` that [`Index`] narrows series
+/// indices to.
+fn validate_series_count(n_series: usize) -> Result<(), Error> {
+    if n_series > MAX_SERIES {
+        return Err(Error::Preprocessing(
+            Box::<dyn std::error::Error>::from(format!(
+                "too many series: got {n_series}, but at most {MAX_SERIES} are supported"
+            ))
+            .into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Push `(value, series)` onto `scratch` unless `value` is `NaN`.
+///
+/// `series` is narrowed to the `u32` that [`Index`] stores; callers must have
+/// already checked it fits via [`validate_series_count`].
+fn push_if_present(scratch: &mut Vec<(f64, Index)>, value: f64, series: usize) {
+    if !value.is_nan() {
+        scratch.push((value, Index(series as u32)));
+    }
+}
+
 /// Preprocessed data for the DBSCAN algorithm.
 ///
 /// This holds the input values transposed, so that the values of every series at
 /// a given timestamp are contiguous, and sorted ascending within each timestamp.
 ///
-/// All timestamps share one flat allocation rather than getting a `Vec` each: the
-/// values for timestamp `i` live at `i * n_series..i * n_series + counts[i]`. Any
 /// `NaN` inputs are dropped during preprocessing, which is why the number of
-/// values at a timestamp can be smaller than `n_series`.
+/// values at a timestamp can be smaller than `n_series`. Rather than reserve a
+/// fixed `n_series`-wide slot per timestamp regardless of how many values
+/// survive that filtering, every timestamp's surviving values are packed back
+/// to back in one flat allocation, with `offsets[i]` recording where
+/// timestamp `i`'s slice starts.
 #[derive(Debug)]
 pub struct Data {
-    /// The values at each timestamp, sorted ascending.
+    /// The values at each timestamp, sorted ascending, packed contiguously.
     values: Vec<f64>,
     /// The original series index of each entry in `values`.
     indices: Vec<Index>,
+    /// The start offset of each timestamp's slice into `values`/`indices`.
+    offsets: Vec<usize>,
     /// The number of non-`NaN` values at each timestamp.
     counts: Vec<u32>,
     n_series: usize,
@@ -371,6 +418,7 @@ impl Data {
 
         let n_series = data.len();
         let n_timestamps = data[0].len();
+        validate_series_count(n_series)?;
 
         // Validate that all rows have the same length (skip first row since it's our reference).
         for (i, row) in data.iter().enumerate().skip(1) {
@@ -390,10 +438,7 @@ impl Data {
         // consecutive timestamps, so there's no need for a separate transpose buffer.
         Ok(Self::build(n_series, n_timestamps, |i, scratch| {
             for (j, row) in data.iter().enumerate() {
-                let value = row[i];
-                if !value.is_nan() {
-                    scratch.push((value, Index(j as u32)));
-                }
+                push_if_present(scratch, row[i], j);
             }
         }))
     }
@@ -421,6 +466,7 @@ impl Data {
         }
 
         let n_series = data[0].len();
+        validate_series_count(n_series)?;
 
         // Validate that all columns have the same length (skip first column since it's our reference).
         for (i, col) in data.iter().enumerate().skip(1) {
@@ -438,9 +484,7 @@ impl Data {
         // The data is already grouped by timestamp, so gathering is just a copy.
         Ok(Self::build(n_series, data.len(), |i, scratch| {
             for (j, &value) in data[i].iter().enumerate() {
-                if !value.is_nan() {
-                    scratch.push((value, Index(j as u32)));
-                }
+                push_if_present(scratch, value, j);
             }
         }))
     }
@@ -455,30 +499,19 @@ impl Data {
         n_timestamps: usize,
         mut gather: impl FnMut(usize, &mut Vec<(f64, Index)>),
     ) -> Self {
-        let mut counts = vec![0; n_timestamps];
-        if n_series == 0 {
-            // Degenerate input: still the right number of timestamps, each with no
-            // values at all. Bail out before chunking below, which needs a non-zero
-            // chunk size.
-            return Self {
-                values: Vec::new(),
-                indices: Vec::new(),
-                counts,
-                n_series,
-            };
-        }
-
-        let mut values = vec![0.0; n_series * n_timestamps];
-        let mut indices = vec![Index(0); n_series * n_timestamps];
+        let mut counts = Vec::with_capacity(n_timestamps);
+        let mut offsets = Vec::with_capacity(n_timestamps);
+        // Grown by exactly as many values as survive `NaN`-filtering, rather
+        // than pre-sized (and zero-initialized) for the dense `n_series *
+        // n_timestamps` upper bound: with sparse data most of that grid would
+        // never be read back through `timestamp`, since it only ever slices
+        // `offsets[i]..offsets[i] + counts[i]`.
+        let mut values = Vec::new();
+        let mut indices = Vec::new();
         // Reused across timestamps so that sorting doesn't allocate per timestamp.
         let mut scratch: Vec<(f64, Index)> = Vec::with_capacity(n_series);
 
-        for (i, ((values, indices), count)) in values
-            .chunks_mut(n_series)
-            .zip(indices.chunks_mut(n_series))
-            .zip(&mut counts)
-            .enumerate()
-        {
+        for i in 0..n_timestamps {
             scratch.clear();
             gather(i, &mut scratch);
             // Sorting `(f64, Index)` pairs by the value keeps the value inline, so
@@ -489,16 +522,16 @@ impl Data {
             // of `-0.0` and `0.0`, which is arbitrary under an unstable sort anyway.
             scratch.sort_unstable_by(|(a, _), (b, _)| a.total_cmp(b));
 
-            for (slot, &(value, index)) in scratch.iter().enumerate() {
-                values[slot] = value;
-                indices[slot] = index;
-            }
-            *count = scratch.len() as u32;
+            offsets.push(values.len());
+            counts.push(scratch.len() as u32);
+            values.extend(scratch.iter().map(|&(value, _)| value));
+            indices.extend(scratch.iter().map(|&(_, index)| index));
         }
 
         Self {
             values,
             indices,
+            offsets,
             counts,
             n_series,
         }
@@ -511,7 +544,7 @@ impl Data {
 
     /// The sorted values of every series at timestamp `i`.
     fn timestamp(&self, i: usize) -> Timestamp<'_> {
-        let base = i * self.n_series;
+        let base = self.offsets[i];
         let range = base..base + self.counts[i] as usize;
         Timestamp {
             values: &self.values[range.clone()],
@@ -999,5 +1032,103 @@ mod tests {
         assert!(result.is_ok());
         let data_struct = result.unwrap();
         assert_eq!(data_struct.n_series, 3);
+    }
+
+    // `dbscan_1d`'s "walk outwards from the middle" shortcut is only valid
+    // because a cluster of `min_majority_cluster_size(n)` values is guaranteed
+    // to hold a strict majority of them (and so must contain the middle
+    // index). This checks that property directly with a regular `assert!`,
+    // which (unlike the `debug_assert!` in `dbscan_1d`) still runs in release
+    // builds, so a future change to the formula that breaks the guarantee is
+    // always caught.
+    #[test]
+    fn min_majority_cluster_size_is_always_a_strict_majority() {
+        for n in 0..10_000 {
+            let min_cluster_size = min_majority_cluster_size(n);
+            assert!(
+                min_cluster_size * 2 > n,
+                "min_majority_cluster_size({n}) = {min_cluster_size} is not a strict majority"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_series_count_accepts_up_to_u32_max() {
+        assert!(validate_series_count(0).is_ok());
+        assert!(validate_series_count(1).is_ok());
+        assert!(validate_series_count(MAX_SERIES).is_ok());
+    }
+
+    #[test]
+    fn validate_series_count_rejects_more_than_u32_max() {
+        let err = validate_series_count(MAX_SERIES + 1).unwrap_err();
+        assert!(err.to_string().contains("too many series"));
+    }
+
+    #[test]
+    fn push_if_present_drops_nan_and_narrows_index() {
+        let mut scratch = Vec::new();
+        push_if_present(&mut scratch, 1.0, 0);
+        push_if_present(&mut scratch, f64::NAN, 1);
+        push_if_present(&mut scratch, 2.0, 2);
+        assert_eq!(scratch, vec![(1.0, Index(0)), (2.0, Index(2))]);
+    }
+
+    // `Data::build` used to allocate and zero-initialize a dense `n_series *
+    // n_timestamps` grid regardless of how many values actually survived
+    // `NaN`-filtering. With sparse data this test would previously have
+    // observed `values.len() == n_series * n_timestamps`; now it should be
+    // sized to exactly the values kept.
+    #[test]
+    fn test_build_does_not_over_allocate_for_sparse_data() {
+        let n_series = 100;
+        let n_timestamps = 5;
+        let mut data: Vec<Vec<f64>> = vec![vec![UNDEFINED; n_timestamps]; n_series];
+        // Exactly one non-NaN value per timestamp.
+        for (t, row) in data.iter_mut().enumerate().take(n_timestamps) {
+            row[t] = t as f64;
+        }
+        let rows: Vec<&[f64]> = data.iter().map(|r| r.as_slice()).collect();
+        let result = Data::try_from_row_major(&rows).unwrap();
+
+        assert_eq!(result.values.len(), n_timestamps);
+        assert_eq!(result.indices.len(), n_timestamps);
+        assert!(result.values.len() < n_series * n_timestamps);
+    }
+
+    // The interval-open bookkeeping in `run` used to track a separate
+    // `interval_open` flag per series alongside `OutlierIntervals`'s own
+    // notion of being open, and closed + filtered `open_series` in two
+    // separate passes. This test exercises a series that repeatedly starts
+    // and stops being an outlier, to guard against that refactor losing or
+    // duplicating an interval.
+    #[test]
+    fn test_flickering_outlier_intervals() {
+        // Series 0 alternates between matching the rest of the cluster and
+        // being far away from it, at every other timestamp.
+        let data: &[&[f64]] = &[
+            &[0.0, 100.0, 0.0, 100.0, 0.0, 100.0],
+            &[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            &[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ];
+        let dbscan = DbscanDetector::with_epsilon(1.0);
+        let processed = dbscan.preprocess(data).unwrap();
+        let results = dbscan.detect(&processed).unwrap();
+
+        assert_eq!(
+            results.series_results[0].scores,
+            vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0]
+        );
+        let intervals = &results.series_results[0].outlier_intervals.intervals;
+        assert_eq!(intervals.len(), 3);
+        // The first two intervals close as soon as the series stops being an
+        // outlier; the last one is still open when the data ends.
+        for interval in &intervals[..2] {
+            assert_eq!(interval.end, interval.start.checked_add(1));
+        }
+        assert_eq!(intervals[2].end, None);
+        for series in &results.series_results[1..] {
+            assert!(series.outlier_intervals.intervals.is_empty());
+        }
     }
 }
