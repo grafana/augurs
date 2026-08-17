@@ -272,7 +272,11 @@ mod test {
         for trial in 0..2_000 {
             let len = (rng.next_u64() % 20) as usize;
             let dists: Vec<f64> = (0..len).map(|_| rng.next_dist()).collect();
-            let i = if len == 0 { 0 } else { (rng.next_u64() as usize) % len };
+            let i = if len == 0 {
+                0
+            } else {
+                (rng.next_u64() as usize) % len
+            };
             let epsilon = rng.next_dist();
             let dbscan = DbscanClusterer::new(epsilon, 2);
 
