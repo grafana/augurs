@@ -257,26 +257,39 @@ fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, Error> {
 
 /// Returns the inverse Yeo-Johnson transformation of the given value.
 ///
-/// Mirrors the exact branch structure of [`yeo_johnson`] so the two are
-/// inverses; selecting branches with the same `== 0.0` / `== 2.0` tests avoids
-/// the fwd/inverse asymmetry that previously fired the wrong formula near
-/// `lambda == 2`.
-fn inverse_yeo_johnson(y: f64, lambda: f64) -> f64 {
+/// Uses `ln_1p`/`exp_m1` forms away from the exact log branches so values near
+/// `lambda == 0` or `lambda == 2` do not collapse through cancellation.
+fn inverse_yeo_johnson(y: f64, lambda: f64) -> Result<f64, Error> {
     if y.is_nan() {
-        return y;
+        return Ok(y);
+    }
+    if !lambda.is_finite() {
+        return Err(Error::InvalidLambda);
     }
 
     if y >= 0.0 {
         if lambda == 0.0 {
-            y.exp() - 1.0
+            Ok(y.exp_m1())
         } else {
-            (y * lambda + 1.0).powf(1.0 / lambda) - 1.0
+            let lambda_y = lambda * y;
+            if lambda_y <= -1.0 {
+                Err(Error::InvalidDomain)
+            } else {
+                Ok((lambda_y.ln_1p() / lambda).exp_m1())
+            }
         }
-    } else if lambda == 2.0 {
-        // Inverse of y = -ln(1 - x): x = 1 - exp(-y).
-        1.0 - (-y).exp()
     } else {
-        1.0 - (1.0 - (2.0 - lambda) * y).powf(1.0 / (2.0 - lambda))
+        let two_minus_lambda = 2.0 - lambda;
+        if two_minus_lambda == 0.0 {
+            Ok(-(-y).exp_m1())
+        } else {
+            let scaled_y = -two_minus_lambda * y;
+            if scaled_y <= -1.0 {
+                Err(Error::InvalidDomain)
+            } else {
+                Ok(-(scaled_y.ln_1p() / two_minus_lambda).exp_m1())
+            }
+        }
     }
 }
 
@@ -428,8 +441,11 @@ impl Transformer for YeoJohnson {
     }
 
     fn inverse_transform(&self, data: &mut [f64]) -> Result<(), Error> {
+        if self.lambda.is_nan() {
+            return Err(Error::NotFitted);
+        }
         for x in data.iter_mut() {
-            *x = inverse_yeo_johnson(*x, self.lambda);
+            *x = inverse_yeo_johnson(*x, self.lambda)?;
         }
         Ok(())
     }
@@ -559,9 +575,9 @@ mod test {
 
     #[test]
     fn inverse_yeo_johnson_single() {
-        assert_approx_eq!(inverse_yeo_johnson(0.8284271247461903, 0.5), 1.0);
-        assert_approx_eq!(inverse_yeo_johnson(1.4641016151377544, 0.5), 2.0);
-        assert!(inverse_yeo_johnson(f64::NAN, 0.5).is_nan());
+        assert_approx_eq!(inverse_yeo_johnson(0.8284271247461903, 0.5).unwrap(), 1.0);
+        assert_approx_eq!(inverse_yeo_johnson(1.4641016151377544, 0.5).unwrap(), 2.0);
+        assert!(inverse_yeo_johnson(f64::NAN, 0.5).unwrap().is_nan());
     }
 
     #[test]
@@ -610,7 +626,7 @@ mod test {
         for &lambda in &lambdas {
             for &x in &xs {
                 let y = yeo_johnson(x, lambda).unwrap();
-                let round_tripped = inverse_yeo_johnson(y, lambda);
+                let round_tripped = inverse_yeo_johnson(y, lambda).unwrap();
                 assert!(
                     (round_tripped - x).abs() < 1e-9,
                     "round-trip failed for lambda={lambda}, x={x}: got {round_tripped}",
@@ -630,5 +646,36 @@ mod test {
         yeo_johnson.transform(&mut data).unwrap();
         yeo_johnson.inverse_transform(&mut data).unwrap();
         assert_all_close(&expected, &data);
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_near_zero_lambda_uses_stable_limit() {
+        let y = 1e-4;
+        let near_zero = inverse_yeo_johnson(y, 1e-12).unwrap();
+        let log_limit = y.exp_m1();
+        assert!(
+            (near_zero - log_limit).abs() < 1e-12,
+            "near-zero lambda inverse collapsed: got {near_zero}, limit {log_limit}",
+        );
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_transform_not_fitted() {
+        let yeo_johnson = YeoJohnson::new();
+        let mut data = vec![1.0];
+        assert!(matches!(
+            yeo_johnson.inverse_transform(&mut data),
+            Err(Error::NotFitted)
+        ));
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_invalid_domain() {
+        let yeo_johnson = YeoJohnson::new().with_lambda(-0.5).unwrap();
+        let mut data = vec![3.0];
+        assert!(matches!(
+            yeo_johnson.inverse_transform(&mut data),
+            Err(Error::InvalidDomain)
+        ));
     }
 }
