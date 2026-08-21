@@ -18,6 +18,7 @@ This crate can be used to access the functionality of all other crates in the
 `augurs` ecosystem, as it re-exports them under a single namespace. The following
 feature flags can be enabled to include only the functionality you need:
 
+- `arima`: arima models
 - `changepoint`: changepoint detection
 - `clustering`: clustering algorithms
 - `dtw`: dynamic time warping

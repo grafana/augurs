@@ -27,6 +27,7 @@ languages such as Python and Javascript (via WASM).
 | Name                     | Purpose                                                                      |
 | ------------------------ | ---------------------------------------------------------------------------- |
 | [`augurs`]               | Wrapper crate exposing functionality of all main crates behind feature flags |
+  [`augurs-arima`][]       | Automatic AutoRegressive Integrated Moving Average models
 | [`augurs-changepoint`][] | Changepoint detection for time series                                        |
 | [`augurs-clustering`][]  | Time series clustering algorithms                                            |
 | [`augurs-core`][]        | Common structs and traits                                                    |

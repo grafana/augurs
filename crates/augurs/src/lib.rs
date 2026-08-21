@@ -1,6 +1,9 @@
 #![doc = include_str!("../README.md")]
 
 #[doc(inline)]
+#[cfg(feature = "arima")]
+pub use augurs_arima as arima;
+#[doc(inline)]
 #[cfg(feature = "changepoint")]
 pub use augurs_changepoint as changepoint;
 #[doc(inline)]
