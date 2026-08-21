@@ -34,16 +34,23 @@ jobs:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
             CARGO_REGISTRY_TOKEN=crates-io:api-token
-            GITHUB_TOKEN=github:token
+
+      # TODO: replace `github_app` with the real App name once it exists; see
+      # https://github.com/grafana/augurs/issues/536. Until then this workflow
+      # will fail to mint a token.
+      - id: get-github-token
+        uses: grafana/shared-workflows/actions/create-github-app-token@46f48da11e78ebdba7a8747ae456b11062fac83e # create-github-app-token/v0.3.1
+        with:
+          github_app: augurs-release
 
       - name: Run release-plz
         uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         env:
-          # get-vault-secrets v2 no longer exports secrets as environment
-          # variables, so they must be passed explicitly to the steps needing
-          # them. See https://github.com/grafana/shared-workflows/releases/tag/get-vault-secrets%2Fv2.0.0
+          # Neither get-vault-secrets nor create-github-app-token export their
+          # secrets as environment variables, so they must be passed explicitly
+          # to the steps needing them.
           CARGO_REGISTRY_TOKEN: ${{ fromJSON(steps.get-secrets.outputs.secrets).CARGO_REGISTRY_TOKEN }}
-          GITHUB_TOKEN: ${{ fromJSON(steps.get-secrets.outputs.secrets).GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get-github-token.outputs.token }}
         with:
           command: release
 
@@ -76,15 +83,22 @@ jobs:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
             CARGO_REGISTRY_TOKEN=crates-io:api-token
-            GITHUB_TOKEN=github:token
+
+      # TODO: replace `github_app` with the real App name once it exists; see
+      # https://github.com/grafana/augurs/issues/536. Until then this workflow
+      # will fail to mint a token.
+      - id: get-github-token
+        uses: grafana/shared-workflows/actions/create-github-app-token@46f48da11e78ebdba7a8747ae456b11062fac83e # create-github-app-token/v0.3.1
+        with:
+          github_app: augurs-release
 
       - name: Run release-plz
         uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         env:
-          # get-vault-secrets v2 no longer exports secrets as environment
-          # variables, so they must be passed explicitly to the steps needing
-          # them. See https://github.com/grafana/shared-workflows/releases/tag/get-vault-secrets%2Fv2.0.0
+          # Neither get-vault-secrets nor create-github-app-token export their
+          # secrets as environment variables, so they must be passed explicitly
+          # to the steps needing them.
           CARGO_REGISTRY_TOKEN: ${{ fromJSON(steps.get-secrets.outputs.secrets).CARGO_REGISTRY_TOKEN }}
-          GITHUB_TOKEN: ${{ fromJSON(steps.get-secrets.outputs.secrets).GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get-github-token.outputs.token }}
         with:
           command: release-pr
