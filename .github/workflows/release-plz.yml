@@ -19,17 +19,17 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
 
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@e46fe1e9a2bf9e618bcf8d8d32f3a7381b45c06d # get-vault-secrets/v2.0.0
+        uses: grafana/shared-workflows/actions/get-vault-secrets@2e3743a1f8abfd3e921e53a7726ec0744c11bb01 # get-vault-secrets/v2.0.1
         with:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
@@ -37,7 +37,7 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
+        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         env:
           # get-vault-secrets v2 no longer exports secrets as environment
           # variables, so they must be passed explicitly to the steps needing
@@ -61,17 +61,17 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
 
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@e46fe1e9a2bf9e618bcf8d8d32f3a7381b45c06d # get-vault-secrets/v2.0.0
+        uses: grafana/shared-workflows/actions/get-vault-secrets@2e3743a1f8abfd3e921e53a7726ec0744c11bb01 # get-vault-secrets/v2.0.1
         with:
           # Secrets placed in the ci/repo/grafana/augurs/<path> path in Vault
           repo_secrets: |
@@ -79,7 +79,7 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
+        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         env:
           # get-vault-secrets v2 no longer exports secrets as environment
           # variables, so they must be passed explicitly to the steps needing
