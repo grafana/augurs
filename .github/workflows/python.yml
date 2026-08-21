@@ -190,6 +190,11 @@ jobs:
 
       - name: Publish to PyPI
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        env:
+          # get-vault-secrets v2 no longer exports secrets as environment
+          # variables, so they must be passed explicitly to the steps needing
+          # them. See https://github.com/grafana/shared-workflows/releases/tag/get-vault-secrets%2Fv2.0.0
+          MATURIN_PYPI_TOKEN: ${{ fromJSON(steps.get-secrets.outputs.secrets).MATURIN_PYPI_TOKEN }}
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
