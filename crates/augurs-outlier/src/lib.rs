@@ -149,6 +149,11 @@ impl OutlierIntervals {
         }
     }
 
+    /// Whether the most recent interval has been started but not yet closed.
+    pub(crate) fn is_open(&self) -> bool {
+        self.expecting_end
+    }
+
     fn add_start(&mut self, ts: usize) {
         debug_assert!(
             !self.expecting_end,
@@ -268,6 +273,18 @@ mod test {
             };
             Ok(OutlierOutput::new(serieses, Some(band)))
         }
+    }
+
+    #[test]
+    fn outlier_intervals_is_open() {
+        let mut intervals = OutlierIntervals::empty();
+        assert!(!intervals.is_open());
+        intervals.add_start(1);
+        assert!(intervals.is_open());
+        intervals.add_end(3);
+        assert!(!intervals.is_open());
+        intervals.add_start(5);
+        assert!(intervals.is_open());
     }
 
     #[cfg(feature = "serde")]
