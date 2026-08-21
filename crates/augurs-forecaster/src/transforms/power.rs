@@ -234,6 +234,10 @@ impl Transformer for BoxCox {
 }
 
 /// Returns the Yeo-Johnson transformation of the given value.
+///
+/// Uses `ln_1p`/`exp_m1` forms away from the exact log branches so values near
+/// `lambda == 0` or `lambda == 2` do not collapse through cancellation, mirroring
+/// [`inverse_yeo_johnson`].
 fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, Error> {
     if x.is_nan() {
         return Ok(x);
@@ -244,14 +248,16 @@ fn yeo_johnson(x: f64, lambda: f64) -> Result<f64, Error> {
 
     if x >= 0.0 {
         if lambda == 0.0 {
-            Ok((x + 1.0).ln())
+            Ok(x.ln_1p())
         } else {
-            Ok(((x + 1.0).powf(lambda) - 1.0) / lambda)
+            Ok((lambda * x.ln_1p()).exp_m1() / lambda)
         }
     } else if lambda == 2.0 {
-        Ok(-(-x + 1.0).ln())
+        Ok(-(-x).ln_1p())
     } else {
-        Ok(-((-x + 1.0).powf(2.0 - lambda) - 1.0) / (2.0 - lambda))
+        let two_minus_lambda = 2.0 - lambda;
+        let scaled = (two_minus_lambda * (-x).ln_1p()).exp_m1();
+        Ok(-scaled / two_minus_lambda)
     }
 }
 
@@ -278,17 +284,15 @@ fn inverse_yeo_johnson(y: f64, lambda: f64) -> Result<f64, Error> {
                 Ok((lambda_y.ln_1p() / lambda).exp_m1())
             }
         }
+    } else if lambda == 2.0 {
+        Ok(-(-y).exp_m1())
     } else {
         let two_minus_lambda = 2.0 - lambda;
-        if two_minus_lambda == 0.0 {
-            Ok(-(-y).exp_m1())
+        let scaled_y = -two_minus_lambda * y;
+        if scaled_y <= -1.0 {
+            Err(Error::InvalidDomain)
         } else {
-            let scaled_y = -two_minus_lambda * y;
-            if scaled_y <= -1.0 {
-                Err(Error::InvalidDomain)
-            } else {
-                Ok(-(scaled_y.ln_1p() / two_minus_lambda).exp_m1())
-            }
+            Ok(-(scaled_y.ln_1p() / two_minus_lambda).exp_m1())
         }
     }
 }
@@ -657,6 +661,64 @@ mod test {
             (near_zero - log_limit).abs() < 1e-12,
             "near-zero lambda inverse collapsed: got {near_zero}, limit {log_limit}",
         );
+    }
+
+    #[test]
+    fn inverse_yeo_johnson_near_two_lambda_uses_stable_limit() {
+        // Mirror of `inverse_yeo_johnson_near_zero_lambda_uses_stable_limit`
+        // for the negative branch, where `2 - lambda` plays the role of
+        // `lambda`.
+        let y = -1e-4;
+        let near_two = inverse_yeo_johnson(y, 2.0 - 1e-12).unwrap();
+        let log_limit = -(-y).exp_m1();
+        assert!(
+            (near_two - log_limit).abs() < 1e-12,
+            "near-two lambda inverse collapsed: got {near_two}, limit {log_limit}",
+        );
+    }
+
+    #[test]
+    fn yeo_johnson_near_degenerate_lambda_uses_stable_limit() {
+        // The forward transform has the same conditioning problem as the
+        // inverse: `((x + 1)^lambda - 1) / lambda` cancels to exactly zero once
+        // `lambda * ln(x + 1)` drops below the f64 epsilon, so the direct power
+        // form returned 0.0 for every input at small lambda.
+        let x = 1e-4;
+        let near_zero = yeo_johnson(x, 1e-12).unwrap();
+        let log_limit = x.ln_1p();
+        assert!(
+            (near_zero - log_limit).abs() < 1e-12,
+            "near-zero lambda forward collapsed: got {near_zero}, limit {log_limit}",
+        );
+
+        let near_two = yeo_johnson(-x, 2.0 - 1e-12).unwrap();
+        let log_limit = -x.ln_1p();
+        assert!(
+            (near_two - log_limit).abs() < 1e-12,
+            "near-two lambda forward collapsed: got {near_two}, limit {log_limit}",
+        );
+    }
+
+    #[test]
+    fn yeo_johnson_round_trip_near_degenerate_lambda() {
+        // With both halves using `ln_1p`/`exp_m1` the round trip holds even for
+        // lambda a whisker away from the log branches, which the direct power
+        // forms could not do in either direction. Brent's tolerance is around
+        // `sqrt(f64::EPSILON)`, so a fitted lambda this close to 0 or 2 is
+        // reachable in practice.
+        let lambdas = [1e-12, -1e-12, 2.0 - 1e-12, 2.0 + 1e-12];
+        let xs = [-100.0, -1.0, -1e-4, 1e-4, 1.0, 100.0];
+        for &lambda in &lambdas {
+            for &x in &xs {
+                let y = yeo_johnson(x, lambda).unwrap();
+                let round_tripped = inverse_yeo_johnson(y, lambda).unwrap();
+                let rel = (round_tripped - x).abs() / x.abs();
+                assert!(
+                    rel < 1e-12,
+                    "round-trip failed for lambda={lambda}, x={x}: got {round_tripped} (rel {rel})",
+                );
+            }
+        }
     }
 
     #[test]
