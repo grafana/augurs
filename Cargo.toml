@@ -55,7 +55,7 @@ num-traits = "0.2.19"
 rand = "0.8.6"
 roots = "0.0.8"
 serde = { version = "1.0.166", features = ["derive"] }
-statrs = "0.18.0"
+statrs = "0.19.0"
 serde_json = "1.0.128"
 serde-wasm-bindgen = "0.6.0"
 thiserror = "2.0.3"
