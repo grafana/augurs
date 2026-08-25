@@ -29,6 +29,7 @@ keywords = [
 
 [workspace.dependencies]
 augurs = { path = "crates/augurs" }
+augurs-arima = { version = "0.10.2", path = "crates/augurs-arima"}
 augurs-changepoint = { version = "0.10.2", path = "crates/augurs-changepoint" }
 augurs-clustering = { version = "0.10.2", path = "crates/augurs-clustering" }
 augurs-core = { version = "0.10.2", path = "crates/augurs-core" }
@@ -51,6 +52,7 @@ distrs = "0.2.1"
 getrandom = { version = "0.2.10", features = ["js"] }
 itertools = "0.14.0"
 js-sys = "0.3.64"
+nalgebra = "0.34.0"
 num-traits = "0.2.19"
 rand = "0.8.6"
 roots = "0.0.8"
