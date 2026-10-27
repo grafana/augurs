@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `augurs` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-v0.10.2...augurs-v0.10.3) - 2026-10-27
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-seasons` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.2...augurs-seasons-v0.10.3) - 2026-10-27
+
+### Other
+- update Cargo.toml dependencies
+
+## `augurs-prophet` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-prophet-v0.10.2...augurs-prophet-v0.10.3) - 2026-10-27
+
+### Fixed
+- *(deps)* update zip to v9 ([#570](https://github.com/grafana/augurs/pull/570))
+- *(security/augurs-prophet)* update wasmtime, wasmtime-wasi, wasmtime-wasi-io to v48 ([#539](https://github.com/grafana/augurs/pull/539))
+- bump wasmtime to 42.0.2 and rollup to 4.62.3 for critical CVEs
+- *(deps)* update rust crate zip to v8 ([#449](https://github.com/grafana/augurs/pull/449))
+
+### Other
+- fix new clippy 1.97 lints
+
+## `augurs-outlier` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-outlier-v0.10.2...augurs-outlier-v0.10.3) - 2026-10-27
+
+### Other
+- branchless and algorithmic wins in clustering, DTW and outlier hot loops ([#532](https://github.com/grafana/augurs/pull/532))
+
+## `augurs-forecaster` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-forecaster-v0.10.2...augurs-forecaster-v0.10.3) - 2026-10-27
+
+### Fixed
+- *(deps)* update zip to v9 ([#570](https://github.com/grafana/augurs/pull/570))
+- *(transforms)* stabilise the forward Yeo-Johnson transform near lambda 0 and 2 ([#534](https://github.com/grafana/augurs/pull/534))
+- *(transforms)* fix inverse Yeo-Johnson to faithfully invert the forward transform ([#528](https://github.com/grafana/augurs/pull/528))
+
+## `augurs-ets` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-ets-v0.10.2...augurs-ets-v0.10.3) - 2026-10-27
+
+### Fixed
+- *(deps)* update nalgebra to 0.35 and lstsq to 0.8 in augurs-ets ([#545](https://github.com/grafana/augurs/pull/545))
+
+## `augurs-mstl` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-mstl-v0.10.2...augurs-mstl-v0.10.3) - 2026-10-27
+
+### Fixed
+- *(deps)* update rust crate stlrs to 0.4.0 ([#488](https://github.com/grafana/augurs/pull/488))
+
+## `augurs-dtw` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-dtw-v0.10.2...augurs-dtw-v0.10.3) - 2026-10-27
+
+### Other
+- branchless and algorithmic wins in clustering, DTW and outlier hot loops ([#532](https://github.com/grafana/augurs/pull/532))
+
+## `augurs-clustering` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-clustering-v0.10.2...augurs-clustering-v0.10.3) - 2026-10-27
+
+### Other
+- branchless and algorithmic wins in clustering, DTW and outlier hot loops ([#532](https://github.com/grafana/augurs/pull/532))
+
+## `augurs-changepoint` - [0.10.3](https://github.com/grafana/augurs/compare/augurs-changepoint-v0.10.2...augurs-changepoint-v0.10.3) - 2026-10-27
+
+### Other
+- update Cargo.toml dependencies
+
 ## `augurs-seasons` - [0.10.2](https://github.com/grafana/augurs/compare/augurs-seasons-v0.10.1...augurs-seasons-v0.10.2) - 2026-02-24
 
 ### Other
