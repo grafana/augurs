@@ -49,8 +49,8 @@ compile: checkout-submodules generate-skeleton
     -I ./cpp/prophet-wasmstan/stan/src \
     -I ./cpp/prophet-wasmstan/stan/lib/rapidjson_1.1.0 \
     -I ./cpp/prophet-wasmstan/stan/lib/stan_math \
-    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/eigen_3.4.0 \
-    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/boost_1.81.0 \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/eigen_5.0.1 \
+    -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/boost_1.87.0 \
     -I ./cpp/prophet-wasmstan/stan/lib/stan_math/lib/sundials_6.1.1/include \
     -I ./cpp/prophet-wasmstan/model \
     -I ./cpp/prophet-wasmstan/shim \
