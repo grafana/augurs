@@ -1,7 +1,5 @@
 //! Scalers, including min-max and standard scalers.
 
-use core::f64;
-
 use augurs_core::{FloatIterExt, NanMinMaxResult};
 
 use super::{Error, Transformer};
