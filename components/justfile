@@ -41,7 +41,7 @@ generate-skeleton:
 # Build the prophet-wasmstan C++ library using the custom `clang` compiler from the WASI SDK.
 compile: checkout-submodules generate-skeleton
   {{CLANG_CPP}} \
-    -std=c++14 \
+    -std=c++17 \
     -O3 \
     -D _REENTRANT \
     -D BOOST_DISABLE_ASSERTS \
