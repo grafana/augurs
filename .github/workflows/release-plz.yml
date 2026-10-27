@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: stable
 
@@ -37,7 +37,7 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
+        uses: release-plz/action@b2baf303c463c223526d52a8a91b0777f052cf3f # v0.5.146
         env:
           # get-vault-secrets v2 no longer exports secrets as environment
           # variables, so they must be passed explicitly to the steps needing
@@ -66,7 +66,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: stable
 
@@ -79,7 +79,7 @@ jobs:
             GITHUB_TOKEN=github:token
 
       - name: Run release-plz
-        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
+        uses: release-plz/action@b2baf303c463c223526d52a8a91b0777f052cf3f # v0.5.146
         env:
           # get-vault-secrets v2 no longer exports secrets as environment
           # variables, so they must be passed explicitly to the steps needing
