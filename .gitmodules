@@ -1,3 +1,4 @@
 [submodule "components/cpp/prophet-wasmstan/stan"]
 	path = components/cpp/prophet-wasmstan/stan
 	url = https://github.com/stan-dev/stan
+	branch = v2.34.0
