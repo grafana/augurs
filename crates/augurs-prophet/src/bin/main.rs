@@ -112,7 +112,11 @@ fn write<R: Read>(dest: &Path, file: ZipFile<'_, R>) -> Result<()> {
     let file_path = file.enclosed_name().context("invalid file name in wheel")?;
     let name = file_path.file_name().context("file has no name?")?;
     let path = dest.join(name);
-    eprintln!("Writing zipped {} to {}", file.name(), path.display());
+    eprintln!(
+        "Writing zipped {} to {}",
+        file_path.display(),
+        path.display()
+    );
     let mut out = File::create(&path).context(format!("create {}", path.display()))?;
     let mut reader = BufReader::new(file);
     io::copy(&mut reader, &mut out).context("copy bytes")?;
